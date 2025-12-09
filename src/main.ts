@@ -1,6 +1,21 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
-import store from './store'
+import { createApp } from 'vue';
+import App from './App.vue';
+import router from './router'; 
 
-createApp(App).use(store).use(router).mount('#app')
+// Importação do Pinia
+import { createPinia } from 'pinia'; // 1. Importe a função de criação
+
+// Crie a aplicação
+const app = createApp(App);
+
+// 2. Crie a instância do Pinia
+const pinia = createPinia(); 
+
+// 3. ANEXAR O PINIA À APLICAÇÃO VUE PRIMEIRO!
+app.use(pinia); // Use a instância 'pinia'
+
+// 4. Anexar outras dependências
+app.use(router);
+
+// 5. Montar a aplicação
+app.mount('#app');
