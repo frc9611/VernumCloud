@@ -1,4 +1,4 @@
-import {ref} from 'vue';
+import {ref, computed} from 'vue';
 import {defineStore} from 'pinia';
 import http from '@/services/http.js';
 
@@ -20,6 +20,18 @@ export const authStore = defineStore('auth', () => {
         localStorage.setItem('divisions', JSON.stringify(divisionsValue));
         divisions.value = divisionsValue;
     }
+
+    const isAuthenticated = computed(() => {
+        return token.value && name.value;
+    })
+
+    const getName = computed(() => {
+        return name.value;
+    })
+
+    const getDivision = computed(() => {
+        return (divisions.value)[0].visibleName;
+    })
 
     async function checkToken(){
         if (!token.value) return false;
@@ -47,6 +59,15 @@ export const authStore = defineStore('auth', () => {
         }
     }
 
+    function clear(){
+        localStorage.removeItem('token');
+        localStorage.removeItem('name');
+        localStorage.removeItem('divisions');
+        token.value = '';
+        name.value = '';
+        divisions.value = '';
+    }
+
     return {
         token,
         name,
@@ -54,6 +75,10 @@ export const authStore = defineStore('auth', () => {
         setToken,
         setName,
         setDivisions,
-        checkToken
+        checkToken,
+        isAuthenticated,
+        getName,
+        getDivision,
+        clear
     }
 });

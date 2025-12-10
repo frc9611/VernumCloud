@@ -1,11 +1,15 @@
 <template>
   <h2>Login</h2>
-
+  <template v-if="!auth.isAuthenticated">
   <form @submit.prevent="login">
     <input type="text" placeholder="username" v-model="user.username">
     <input type="password" placeholder="*****" v-model="user.password">
     <button type="submit">Login</button>
   </form>
+</template>
+<template v-else>
+Já possui sessão
+</template>
 </template>
 <script setup>
   import http from '@/services/http.js';
