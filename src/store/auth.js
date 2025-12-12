@@ -1,12 +1,14 @@
 import {ref, computed} from 'vue';
 import {defineStore} from 'pinia';
 import http from '@/services/http.js';
+import router from '../router';
 
 export const authStore = defineStore('auth', () => {
     const token = ref(localStorage.getItem('token'));
     //const username = ref(localStorage.getItem('username'));
     const name = ref(localStorage.getItem('name'));
     const divisions = ref(JSON.parse(localStorage.getItem('divisions')));
+    const isAuth = ref(false);
 
     function setToken(tokenValue) {
         localStorage.setItem('token', tokenValue);
@@ -33,6 +35,10 @@ export const authStore = defineStore('auth', () => {
         return (divisions.value)[0].visibleName;
     })
 
+    function setIsAuth(auth){
+        isAuth.value = auth;
+    }
+
     async function checkToken(){
         if (!token.value) return false;
         try {
@@ -47,14 +53,8 @@ export const authStore = defineStore('auth', () => {
             });
             return response.status === 200;
         } catch (error) {
-            console.error('checkToken error:', {
-                status: error?.response?.status,
-                data: error?.response?.data,
-                headers: error?.response?.headers,
-                request: error?.request,
-                message: error?.message,
-                toJSON: error?.toJSON ? error.toJSON() : undefined
-            });
+            clear();
+            router.push('/login');
             return false;
         }
     }
@@ -63,6 +63,7 @@ export const authStore = defineStore('auth', () => {
         localStorage.removeItem('token');
         localStorage.removeItem('name');
         localStorage.removeItem('divisions');
+        isAuth.value = false;
         token.value = '';
         name.value = '';
         divisions.value = '';
@@ -79,6 +80,8 @@ export const authStore = defineStore('auth', () => {
         isAuthenticated,
         getName,
         getDivision,
-        clear
+        clear,
+        setIsAuth,
+        isAuth
     }
 });

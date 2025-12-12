@@ -1,6 +1,6 @@
 <template>
   <h2>Login</h2>
-  <template v-if="!auth.isAuthenticated">
+  <template v-if="!auth.isAuth">
   <form @submit.prevent="login">
     <input type="text" placeholder="username" v-model="user.username">
     <input type="password" placeholder="*****" v-model="user.password">
@@ -30,6 +30,7 @@ const auth = authStore();
       auth.setToken(data.accessToken);
       auth.setName(data.name);
       auth.setDivisions(data.divisions);
+      auth.setIsAuth(true);
     }catch(error){
       console.log(error?.response?.data);
     }

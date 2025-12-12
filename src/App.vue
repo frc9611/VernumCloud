@@ -4,7 +4,7 @@
     <li><Router-link :to="{name:'home'}">Home</Router-link></li>
     <li><Router-link :to="{name:'about'}">Sobre o Vernum Cloud</Router-link></li>
     <li>
-      <template v-if="auth.isAuthenticated">
+      <template v-if="auth.isAuth">
         {{ auth.getName }}
         {{ auth.getDivision }}
         <button @click="logout">Logout</button>

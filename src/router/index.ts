@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import {authStore} from '@/store/auth.js'
+// eslint-disable-next-line
+import {authStore} from '@/store/auth.js' //Maybe the IDE says there is an error, but it's ok
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -30,16 +31,7 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   if(to.meta?.auth){
     const auth = authStore();
-    if(auth.token && auth.name){
-      const isAuthenticated = await auth.checkToken();
-      if(isAuthenticated){
-        next();
-      }else{
-        next({name: 'login'});
-      }
-    }else{
-      next({name: 'login'});
-    }
+    auth.isAuth? next() : next({name: 'login'});
   }else{
     next();
   }

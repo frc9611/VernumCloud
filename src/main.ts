@@ -1,21 +1,30 @@
-import { createApp } from 'vue';
+import { createApp, markRaw } from 'vue';
 import App from './App.vue';
 import router from './router'; 
+import {authStore} from '@/store/auth.js'
+import { createPinia } from 'pinia';
 
-// Importação do Pinia
-import { createPinia } from 'pinia'; // 1. Importe a função de criação
-
-// Crie a aplicação
 const app = createApp(App);
 
-// 2. Crie a instância do Pinia
 const pinia = createPinia(); 
+pinia.use(({store}) => {store.router = markRaw(router)});
 
-// 3. ANEXAR O PINIA À APLICAÇÃO VUE PRIMEIRO!
-app.use(pinia); // Use a instância 'pinia'
+app.use(pinia); 
 
-// 4. Anexar outras dependências
 app.use(router);
 
-// 5. Montar a aplicação
+if(localStorage.getItem('token')){
+    (async () => {
+        const auth = authStore();
+        try{
+            auth.setIsAuth(true);
+            await auth.checkToken();
+        }catch(error){
+            auth.setIsAuth(false);
+
+        }
+        
+    })()
+}
+
 app.mount('#app');
