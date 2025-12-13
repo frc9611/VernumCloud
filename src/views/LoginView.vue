@@ -22,7 +22,6 @@
               required
             />
           </div>
-
           <button type="submit" class="buttonLogin">Entrar</button>
         </form>
       </template>
@@ -77,7 +76,6 @@ const auth = authStore();
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  
 }
 
 .login-card {
@@ -86,7 +84,7 @@ const auth = authStore();
   max-width: 380px;
   padding: 2rem;
   border-radius: 14px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 15px 40px #865faf;
 }
 
 .login-card h2 {

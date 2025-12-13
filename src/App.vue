@@ -140,7 +140,7 @@ function logout(){
 
   .user-division {
     font-size: 12px;
-    color: #94a3b8;
+    color: #d4d4d4;
   }
 
   .logout-btn {
@@ -189,5 +189,64 @@ function logout(){
       justify-content: space-between;
     }
   }
+.information, .warning {
+    display: inline-block;
+    padding: 8px 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    font-size: 0.9em;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+  }
 
+  .information {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+
+  .warning {
+    background-color: #fde69c;
+    color: #4d3a00;
+    border: 1px solid #ffbf00;
+  }
+
+  .main-menu {
+    list-style-type: none;
+    padding: 0;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .main-menu li {
+    margin-bottom: 15px;
+  }
+
+  .menu-button {
+    display: block;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #8864af;
+    border-radius: 8px;
+    border: 3px solid #5c288f;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  .menu-button:hover {
+    background-color: #5c288f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+  }
+
+  .menu-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 </style>
