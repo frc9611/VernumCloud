@@ -8,6 +8,7 @@ export const authStore = defineStore('auth', () => {
     //const username = ref(localStorage.getItem('username'));
     const name = ref(localStorage.getItem('name'));
     const divisions = ref(JSON.parse(localStorage.getItem('divisions')));
+    const roles = ref(JSON.parse(localStorage.getItem('roles')));
     const isAuth = ref(false);
 
     function setToken(tokenValue) {
@@ -23,6 +24,11 @@ export const authStore = defineStore('auth', () => {
         divisions.value = divisionsValue;
     }
 
+    function setRoles(rolesValue) {
+        localStorage.setItem('roles', JSON.stringify(rolesValue));
+        roles.value = rolesValue;
+    }
+
     const isAuthenticated = computed(() => {
         return token.value && name.value;
     })
@@ -33,6 +39,10 @@ export const authStore = defineStore('auth', () => {
 
     const getDivision = computed(() => {
         return (divisions.value)[0].visibleName;
+    })
+
+    const getRole = computed(() => {
+        return (roles.value)[0].name;
     })
 
     function setIsAuth(auth){
@@ -54,7 +64,6 @@ export const authStore = defineStore('auth', () => {
             return response.status === 200;
         } catch (error) {
             clear();
-            router.push('/login');
             return false;
         }
     }
@@ -63,10 +72,13 @@ export const authStore = defineStore('auth', () => {
         localStorage.removeItem('token');
         localStorage.removeItem('name');
         localStorage.removeItem('divisions');
+        localStorage.removeItem('roles');
         isAuth.value = false;
         token.value = '';
         name.value = '';
         divisions.value = '';
+        roles.value = '';
+        router.push('/login');
     }
 
     return {
@@ -76,10 +88,12 @@ export const authStore = defineStore('auth', () => {
         setToken,
         setName,
         setDivisions,
+        setRoles,
         checkToken,
         isAuthenticated,
         getName,
         getDivision,
+        getRole,
         clear,
         setIsAuth,
         isAuth

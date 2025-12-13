@@ -30,6 +30,7 @@ const auth = authStore();
       auth.setToken(data.accessToken);
       auth.setName(data.name);
       auth.setDivisions(data.divisions);
+      auth.setRoles(data.role);
       auth.setIsAuth(true);
     }catch(error){
       console.log(error?.response?.data);
