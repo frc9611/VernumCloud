@@ -61,6 +61,21 @@ function logout(){
     margin: 0;
     font-family: "Outfit", sans-serif;
   }
+  hr{
+    border: none;
+    border-top: 3px solid #865faf;
+    width: 75%;
+    max-width: 360px;
+  }
+  .centerFlex{
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+  }
+  .centerText{
+    text-align: center;
+  }
+
   .nav {
     display: flex;
     align-items: center;
