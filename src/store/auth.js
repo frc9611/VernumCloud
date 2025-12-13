@@ -10,6 +10,7 @@ export const authStore = defineStore('auth', () => {
     const divisions = ref(JSON.parse(localStorage.getItem('divisions')));
     const roles = ref(JSON.parse(localStorage.getItem('roles')));
     const isAuth = ref(false);
+    const isAdmin = ref(false);
 
     function setToken(tokenValue) {
         localStorage.setItem('token', tokenValue);
@@ -48,6 +49,9 @@ export const authStore = defineStore('auth', () => {
     function setIsAuth(auth){
         isAuth.value = auth;
     }
+    function setIsAdmin(admin){
+        isAdmin.value = admin;
+    }
 
     async function checkToken(){
         if (!token.value) return false;
@@ -74,6 +78,7 @@ export const authStore = defineStore('auth', () => {
         localStorage.removeItem('divisions');
         localStorage.removeItem('roles');
         isAuth.value = false;
+        isAdmin.value = false;
         token.value = '';
         name.value = '';
         divisions.value = '';
@@ -96,6 +101,8 @@ export const authStore = defineStore('auth', () => {
         getRole,
         clear,
         setIsAuth,
-        isAuth
+        isAuth,
+        setIsAdmin,
+        isAdmin
     }
 });

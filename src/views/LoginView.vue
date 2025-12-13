@@ -32,6 +32,7 @@ const auth = authStore();
       auth.setDivisions(data.divisions);
       auth.setRoles(data.role);
       auth.setIsAuth(true);
+      if((data.role)[0].name == 'ADMIN') auth.setIsAdmin(true);
     }catch(error){
       console.log(error?.response?.data);
     }

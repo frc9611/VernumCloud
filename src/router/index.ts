@@ -20,6 +20,15 @@ const routes: Array<RouteRecordRaw> = [
     path: '/about',
     name: 'about',
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/AdminView.vue'),
+    meta:{
+      auth: true,
+      requireAdmin: true
+    }
   }
 ]
 
@@ -31,7 +40,16 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   if(to.meta?.auth){
     const auth = authStore();
-    auth.isAuth? next() : next({name: 'login'});
+    if(auth.isAuth){
+      if(to.meta?.requireAdmin){
+        console.log(auth.isAdmin);
+        auth.isAdmin? next() : next({name: 'home'});
+      }else{
+        next();
+      }
+    }else{
+      next({name: 'login'});
+    }
   }else{
     next();
   }
