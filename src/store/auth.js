@@ -42,6 +42,10 @@ export const authStore = defineStore('auth', () => {
         return (divisions.value)[0].visibleName;
     })
 
+    const getDivisionColor = computed(() => {
+        return (divisions.value)[0].color;
+    })
+
     const getRole = computed(() => {
         return (roles.value)[0].name;
     })
@@ -98,6 +102,7 @@ export const authStore = defineStore('auth', () => {
         isAuthenticated,
         getName,
         getDivision,
+        getDivisionColor,
         getRole,
         clear,
         setIsAuth,

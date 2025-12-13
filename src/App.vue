@@ -16,7 +16,7 @@
       <li class="user-slot">
         <template v-if="auth.isAuth">    
           <Router-link :to="{ name: 'home' }">
-            <div class="user-box">
+            <div class="user-box" :style="{'--bg-box-color': auth.getDivisionColor}">
               <div class="user-info">
                 <span class="user-name">{{ auth.getName }}</span>
                 <span class="user-division">{{ auth.getDivision }}</span>
@@ -58,6 +58,9 @@ function logout(){
 </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+  :root{
+    --bg-box-color: #391c55;
+  }
   body{
     margin: 0;
     font-family: "Outfit", sans-serif;
@@ -117,7 +120,9 @@ function logout(){
     display: flex;
     align-items: center;
     border: solid 3px #b4a0cf;
-    background: #391c55;
+    background: #391C55;
+    background: linear-gradient(180deg, #391C55 30%, var(--bg-box-color) 100%);
+    /* background: #391c55; */
     border-radius: 14px;
     padding: 8px 10px;
     gap: 12px;
