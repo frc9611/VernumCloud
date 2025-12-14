@@ -57,7 +57,7 @@ const auth = authStore();
       auth.setDivisions(data.divisions);
       auth.setRoles(data.role);
       auth.setIsAuth(true);
-      if((data.role)[0].name == 'ADMIN') auth.setIsAdmin(true);
+      ((data.role)[0].name == 'ADMIN')? auth.setIsAdmin(true) : auth.setIsAdmin(false);
       router.push({name: 'home'});
     }catch(error){
       console.log(error?.response?.data);
