@@ -50,6 +50,10 @@ export const authStore = defineStore('auth', () => {
         return (roles.value)[0].name;
     })
 
+    const getToken = computed(() => {
+        return token.value;
+    })
+
     function setIsAuth(auth){
         isAuth.value = auth;
     }
@@ -76,6 +80,18 @@ export const authStore = defineStore('auth', () => {
         }
     }
 
+    async function checkRole(){
+        if (!token.value) return false;
+        try {
+            const response = await http.get("/login/verify", {
+                headers: { Authorization: 'Bearer ' + token.value },
+            });
+            return response.data.role[0].name == "ADMIN";
+        } catch (error) {
+            return false;
+        }
+    }
+
     function clear(){
         localStorage.removeItem('token');
         localStorage.removeItem('name');
@@ -87,7 +103,7 @@ export const authStore = defineStore('auth', () => {
         name.value = '';
         divisions.value = '';
         roles.value = '';
-        router.push('/login');
+        router.push('/');
     }
 
     return {
@@ -108,6 +124,8 @@ export const authStore = defineStore('auth', () => {
         setIsAuth,
         isAuth,
         setIsAdmin,
-        isAdmin
+        isAdmin,
+        checkRole,
+        getToken
     }
 });

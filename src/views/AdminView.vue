@@ -4,7 +4,7 @@
     <h3>CyberRain #9611</h3>
     <span class="warning">Você está acessando opções sensíveis e confidenciais, NÃO PERMANEÇA COM LOGIN SEM SUPERVISÃO</span>
     <ul class="main-menu">
-      <li><Router-link :to="{ name: 'admin' }" class="menu-button">
+      <li><Router-link :to="{ name: 'users' }" class="menu-button">
         Gerenciar Equipe
       </Router-link></li>
       <li><Router-link :to="{ name: 'admin' }" class="menu-button">

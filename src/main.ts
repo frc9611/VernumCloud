@@ -18,9 +18,14 @@ if(localStorage.getItem('token')){
         const auth = authStore();
         try{
             auth.setIsAuth(true);
+            auth.checkRole()? auth.setIsAdmin(true) : auth.setIsAdmin(false);
             await auth.checkToken();
+            
+            
         }catch(error){
+            console.log('failed check login: ', error);
             auth.setIsAuth(false);
+            auth.setIsAdmin(false);
 
         }
         

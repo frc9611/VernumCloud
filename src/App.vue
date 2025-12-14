@@ -249,4 +249,72 @@ function logout(){
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
+  .main-table {
+  width: 100%;
+  max-width: 1100px;
+  border-collapse: collapse;
+  background: #1e1e2e;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.main-table thead {
+  background: #5c288f;
+}
+
+.main-table th {
+  color: #fff;
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 600;
+}
+
+.main-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #2e2e42;
+  color: #eaeaea;
+}
+
+.main-table tbody tr:hover {
+  background: #2a2a3d;
+}
+
+.main-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status.active {
+  background: #1e7f4d;
+  color: #b6f2d6;
+}
+
+.status.inactive {
+  background: #7f1e1e;
+  color: #f2b6b6;
+}
+
+.table-search {
+  width: 100%;
+  max-width: 1100px;
+  margin: 20px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  background: #2a2a3d;
+  color: #fff;
+}
+
+.table-search::placeholder {
+  color: #aaa;
+}
 </style>
