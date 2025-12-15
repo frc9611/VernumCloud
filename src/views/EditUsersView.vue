@@ -1,36 +1,36 @@
 <template>
   <div class="form-container">
-    <form class="main-form" @submit.prevent="login">
+    <form class="main-form" @submit.prevent="editUser">
       <h3>Editar Membro da Equipe</h3>
       
       <div class="form-group">
         <label for="nome">Nome Completo:</label>
-        <input id="nome" type="text" :value="user.name" >
+        <input id="nome" type="text" v-model="user.name" >
       </div>
       
       <div class="form-group">
         <label for="username">Username:</label>
-        <input id="username" type="text" :value="user.username" >
+        <input id="username" type="text" v-model="user.username" >
       </div>
       
       <div class="form-group">
         <label for="email">E-mail:</label>
-        <input id="email" type="text" :value="user.email" >
+        <input id="email" type="text" v-model="user.email" >
       </div>
       
       <div class="form-group">
         <label for="nascimento">Data de Nascimento:</label>
-        <input id="nascimento" type="date" :value="user.birthDate" >
+        <input id="nascimento" type="date" v-model="user.birthDate" >
       </div>
       
       <div class="form-group">
         <label for="turma">Turma:</label>
-        <input id="turma" type="text" :value="user.schoolClass">
+        <input id="turma" type="text" v-model="user.schoolClass">
       </div>
       
       <div class="form-group">
         <label for="status">Status:</label>
-        <select id="status">
+        <select id="status" v-model="user.active">
           <option value="true" :selected="user.active">Ativo</option>
           <option value="false" :selected="!(user.active)">Inativo</option>
         </select>
@@ -38,13 +38,13 @@
       
       <div class="form-group">
         <label for="divisao">Divisão:</label>
-        <select id="divisao">
+        <select id="divisao" v-model="user.division">
           <option 
             v-for="division in allDivisions" 
             :key="division.divisionId" 
             @click="goToEdit(user.userId)" 
-            :value="division.divisionId" 
-            :selected="user.divisions?.[0]?.name === division.name"
+            :value="division.name" 
+            :selected="user.division === division.name"
           >
             {{ division.visibleName }}
           </option>
@@ -58,7 +58,7 @@
 
 
 <script setup>
-  import { ref, onMounted, computed } from 'vue'
+  import { ref, onMounted, computed, reactive } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter, useRoute } from 'vue-router'
@@ -67,7 +67,15 @@ const router = useRouter()
 const route = useRoute()
 const auth = authStore()
 const allDivisions = ref([])
-const user = ref({})
+let user = reactive({
+    name:'',
+    username:'',
+    email:'',
+    division:'',
+    birthDate:'',
+    active:'',
+    schoolClass:''
+  });
 const userId = route.params.id;
 
 
@@ -88,11 +96,29 @@ onMounted(async () => {
         Authorization: `Bearer ${auth.getToken}`
       }
     })
-    user.value = response.data
+    user.name = response.data.name
+    user.username = response.data.username
+    user.email = response.data.email
+    user.division = response.data.divisions?.[0]?.name
+    user.active = response.data.active
+    user.birthDate = response.data.birthDate
+    user.schoolClass = response.data.schoolClass
   } catch (err) {
     console.error('Erro ao carregar divisões', err)
   }
-})
+});
+
+async function editUser(){
+    try{
+      await http.put('/users/'+userId, user, {
+      headers: {
+        Authorization: `Bearer ${auth.getToken}`
+      }});
+      router.push({name: 'users'});
+    }catch(error){
+      console.log(error?.response?.data);
+    }
+  }
 </script>
 
 <style scoped>

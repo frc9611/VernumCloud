@@ -37,6 +37,7 @@
         </tr>
       </tbody>
     </table>
+    <span class="information" style="margin-top: 10px;">Usuários inativos não possuem acesso ao sistema. <br>Para deletar definitivamente um usuário, contate a equipe de P&D.</span>
   </div>
 </template>
 
