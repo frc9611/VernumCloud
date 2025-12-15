@@ -13,6 +13,19 @@ app.use(router);
 
 const auth = authStore(); 
 
+async function verifyAdmin(){
+try {
+      auth.setIsAdmin(true); 
+
+      const isAdmin = await auth.checkRole(); 
+      auth.setIsAdmin(isAdmin);
+
+    } catch (error) {
+      console.log('failed check admin:', error);
+      auth.setIsAdmin(false);
+    }
+}
+
 async function initializeAuthAndMount() {
   if (localStorage.getItem('token')) {
     try {
@@ -20,9 +33,7 @@ async function initializeAuthAndMount() {
       
       await auth.checkToken();
       auth.setIsAuth(true); 
-
-      const isAdmin = await auth.checkRole(); 
-      auth.setIsAdmin(isAdmin);
+      await verifyAdmin();
 
     } catch (error) {
       console.log('failed check login:', error);

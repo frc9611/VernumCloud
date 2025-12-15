@@ -56,20 +56,25 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  if(to.meta?.auth){
-    const auth = authStore();
-    if(auth.isAuth){
-      if(to.meta?.requireAdmin){
-        auth.isAdmin? next() : next({name: 'home'});
-      }else{
-        next();
-      }
-    }else{
-      next({name: 'login'});
+  const auth = authStore();
+
+  if (to.meta?.auth) {
+    if (!auth.isAuth) {
+      return next({ name: 'login' });
     }
-  }else{
-    next();
+
+    if (to.meta?.requireAdmin) {
+      if (auth.isAdmin === null || auth.isAdmin === undefined) {
+        await auth.checkRole();
+      }
+      return auth.isAdmin ? next() : next({ name: 'home' });
+    }
+
+    return next();
   }
-})
+
+  next();
+});
+
 
 export default router
