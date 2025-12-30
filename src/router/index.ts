@@ -17,6 +17,14 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/profile',
+    name: 'profile',
+    component: () => import(/* webpackChunkName: "profile" */ '../views/ProfileView.vue'),
+    meta:{
+      auth: true
+    }
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')

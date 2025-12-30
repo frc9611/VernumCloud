@@ -15,7 +15,7 @@
 
       <li class="user-slot">
         <template v-if="auth.isAuth">    
-          <Router-link :to="{ name: 'home' }">
+          <Router-link :to="{ name: 'profile' }">
             <div class="user-box" :style="{'--bg-box-color': auth.getDivisionColor}">
               <div class="user-info">
                 <span class="user-name">{{ auth.getName }}</span>

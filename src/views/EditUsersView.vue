@@ -58,7 +58,7 @@
 
 
 <script setup>
-  import { ref, onMounted, computed, reactive } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter, useRoute } from 'vue-router'
@@ -104,7 +104,7 @@ onMounted(async () => {
     user.birthDate = response.data.birthDate
     user.schoolClass = response.data.schoolClass
   } catch (err) {
-    console.error('Erro ao carregar divisões', err)
+    console.error('Erro ao carregar usuário', err)
   }
 });
 

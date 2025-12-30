@@ -54,6 +54,7 @@ const auth = authStore();
       console.log(data);
       auth.setToken(data.accessToken);
       auth.setName(data.name);
+      auth.setUserId(data.userId);
       auth.setDivisions(data.divisions);
       auth.setRoles(data.role);
       auth.setIsAuth(true);
