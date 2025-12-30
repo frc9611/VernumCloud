@@ -22,13 +22,11 @@
   </div>
 
   <div>
-    <form action="">
+    <form @submit.prevent="editPassword">
       <label for="oldPassword">Senha Atual:</label>
-      <input type="password" name="oldPassword" id="oldPassword">
+      <input type="password" name="oldPassword" id="oldPassword" v-model="userPassword.oldPassword">
       <label for="newPassword">Senha Nova:</label>
-      <input type="password" name="newPassword" id="newPassword">
-      <label for="repeatNewPassword">Repita a Senha Nova:</label>
-      <input type="password" name="repeatNewPassword" id="repeatNewPassword">
+      <input type="password" name="newPassword" id="newPassword" v-model="userPassword.password">
       <button type="submit">Redefinir Senha</button>
     </form>
   </div>
@@ -52,6 +50,10 @@
     username:'',
     birthDate:'',
     schoolClass:''
+  });
+  let userPassword = reactive({
+    oldPassword:'',
+    password:'',
   });
 
   onMounted(async () => {
@@ -78,7 +80,17 @@
       headers: {
         Authorization: `Bearer ${auth.getToken}`
       }});
-      router.push({name: 'home'});
+    }catch(error){
+      console.log(error?.response?.data);
+    }
+  }
+
+  async function editPassword() {
+    try{
+      await http.put('/users/'+userId, userPassword, {
+      headers: {
+        Authorization: `Bearer ${auth.getToken}`
+      }});
     }catch(error){
       console.log(error?.response?.data);
     }
