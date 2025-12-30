@@ -47,7 +47,9 @@ import { ref, onMounted, computed } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter } from 'vue-router'
+import { useToast } from "vue-toastification"
 
+const toast = useToast()
 const router = useRouter()
 const auth = authStore()
 const data = ref([])
@@ -62,7 +64,7 @@ onMounted(async () => {
     })
     data.value = response.data
   } catch (err) {
-    console.error('Erro ao carregar usuários', err)
+    toast.error("Erro ao carregar lista de usuários.")
   }
 })
 

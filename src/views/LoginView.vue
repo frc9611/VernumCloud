@@ -38,6 +38,8 @@
   import { reactive } from 'vue';
   import {authStore} from '@/store/auth.js'
   import { useRouter } from 'vue-router';
+  import { useToast } from "vue-toastification";
+  const toast = useToast();
 
   const router = useRouter();
 
@@ -62,6 +64,7 @@ const auth = authStore();
       router.push({name: 'home'});
     }catch(error){
       console.log(error?.response?.data);
+      toast.error('Usuário ou senha incorretos!');
     }
   }
 

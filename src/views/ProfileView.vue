@@ -37,7 +37,9 @@
   import http from '@/services/http.js'
   import { authStore } from '@/store/auth.js'
   import { useRouter } from 'vue-router'
-  const router = useRouter()
+  import { useToast } from "vue-toastification";
+  const toast = useToast();
+  const router = useRouter();
   const auth = authStore();
   const userId = auth.getId;
 
@@ -70,7 +72,7 @@
       userWrite.birthDate = response.data.birthDate
       userWrite.schoolClass = response.data.schoolClass
     } catch (err) {
-      console.error('Erro ao carregar usuário', err)
+      toast.error("Erro ao carregar perfil");
     }
   });
 
@@ -80,8 +82,9 @@
       headers: {
         Authorization: `Bearer ${auth.getToken}`
       }});
+      toast.success("Perfil atualizado com sucesso!");
     }catch(error){
-      console.log(error?.response?.data);
+      toast.error("Erro ao atualizar perfil");
     }
   }
 
@@ -91,8 +94,9 @@
       headers: {
         Authorization: `Bearer ${auth.getToken}`
       }});
+      toast.success("Senha alterada com sucesso!");
     }catch(error){
-      console.log(error?.response?.data);
+      toast.error("Alteração de senha não autorizada");
     }
   }
 </script>
