@@ -38,7 +38,8 @@ async function initializeAuthAndMount() {
     try {
       auth.setIsAuth(true); 
       
-      await auth.checkToken();
+      const authorized = await auth.checkToken();
+      if(!authorized) router.push('/');
       auth.setIsAuth(true); 
       await verifyAdmin();
 
