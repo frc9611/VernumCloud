@@ -2,7 +2,21 @@
   <div>
     <form @submit.prevent="editUser">
       <div>
-        <img src="" alt="Foto de Perfil">
+        <img v-if="pictureUrl" :src="pictureUrl" alt="Foto de Perfil">
+        
+        <form @submit.prevent="submitPicture">
+          <div class="profile-image-form">
+            <input
+              type="file"
+              accept="image/*"
+              @change="onFileChange"
+            />
+
+            <button type="submit" :disabled="!selectedFile">
+              Enviar foto
+            </button>
+          </div>
+        </form>
         <h1>{{userRead.name}}</h1>
         <span>{{userRead.division}}</span>
       </div>
@@ -42,6 +56,10 @@
   const router = useRouter();
   const auth = authStore();
   const userId = auth.getId;
+  const selectedFile = ref(null);
+  const pictureUrl = ref(null);
+
+  loadProfileImage();
 
   let userRead = reactive({
     email:'',
@@ -99,5 +117,60 @@
       toast.error("Alteração de senha não autorizada");
     }
   }
+
+  
+
+function onFileChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedFile.value = file;
+}
+
+async function submitPicture() {
+  if (!selectedFile.value) {
+    toast.error("Selecione uma imagem");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", selectedFile.value);
+
+  try {
+    await http.put(
+      `/users/${userId}/picture`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    );
+
+    toast.success("Foto de perfil atualizada com sucesso!");
+    selectedFile.value = null;
+  } catch (error) {
+    toast.error("Erro ao atualizar foto de perfil");
+  }
+}
+
+async function loadProfileImage() {
+  try{
+    const response = await http.get(
+      `/users/${userId}/picture`,
+      {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    );
+
+    pictureUrl.value = URL.createObjectURL(response.data);
+  }
+  catch(error){
+    toast.warning("Erro ao obter foto de perfil");
+  }
+}
 </script>
 <style></style>
