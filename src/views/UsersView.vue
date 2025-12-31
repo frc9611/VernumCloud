@@ -8,7 +8,7 @@
     <input
       class="table-search"
       type="text"
-      placeholder="Buscar por nome, username ou e-mail"
+      placeholder="Buscar por nome, username, e-mail ou divisão"
       v-model="search"
     />
 
@@ -76,7 +76,8 @@ const filteredData = computed(() => {
   return data.value.filter(user =>
     user.username.toLowerCase().includes(term) ||
     user.name.toLowerCase().includes(term) ||
-    user.email.toLowerCase().includes(term)
+    user.email.toLowerCase().includes(term) ||
+    user.divisions[0].visibleName.toLowerCase().includes(term)
   )
 })
 function goToEdit(userId) {
