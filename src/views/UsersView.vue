@@ -16,6 +16,7 @@
       <thead>
         <tr>
           <th>Status</th>
+          <th>Foto</th>
           <th>Username</th>
           <th>Nome</th>
           <th>E-mail</th>
@@ -30,6 +31,7 @@
               {{ user.active ? 'Ativo' : 'Inativo' }}
             </span>
           </td>
+          <td><img :src="profileImages[user.userId]" class="profilePicture"></td>
           <td>{{ user.username }}</td>
           <td>{{ user.name }}</td>
           <td>{{ user.email }}</td>
@@ -43,7 +45,7 @@
 
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter } from 'vue-router'
@@ -54,6 +56,7 @@ const router = useRouter()
 const auth = authStore()
 const data = ref([])
 const search = ref('')
+const profileImages = ref({})
 
 onMounted(async () => {
   try {
@@ -83,6 +86,29 @@ const filteredData = computed(() => {
 function goToEdit(userId) {
   router.push(`/admin/users/${userId}`)
 }
+
+async function loadProfileImage(userId) {
+  try{
+    if (profileImages.value[userId]) return
+
+    const response = await http.get(
+      `/users/${userId}/picture`,
+      {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    )
+    profileImages.value[userId] = URL.createObjectURL(response.data)
+  }catch(error){
+    profileImages.value[userId] = null
+  }
+}
+
+watch(filteredData, users => {
+  users.forEach(u => loadProfileImage(u.userId))
+})
 </script>
 
 <style>
@@ -99,6 +125,9 @@ function goToEdit(userId) {
   }
   tbody tr{
     cursor: pointer;
+  }
+  .profilePicture{
+    width: 40px;
   }
 
 </style>
