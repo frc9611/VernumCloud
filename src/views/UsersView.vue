@@ -5,6 +5,8 @@
       Você está acessando opções sensíveis e confidenciais, NÃO PERMANEÇA COM LOGIN SEM SUPERVISÃO
     </span>
 
+    <button @click="goToCreate()">Cadastrar Novo</button>
+
     <input
       class="table-search"
       type="text"
@@ -85,6 +87,9 @@ const filteredData = computed(() => {
 })
 function goToEdit(userId) {
   router.push(`/admin/users/${userId}`)
+}
+function goToCreate(){
+  router.push({name: 'createUser'})
 }
 
 async function loadProfileImage(userId) {

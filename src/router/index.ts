@@ -55,6 +55,15 @@ const routes: Array<RouteRecordRaw> = [
       auth: true,
       requireAdmin: true
     }
+  },
+  {
+    path: '/admin/createuser',
+    name: 'createUser',
+    component: () => import(/* webpackChunkName: "createuser" */ '../views/usersManagement/CreateUserView.vue'),
+    meta:{
+      auth: true,
+      requireAdmin: true
+    }
   }
 ]
 
