@@ -50,7 +50,7 @@
         </select>
       </div>
       
-      <button type="submit" class="buttonLogin">Confirmar</button>
+      <button type="submit" class="buttonLogin">Cadastrar</button>
     </form>
   </div>
 </template>

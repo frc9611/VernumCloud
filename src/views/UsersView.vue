@@ -5,7 +5,7 @@
       Você está acessando opções sensíveis e confidenciais, NÃO PERMANEÇA COM LOGIN SEM SUPERVISÃO
     </span>
 
-    <button @click="goToCreate()">Cadastrar Novo</button>
+    <button class="createButton" @click="goToCreate()">Cadastrar Novo</button>
 
     <input
       class="table-search"
@@ -133,6 +133,15 @@ watch(filteredData, users => {
   }
   .profilePicture{
     width: 40px;
+  }
+  .createButton{
+    color: white;
+    background-color: #1e7f4d;
+    font-size: 17px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: black 1px;
+    cursor: pointer;
   }
 
 </style>
