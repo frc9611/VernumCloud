@@ -1,11 +1,11 @@
 <template>
   <div class="form-container">
-    <form class="main-form" @submit.prevent="createUser">
+    <form class="main-form" @submit.prevent="createUser" autocomplete="off">
       <h3>Cadastrar Membro da Equipe</h3>
       
       <div class="form-group">
         <label for="nome">Nome Completo:</label>
-        <input id="nome" type="text" v-model="user.name" >
+        <input id="nome" type="text" v-model="user.name" @change="updateName">
       </div>
       
       <div class="form-group">
@@ -23,6 +23,7 @@
       <div class="form-group">
         <label for="email">E-mail:</label>
         <input id="email" type="email" v-model="user.email" >
+        <a class="link" @click="addEndEmail">Adicionar @estudante.sesisenai.org.br</a>
       </div>
       
       <div class="form-group">
@@ -38,12 +39,12 @@
       <div class="form-group">
         <label for="divisao">Divisão:</label>
         <select id="divisao" v-model="user.division">
-          <option 
+          <option selected
             v-for="division in allDivisions" 
             :key="division.divisionId" 
             @click="goToEdit(user.userId)" 
             :value="division.name" 
-            :selected="user.division === division.name"
+            
           >
             {{ division.visibleName }}
           </option>
@@ -88,21 +89,29 @@ onMounted(async () => {
     })
     allDivisions.value = response.data
   } catch (err) {
-    toast.error('Erro ao carregar divisões')
+    toast.error('Erro ao carregar divisões');
   }
 });
 
 async function createUser(){
-    try{
-      await http.post('/users', user, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }});
-      router.push({name: 'users'});
-    }catch(error){
-      toast.error('Erro ao criar usuário. Verifique se o usuário já existe')
-    }
+  try{
+    await http.post('/users', user, {
+    headers: {
+      Authorization: `Bearer ${auth.getToken}`
+    }});
+    router.push({name: 'users'});
+  }catch(error){
+    toast.error('Erro ao criar usuário. Verifique se o usuário já existe');
   }
+}
+
+function updateName(){
+  user.username = user.name.toLowerCase().trim().split(' ')[0] + user.name.toLowerCase().trim().split(' ').at(-1);
+}
+
+function addEndEmail(){
+  user.email = user.email.concat("@estudante.sesisenai.org.br");
+}
 </script>
 
 <style>
@@ -197,5 +206,11 @@ select:focus {
 
 .buttonLogin:active {
   transform: translateY(0);
+}
+
+.link{
+  text-decoration: underline;
+  color: #865faf;
+  cursor: pointer;
 }
 </style>
