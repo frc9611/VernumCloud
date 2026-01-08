@@ -105,7 +105,7 @@ async function createUser(){
   }
 </script>
 
-<style scoped>
+<style>
   .admin {
     display: flex;
     flex-direction: column;

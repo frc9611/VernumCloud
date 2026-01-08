@@ -34,6 +34,9 @@
   }
 </script>
 <style>
+  h1{
+    color: #865faf !important;
+  }
   .longText{
     width: 80%;
     max-width: 900px;

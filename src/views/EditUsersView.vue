@@ -121,7 +121,7 @@ async function editUser(){
   }
 </script>
 
-<style scoped>
+<style>
   .admin {
     display: flex;
     flex-direction: column;

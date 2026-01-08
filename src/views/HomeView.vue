@@ -28,7 +28,7 @@
   const auth = authStore();
 </script>
 
-<style scoped>
+<style>
   .home {
     display: flex;
     flex-direction: column;
