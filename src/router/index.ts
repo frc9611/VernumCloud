@@ -65,6 +65,24 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/admin/divisions',
+    name: 'editDivisions',
+    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/DivisionsAdminView.vue'),
+    meta:{
+      auth: true,
+      requireAdmin: true
+    }
+  },
+  {
+    path: '/admin/division/:id',
+    name: 'editDivision',
+    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/EditDivisionView.vue'),
+    meta:{
+      auth: true,
+      requireAdmin: true
+    }
+  },
+  {
     path: '/admin/createuser',
     name: 'createUser',
     component: () => import(/* webpackChunkName: "createuser" */ '../views/usersManagement/CreateUserView.vue'),

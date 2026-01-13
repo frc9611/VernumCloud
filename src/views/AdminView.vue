@@ -7,7 +7,7 @@
       <li><Router-link :to="{ name: 'users' }" class="menu-button">
         Gerenciar Equipe
       </Router-link></li>
-      <li><Router-link :to="{ name: 'admin' }" class="menu-button">
+      <li><Router-link :to="{ name: 'editDivisions' }" class="menu-button">
         Gerenciar Divisões
       </Router-link></li>
       <li><Router-link :to="{ name: 'admin' }" class="menu-button">
