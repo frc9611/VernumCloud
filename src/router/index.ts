@@ -73,6 +73,16 @@ const routes: Array<RouteRecordRaw> = [
       requireAdmin: true
     }
   },
+  
+  {
+    path: '/admin/createDivision',
+    name: 'createDivision',
+    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/CreateDivisionView.vue'),
+    meta:{
+      auth: true,
+      requireAdmin: true
+    }
+  },
   {
     path: '/admin/division/:id',
     name: 'editDivision',
