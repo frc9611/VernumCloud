@@ -1,7 +1,7 @@
 <template>
   <div class="form-container">
     <form class="main-form" @submit.prevent="createDivision">
-      <h3>Editar Divisão</h3>
+      <h3>Criar Divisão</h3>
       
       <div class="form-group">
         <label for="visibleName">Nome Visível:</label>
