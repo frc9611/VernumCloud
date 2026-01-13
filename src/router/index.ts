@@ -48,6 +48,14 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/listusers',
+    name: 'listusers',
+    component: () => import(/* webpackChunkName: "listusers" */ '../views/ListUsersView.vue'),
+    meta:{
+      auth: true,
+    }
+  },
+  {
     path: '/admin/users/:id',
     name: 'editUsers',
     component: () => import(/* webpackChunkName: "users" */ '../views/EditUsersView.vue'),

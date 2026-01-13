@@ -16,7 +16,7 @@
       <li><Router-link :to="{ name: 'home' }" class="menu-button">
         Minha Divisão
       </Router-link></li>
-      <li><Router-link :to="{ name: 'home' }" class="menu-button">
+      <li><Router-link :to="{ name: 'listusers' }" class="menu-button">
         Equipe
       </Router-link></li>
     </ul>
