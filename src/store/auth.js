@@ -37,6 +37,7 @@ export const authStore = defineStore('auth', () => {
   const getName = computed(() => name.value);
   const getId = computed(() => userId.value);
   const getDivision = computed(() => divisions.value?.[0]?.visibleName);
+  const getDivisionId = computed(() => divisions.value?.[0]?.divisionId);
   const getDivisionColor = computed(() => divisions.value?.[0]?.color);
   const getRole = computed(() => roles.value?.[0]?.name);
   const getToken = computed(() => token.value);
@@ -116,6 +117,7 @@ export const authStore = defineStore('auth', () => {
     getName,
     getId,
     getDivision,
+    getDivisionId,
     getDivisionColor,
     getRole,
     getToken,

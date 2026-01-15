@@ -39,6 +39,14 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/division',
+    name: 'listDivision',
+    component: () => import(/* webpackChunkName: "division" */ '../views/divisionsManagement/ListUsersDivisionView.vue'),
+    meta:{
+      auth: true, 
+    }
+  },
+  {
     path: '/users',
     name: 'users',
     component: () => import(/* webpackChunkName: "users" */ '../views/UsersView.vue'),

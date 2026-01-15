@@ -29,7 +29,7 @@
         <input type="date" name="birthDate" id="birthDate" v-model="userWrite.birthDate">
         <label for="schoolClass">Turma Escolar:</label>
         <input type="text" name="schoolClass" id="schoolClass" v-model="userWrite.schoolClass">
-        <span>Inserindo informações falsas, você estará sujeito(a) a penalidades na equipe.</span>
+        <span>Insira apenas informações verdadeiras.</span>
         <button class="button">Atualizar Dados</button>
       </div>
     </form>
