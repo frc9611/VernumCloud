@@ -1,12 +1,16 @@
 <template>
   <h1>Arquivos (Cloud)</h1>
+  <form @submit.prevent="createFolder">
+    <input type="text" name="folderName" placeholder="Nome da Pasta" v-model="newFolder.name">
+    <button type="submit">Criar Pasta</button>
+  </form>
   <h3>Pasta Atual: {{ openedFolder.name }}</h3>
   <p class="directory">{{ directory }}</p>
   <p class="folder" v-if="openedFolder.id != 1" @click="goToFolder(openedFolder.parent.id)">..</p>
   <p class="folder" v-for="folder in childFolders" :key="folder.id" @click="goToFolder(folder.id)">{{ folder.name }}</p>
 </template>
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, reactive } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter,useRoute } from 'vue-router'
@@ -19,6 +23,10 @@ const auth = authStore();
 const childFolders = ref([]);
 const openedFolder = ref({});
 const directory = ref("");
+let newFolder = reactive({
+    name:'',
+    parentFolderId: route.params.id
+  });
 
 async function fetchFolders() {
   try {
@@ -57,10 +65,27 @@ async function fetchFolders() {
 
 onMounted(fetchFolders);
 
-watch(() => route.params.id, fetchFolders);
+watch(() => route.params.id, (newId) => {
+  fetchFolders();
+  newFolder.parentFolderId = newId;
+});
 
 function goToFolder(folderId){
   router.push(`/cloud/${folderId}`);
+}
+
+async function createFolder(){
+  try{
+      await http.post('/cloud/folder', newFolder, {
+      headers: {
+        Authorization: `Bearer ${auth.getToken}`
+      }});
+      toast.success("Pasta " + newFolder.name + " criada com sucesso!");
+      newFolder.name = '';
+      fetchFolders();
+    }catch(error){
+      toast.error("Erro ao criar pasta");
+    }
 }
 </script>
 <style>
