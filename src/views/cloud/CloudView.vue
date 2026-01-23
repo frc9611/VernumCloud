@@ -1,11 +1,12 @@
 <template>
   <h1>Arquivos (Cloud)</h1>
   <h3>Pasta Atual: {{ openedFolder.name }}</h3>
-  <p class="folder" @click="goToFolder(openedFolder.parent.id)">..</p>
+  <p class="directory">{{ directory }}</p>
+  <p class="folder" v-if="openedFolder.id != 1" @click="goToFolder(openedFolder.parent.id)">..</p>
   <p class="folder" v-for="folder in childFolders" :key="folder.id" @click="goToFolder(folder.id)">{{ folder.name }}</p>
 </template>
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import http from '@/services/http.js'
 import { authStore } from '@/store/auth.js'
 import { useRouter,useRoute } from 'vue-router'
@@ -16,7 +17,8 @@ const router = useRouter();
 const route = useRoute();
 const auth = authStore();
 const childFolders = ref([]);
-const openedFolder = ref([]);
+const openedFolder = ref({});
+const directory = ref("");
 
 async function fetchFolders() {
   try {
@@ -40,6 +42,17 @@ async function fetchFolders() {
   }catch (err) {
     toast.error("Erro ao carregar pasta atual.");
   }
+
+  try{
+    const response = await http.get('/cloud/folder/getDirectory/' + route.params.id, {
+      headers: {
+        Authorization: `Bearer ${auth.getToken}`
+      }
+    });
+    directory.value = response.data;
+  }catch (err) {
+    directory.value = "não foi possível obter o diretório";
+  }
 }
 
 onMounted(fetchFolders);
@@ -56,6 +69,9 @@ function goToFolder(folderId){
   }
   .folder{
     cursor:pointer;
+  }
+  .directory{
+    font-size: 12px;
   }
   
 </style>
