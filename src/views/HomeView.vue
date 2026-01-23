@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <h1>Olá {{ auth.getName }}</h1>
-    <span v-for="announcement in data" :key="announcement.announcementId" class="information"><strong> {{ announcement.title }} </strong> <br> {{ announcement.content }}</span> 
+    <span v-for="announcement in data" :key="announcement.announcementId" class="information"><strong> {{ announcement.title }} </strong> <br> {{ announcement.content }} <br><br> {{ announcement.sender.name }}</span> 
 
     <ul class="main-menu">
       <li><Router-link :to="{ name: 'home' }" class="menu-button">
@@ -13,7 +13,7 @@
       <li><Router-link :to="{ name: 'home' }" class="menu-button">
         Arquivos
       </Router-link></li>
-      <li><Router-link :to="{ name: 'home' }" class="menu-button">
+      <li><Router-link :to="{ name: 'listDivision' }" class="menu-button">
         Minha Divisão
       </Router-link></li>
       <li><Router-link :to="{ name: 'listusers' }" class="menu-button">
@@ -43,8 +43,6 @@ const data = ref([]);
       data.value = response.data;
     }catch (err){
       toast.error("Erro ao carregar avisos");
-      console.log(err?.response?.data);
-      console.log(err.message)
     }
   });
 </script>

@@ -108,7 +108,15 @@ const routes: Array<RouteRecordRaw> = [
       auth: true,
       requireAdmin: true
     }
-  }
+  },
+  {
+    path: '/cloud/:id',
+    name: 'cloud',
+    component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/CloudView.vue'),
+    meta:{
+      auth: true, 
+    }
+  },
 ]
 
 const router = createRouter({
