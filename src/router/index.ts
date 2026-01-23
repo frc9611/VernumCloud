@@ -110,8 +110,12 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/cloud/:id',
+    path: '/cloud',
     name: 'cloud',
+    redirect: '/cloud/1'
+  },
+  {
+    path: '/cloud/:id',
     component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/CloudView.vue'),
     meta:{
       auth: true, 

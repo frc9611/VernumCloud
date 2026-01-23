@@ -10,7 +10,7 @@
       <li><Router-link :to="{ name: 'home' }" class="menu-button">
         Fórum
       </Router-link></li>
-      <li><Router-link :to="{ name: 'home' }" class="menu-button">
+      <li><Router-link :to="{ name: 'cloud' }" class="menu-button">
         Arquivos
       </Router-link></li>
       <li><Router-link :to="{ name: 'listDivision' }" class="menu-button">

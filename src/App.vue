@@ -9,7 +9,7 @@
     <ul :class="{ open: menuOpen }">
       <li><Router-link :to="{ name: 'home' }">Home</Router-link></li>
       <li><Router-link :to="{ name: 'about' }">Sobre</Router-link></li>
-      <li><Router-link :to="{ name: 'about' }">Arquivos</Router-link></li>
+      <li><Router-link :to="{ name: 'cloud' }">Arquivos</Router-link></li>
       <li><Router-link :to="{ name: 'about' }">Fórum</Router-link></li>
       <li v-if="auth.isAuth && auth.getRole == 'ADMIN'"><Router-link :to="{ name: 'admin' }">Admin</Router-link></li>
 

@@ -1,13 +1,59 @@
 <template>
-  <h1>Arquivos (Cloud)</h1>
-  <form @submit.prevent="createFolder">
-    <input type="text" name="folderName" placeholder="Nome da Pasta" v-model="newFolder.name">
-    <button type="submit">Criar Pasta</button>
-  </form>
-  <h3>Pasta Atual: {{ openedFolder.name }}</h3>
-  <p class="directory">{{ directory }}</p>
-  <p class="folder" v-if="openedFolder.id != 1" @click="goToFolder(openedFolder.parent.id)">..</p>
-  <p class="folder" v-for="folder in childFolders" :key="folder.id" @click="goToFolder(folder.id)">{{ folder.name }}</p>
+  <div class="file-manager-container">
+    
+    <header class="top-bar">
+      <h1>Gerenciador de Arquivos (Cloud)</h1>
+      <form @submit.prevent="createFolder" class="create-form">
+        <input 
+          type="text" 
+          name="folderName" 
+          placeholder="Nome da nova pasta..." 
+          v-model="newFolder.name"
+          class="input-styled"
+          required
+        >
+        <button type="submit" class="btn-primary">
+          <span>+</span> Criar Pasta
+        </button>
+      </form>
+    </header>
+
+    <div class="navigation-bar">
+      <div class="current-path">
+        <span class="label">Local:</span>
+        <span class="path-text">{{ directory || '/' }}</span>
+      </div>
+      <h3 class="folder-title">{{ openedFolder.name }}</h3>
+    </div>
+
+    <hr class="divider">
+
+    <div class="folder-grid">
+      <div 
+        class="folder-card back-folder" 
+        v-if="openedFolder.id != 1" 
+        @click="goToFolder(openedFolder.parent.id)"
+      >
+        <div class="icon-wrapper back-icon">
+          <img class="folderPicture" src="../../assets/folder.png" alt="Voltar">
+        </div>
+        <span class="folder-name">Voltar (..)</span>
+      </div>
+
+      <div 
+        class="folder-card" 
+        v-for="folder in childFolders" 
+        :key="folder.id" 
+        @click="goToFolder(folder.id)"
+      >
+        <div class="icon-wrapper">
+          <img class="folderPicture" src="../../assets/folder.png" alt="Pasta">
+        </div>
+        <span class="folder-name">{{ folder.name }}</span>
+      </div>
+    </div>
+
+  </div>
 </template>
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
@@ -89,14 +135,194 @@ async function createFolder(){
 }
 </script>
 <style>
-  h1{
-    color: #865faf !important;
+  :root {
+  --primary-color: #865faf;
+  --primary-hover: #6a4b8c;
+  --bg-color: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-main: #333;
+  --text-light: #666;
+  --border-radius: 8px;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.file-manager-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  color: #333;
+}
+
+/* --- Cabeçalho --- */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+h1 {
+  color: #865faf;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.create-form {
+  display: flex;
+  gap: 10px;
+}
+
+.input-styled {
+  padding: 0.6rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 250px;
+}
+
+.input-styled:focus {
+  border-color: #865faf;
+}
+
+.btn-primary {
+  background-color: #865faf;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background-color: #6a4b8c;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* --- Navegação --- */
+.navigation-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.current-path {
+  background: #f0f0f5;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.label {
+  font-weight: bold;
+  margin-right: 5px;
+  color: #865faf;
+}
+
+.folder-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #444;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #eee;
+  margin-bottom: 2rem;
+}
+
+/* --- Grid de Pastas --- */
+.folder-grid {
+  display: grid;
+  /* Cria colunas automáticas de no mínimo 140px */
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+  gap: 1.5rem;
+}
+
+.folder-card {
+  background-color: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.folder-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(134, 95, 175, 0.15); /* Sombra roxa suave */
+  border-color: #e0d4f0;
+}
+
+.icon-wrapper {
+  margin-bottom: 10px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.folderPicture {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.folder-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  color: #333;
+  word-break: break-word; /* Quebra nomes longos */
+  line-height: 1.2;
+}
+
+/* Estilo específico para o botão de voltar */
+.back-folder {
+  background-color: #f9f9f9;
+  border-style: dashed;
+}
+
+.back-folder .folder-name {
+  color: #888;
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 600px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .folder{
-    cursor:pointer;
+  
+  .create-form {
+    flex-direction: column;
   }
-  .directory{
-    font-size: 12px;
+  
+  .input-styled {
+    width: 100%;
   }
+  
+  .folder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
   
 </style>
