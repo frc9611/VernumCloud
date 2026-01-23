@@ -77,26 +77,31 @@ let newFolder = reactive({
   });
 
 async function fetchFolders() {
-  try {
-    const response = await http.get('/cloud/childFolders/' + route.params.id, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }
-    });
-    childFolders.value = response.data;
-  } catch (err) {
-    toast.error("Erro ao carregar pastas.");
-  }
-
   try{
-    const response = await http.get('/cloud/folder/' + route.params.id, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }
-    });
-    openedFolder.value = response.data;
-  }catch (err) {
-    toast.error("Erro ao carregar pasta atual.");
+    try{
+      const response = await http.get('/cloud/folder/' + route.params.id, {
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      });
+      openedFolder.value = response.data;
+    }catch (err) {
+      throw new Error("Erro ao carregar informações da pasta.");
+    }
+
+    try {
+      const response = await http.get('/cloud/childFolders/' + route.params.id, {
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      });
+      childFolders.value = response.data;
+    } catch (err) {
+      throw new Error("Erro ao carregar o conteúdo.");
+    }
+
+  }catch(err){
+    toast.error(err.message);
   }
 
   try{
