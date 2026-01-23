@@ -14,6 +14,7 @@ app.use(pinia);
 app.use(Toast, {
   transition: "Vue-Toastification__bounce",
   maxToasts: 4,
+  timeout: 2500,
   newestOnTop: true
 });
 app.use(router); 

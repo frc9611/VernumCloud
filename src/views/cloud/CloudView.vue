@@ -50,6 +50,8 @@
           <img class="folderPicture" src="../../assets/folder.png" alt="Pasta">
         </div>
         <span class="folder-name">{{ folder.name }}</span>
+        <br>
+        <span class="deleteBtn" @click.stop="deleteFolder(folder.id)">Deletar</span>
       </div>
     </div>
 
@@ -133,6 +135,20 @@ async function createFolder(){
       toast.error("Erro ao criar pasta");
     }
 }
+
+async function deleteFolder(folderId){
+  try{
+      await http.delete('/cloud/folder/' + folderId, {
+      headers: {
+        Authorization: `Bearer ${auth.getToken}`
+      }});
+      toast.success("Pasta deletada com sucesso!");
+      fetchFolders();
+    }catch(error){
+      toast.warning("A pasta possui conteúdo e não pode ser deletada!");
+    }
+}
+
 </script>
 <style>
   :root {
@@ -293,6 +309,11 @@ h1 {
   color: #333;
   word-break: break-word; /* Quebra nomes longos */
   line-height: 1.2;
+}
+
+.deleteBtn{
+  font-size: 14px;
+  color:rgb(180, 0, 0);
 }
 
 /* Estilo específico para o botão de voltar */
