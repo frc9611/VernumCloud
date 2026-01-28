@@ -65,7 +65,7 @@
         class="folder-card" 
         v-for="file in filesInFolder" 
         :key="file.fileId" 
-        @click="goToFile(folder.fileId)"
+        @click="goToFile(file.fileId)"
       >
         <div class="icon-wrapper">
           <img class="folderPicture" src="../../assets/file.png" alt="Pasta">
@@ -227,6 +227,14 @@ async function uploadFile(){
   } catch (error) {
     toast.error("Erro!");
   }
+}
+
+function deleteFile(fileId){
+  toast.info("Em implementação. \n Nada foi deletado.");
+}
+
+function goToFile(fileId){
+  toast.info("Em implementação.");
 }
 
 </script>
