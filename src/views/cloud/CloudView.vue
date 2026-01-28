@@ -212,6 +212,7 @@ async function uploadFile(){
   formData.append("folderId", route.params.id);
 
   try {
+    toast.info("Iniciando upload, aguarde nessa página...")
     await http.post(
       `/cloud/uploadFile`,
       formData,
@@ -222,7 +223,7 @@ async function uploadFile(){
       }
     );
 
-    toast.success("Enviando...");
+    toast.success("Upload feito com sucesso!");
     fetchFiles();
     selectedFile.value = null;
   } catch (error) {
@@ -230,12 +231,51 @@ async function uploadFile(){
   }
 }
 
-function deleteFile(fileId){
-  toast.info("Em implementação. \n Nada foi deletado.");
+async function goToFile(fileId) {
+  try{
+    const response = await http.get(
+      `/cloud/file/${fileId}`,
+      {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    );
+    const contentType = response.headers['content-type'] || 'application/pdf';
+    const blob = new Blob([response.data], { type: contentType })
+    const fileURL = window.URL.createObjectURL(blob);
+
+    // 1. Extrair o nome do header que enviamos do Java
+const contentDisposition = response.headers['content-disposition'];
+let fileName = 'arquivo_baixado'; // nome padrão caso falhe
+
+if (contentDisposition) {
+    // Procura por filename="nome.ext" ou filename=nome.ext
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+        fileName = match[1];
+    }
 }
 
-function goToFile(fileId){
-  toast.info("Em implementação.");
+// 2. Criar um elemento "a" invisível para disparar o download
+const link = document.createElement('a');
+link.href = fileURL;
+link.download = fileName; // AQUI é onde a mágica do nome acontece
+document.body.appendChild(link);
+link.click();
+
+// 3. Limpeza
+document.body.removeChild(link);
+window.URL.revokeObjectURL(fileURL);
+  }
+  catch(error){
+    toast.warning("Erro ao baixar arquivo.");
+  }
+}
+
+function deleteFile(fileId){
+  toast.info("Em implementação. \n Nada foi deletado.");
 }
 
 </script>
