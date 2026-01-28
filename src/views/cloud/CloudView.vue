@@ -2,7 +2,15 @@
   <div class="file-manager-container">
     
     <header class="top-bar">
-      <h1>Gerenciador de Arquivos (Cloud)</h1>
+        <label for="file-upload" class="btn-primary">
+        Enviar Arquivo
+    </label>
+        <input
+          id="file-upload"
+          type="file"
+          accept="*"
+          @change="uploadFile"
+        />
       <form @submit.prevent="createFolder" class="create-form">
         <input 
           type="text" 
@@ -53,6 +61,19 @@
         <br>
         <span class="deleteBtn" @click.stop="deleteFolder(folder.id)">Deletar</span>
       </div>
+      <div 
+        class="folder-card" 
+        v-for="file in filesInFolder" 
+        :key="file.fileId" 
+        @click="goToFile(folder.fileId)"
+      >
+        <div class="icon-wrapper">
+          <img class="folderPicture" src="../../assets/file.png" alt="Pasta">
+        </div>
+        <span class="folder-name">{{ file.name }}</span>
+        <br>
+        <span class="deleteBtn" @click.stop="deleteFile(file.fileId)">Deletar</span>
+      </div>
     </div>
 
   </div>
@@ -70,7 +91,10 @@ const route = useRoute();
 const auth = authStore();
 const childFolders = ref([]);
 const openedFolder = ref({});
+const filesInFolder = ref({});
 const directory = ref("");
+const selectedFile = ref(null);
+
 let newFolder = reactive({
     name:'',
     parentFolderId: route.params.id
@@ -114,6 +138,21 @@ async function fetchFolders() {
   }catch (err) {
     directory.value = "não foi possível obter o diretório";
   }
+  fetchFiles();
+}
+
+async function fetchFiles() {
+  try{
+    const response = await http.get('/cloud/folder/' + route.params.id + '/listFiles', {
+      headers:{
+        Authorization: `Bearer ${auth.getToken}`
+      }
+    });
+    filesInFolder.value = response.data;
+  }catch(err){
+    toast.error(err.message);
+  }
+  
 }
 
 onMounted(fetchFolders);
@@ -152,6 +191,42 @@ async function deleteFolder(folderId){
     }catch(error){
       toast.warning("A pasta possui conteúdo e não pode ser deletada!");
     }
+}
+
+function onFileChange(){
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedFile.value = file;
+}
+
+async function uploadFile(){
+  onFileChange();
+  if (!selectedFile.value) {
+    toast.error("Selecione um arquivo");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", selectedFile.value);
+  formData.append("folderId", route.params.id);
+
+  try {
+    await http.post(
+      `/cloud/uploadFile`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    );
+
+    toast.success("Enviando...");
+    selectedFile.value = null;
+  } catch (error) {
+    toast.error("Erro!");
+  }
 }
 
 </script>
@@ -228,6 +303,17 @@ h1 {
 
 .btn-primary:active {
   transform: scale(0.98);
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.file-upload {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
 /* --- Navegação --- */
