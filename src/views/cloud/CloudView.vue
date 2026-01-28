@@ -249,7 +249,7 @@ async function goToFile(fileId) {
     if(contentType.startsWith("image/") || contentType.startsWith("application/pdf") || contentType.startsWith("video/")){
       window.open(fileURL, '_blank');
     }else{
-      
+
       const contentDisposition = response.headers['content-disposition'];
       let fileName = 'arquivo'; 
 
@@ -277,8 +277,21 @@ async function goToFile(fileId) {
   }
 }
 
-function deleteFile(fileId){
-  toast.info("Em implementação. \n Nada foi deletado.");
+async function deleteFile(fileId){
+  try{
+    await http.delete(
+      `/cloud/file/${fileId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${auth.getToken}`
+        }
+      }
+    );
+    toast.info("Arquivo deletado.");
+    fetchFiles();
+  }catch(error){
+    toast.error("Erro ao deletar arquivo");
+  }
 }
 
 </script>
