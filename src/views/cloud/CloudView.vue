@@ -223,6 +223,7 @@ async function uploadFile(){
     );
 
     toast.success("Enviando...");
+    fetchFiles();
     selectedFile.value = null;
   } catch (error) {
     toast.error("Erro!");
