@@ -246,28 +246,31 @@ async function goToFile(fileId) {
     const blob = new Blob([response.data], { type: contentType })
     const fileURL = window.URL.createObjectURL(blob);
 
-    // 1. Extrair o nome do header que enviamos do Java
-const contentDisposition = response.headers['content-disposition'];
-let fileName = 'arquivo_baixado'; // nome padrão caso falhe
+    if(contentType.startsWith("image/") || contentType.startsWith("application/pdf") || contentType.startsWith("video/")){
+      window.open(fileURL, '_blank');
+    }else{
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'arquivo'; 
 
-if (contentDisposition) {
-    // Procura por filename="nome.ext" ou filename=nome.ext
-    const match = contentDisposition.match(/filename="?([^"]+)"?/);
-    if (match && match[1]) {
-        fileName = match[1];
+      if (contentDisposition) {
+
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+            fileName = match[1];
+        }
+      }
+      const link = document.createElement('a');
+      link.href = fileURL;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(fileURL);
+      toast.info("Baixando arquivo");
     }
-}
-
-// 2. Criar um elemento "a" invisível para disparar o download
-const link = document.createElement('a');
-link.href = fileURL;
-link.download = fileName; // AQUI é onde a mágica do nome acontece
-document.body.appendChild(link);
-link.click();
-
-// 3. Limpeza
-document.body.removeChild(link);
-window.URL.revokeObjectURL(fileURL);
   }
   catch(error){
     toast.warning("Erro ao baixar arquivo.");
