@@ -232,6 +232,7 @@ async function uploadFile(){
 }
 
 async function goToFile(fileId) {
+  toast.info("Solicitando ao Vernum Server para baixar/abrir o arquivo.");
   try{
     const response = await http.get(
       `/cloud/file/${fileId}`,

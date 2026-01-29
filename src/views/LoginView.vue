@@ -45,6 +45,8 @@
 
 const auth = authStore();
 
+verifyServer();
+
   const user = reactive({
     username:'',
     password:''
@@ -65,6 +67,14 @@ const auth = authStore();
     }catch(error){
       console.log(error?.response?.data);
       toast.error('Usuário ou senha incorretos!');
+    }
+  }
+
+  async function verifyServer() {
+    try{
+      await http.get("/serverInfo");
+    }catch(err){
+      toast.error("Vernum Server Offline!");
     }
   }
 
