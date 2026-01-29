@@ -137,6 +137,8 @@ async function fetchFolders() {
     directory.value = response.data;
   }catch (err) {
     directory.value = "não foi possível obter o diretório";
+    toast.error("A pasta que você tentou acessar não existe!")
+    router.push({name: 'cloud'});
   }
   fetchFiles();
 }
