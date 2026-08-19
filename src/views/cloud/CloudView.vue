@@ -1,508 +1,808 @@
 <template>
-  <div class="file-manager-container">
-    
-    <header class="top-bar">
-        <label for="file-upload" class="btn-primary">
-        Enviar Arquivo
-    </label>
-        <input
-          id="file-upload"
-          type="file"
-          accept="*"
-          @change="uploadFile"
-        />
-      <form @submit.prevent="createFolder" class="create-form">
-        <input 
-          type="text" 
-          name="folderName" 
-          placeholder="Nome da nova pasta..." 
-          v-model="newFolder.name"
-          class="input-styled"
-          required
-        >
-        <button type="submit" class="btn-primary">
-          <span>+</span> Criar Pasta
+  <main class="vc-page vc-page--wide">
+    <TabBar v-model="tab" :tabs="tabs">
+      <template #context>
+        <span class="vc-chip vc-chip--purple">{{ auth.activeTenantName }}</span>
+        <span v-if="content.access" class="vc-chip">{{ accessLabel(content.access) }}</span>
+      </template>
+    </TabBar>
+
+    <!-- ------------------------------------------------------ access denied -->
+    <div v-if="content.denied" class="vc-stack">
+      <AlertBanner variant="warning" icon="🔒" :title="'Sem acesso a ' + (content.folder?.name || 'esta pasta')"
+                   aside="Você pode solicitar acesso">
+        Esta pasta existe, mas ainda não foi liberada para você.
+      </AlertBanner>
+
+      <PanelCard title="Solicitar acesso" icon="🔐">
+        <p v-if="content.myAccessRequest">
+          Seu pedido está <strong>{{ content.myAccessRequest.statusLabel }}</strong> desde
+          {{ formatWhen(content.myAccessRequest.createdAt) }}. Quem pode liberar já foi notificado.
+        </p>
+        <template v-else>
+          <div class="vc-field">
+            <label class="vc-label" for="requestLevel">Nível desejado</label>
+            <select id="requestLevel" class="vc-select" v-model="accessRequest.requestedLevel">
+              <option value="VIEW">Ver e baixar</option>
+              <option value="EDIT">Ver, enviar e alterar</option>
+            </select>
+          </div>
+          <div class="vc-field">
+            <label class="vc-label" for="requestMessage">Mensagem</label>
+            <textarea id="requestMessage" class="vc-textarea" v-model="accessRequest.message"
+                      placeholder="Explique por que precisa deste acesso."></textarea>
+          </div>
+          <button class="vc-btn" type="button" @click="requestAccess">Enviar pedido</button>
+        </template>
+      </PanelCard>
+
+      <div class="vc-row">
+        <button class="vc-btn vc-btn--ghost" type="button" @click="goUp">Voltar</button>
+        <router-link class="vc-btn vc-btn--ghost" :to="{ name: 'cloud' }">Ir para a raiz da equipe</router-link>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------- file manager -->
+    <div v-else class="vc-stack">
+      <!-- breadcrumb + actions -->
+      <div class="vc-row vc-row--between">
+        <nav class="cloud__path">
+          <template v-for="(item, index) in content.path || []" :key="item.id">
+            <router-link :to="{ name: 'cloudFolder', params: { id: item.id } }" class="cloud__crumb">
+              {{ index === 0 ? '🏠 ' + item.name : item.name }}
+            </router-link>
+            <span v-if="index < (content.path || []).length - 1" class="cloud__sep">/</span>
+          </template>
+        </nav>
+
+        <div class="vc-row">
+          <router-link class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'sharedWithMe' }">
+            Compartilhados comigo
+          </router-link>
+          <router-link class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'accessRequests' }">
+            Pedidos de acesso
+          </router-link>
+        </div>
+      </div>
+
+      <div class="vc-row">
+        <label v-if="content.canUpload" class="vc-btn">
+          Enviar arquivo
+          <input type="file" style="display: none" @change="upload" />
+        </label>
+        <form v-if="content.canUpload" class="vc-row" style="gap: 6px" @submit.prevent="createFolder">
+          <input class="vc-input" style="min-width: 220px" type="text" v-model="newFolderName"
+                 placeholder="Nome da nova pasta..." required />
+          <button class="vc-btn vc-btn--outline" type="submit">+ Criar pasta</button>
+        </form>
+        <span class="vc-spacer"></span>
+        <button v-if="content.canManage && !isRoot" class="vc-btn vc-btn--ghost vc-btn--small"
+                type="button" @click="openFolderSettings">
+          Configurar pasta
         </button>
-      </form>
-    </header>
-
-    <div class="navigation-bar">
-      <div class="current-path">
-        <span class="label">Local:</span>
-        <span class="path-text">{{ directory || '/' }}</span>
+        <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="openComments('folder', content.folder)">
+          Comentários
+        </button>
       </div>
-      <h3 class="folder-title">{{ openedFolder.name }}</h3>
+
+      <div v-if="uploading" class="vc-banner vc-banner--info">
+        Enviando arquivo... {{ uploadProgress }}%
+      </div>
+
+      <!-- content grid -->
+      <div class="cloud__grid">
+        <button v-if="!isRoot" type="button" class="cloud__item cloud__item--back" @click="goUp">
+          <span class="cloud__icon">↩</span>
+          <span class="cloud__name">Voltar</span>
+        </button>
+
+        <div
+          v-for="folder in content.folders || []"
+          :key="'folder-' + folder.id"
+          :class="['cloud__item', folder.access === 'NONE' ? 'is-locked' : '']"
+        >
+          <button type="button" class="cloud__open" @click="openFolder(folder)">
+            <span class="cloud__icon">{{ folder.access === 'NONE' ? '🔒' : '📁' }}</span>
+            <span class="cloud__name">{{ folder.name }}</span>
+            <span v-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
+            <span v-else-if="folder.access === 'NONE'" class="vc-chip">sem acesso</span>
+          </button>
+          <div class="cloud__actions">
+            <button v-if="canManageItem(folder)" class="cloud__action" type="button" @click="openShares('folder', folder)">
+              Compartilhar
+            </button>
+            <button v-if="canManageItem(folder)" class="cloud__action" type="button" @click="openItemSettings('folder', folder)">
+              Editar
+            </button>
+            <button v-if="canManageItem(folder)" class="cloud__action is-danger" type="button" @click="removeFolder(folder)">
+              Deletar
+            </button>
+            <button v-if="folder.access === 'NONE'" class="cloud__action" type="button" @click="openFolder(folder)">
+              Solicitar
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-for="file in content.files || []"
+          :key="'file-' + file.fileId"
+          :class="['cloud__item', file.access === 'NONE' ? 'is-locked' : '']"
+        >
+          <button type="button" class="cloud__open" @click="openFile(file)">
+            <span class="cloud__icon">{{ file.access === 'NONE' ? '🔒' : '📄' }}</span>
+            <span class="cloud__name">{{ file.name }}</span>
+            <span v-if="file.sizeBytes" class="vc-faint">{{ formatSize(file.sizeBytes) }}</span>
+            <span v-else-if="file.access === 'NONE'" class="vc-chip">sem acesso</span>
+          </button>
+          <div class="cloud__actions">
+            <button class="cloud__action" type="button" @click="openComments('file', file)">Comentar</button>
+            <button v-if="canManageItem(file)" class="cloud__action" type="button" @click="openShares('file', file)">
+              Compartilhar
+            </button>
+            <button v-if="canManageItem(file)" class="cloud__action" type="button" @click="openItemSettings('file', file)">
+              Editar
+            </button>
+            <button v-if="canEditItem(file)" class="cloud__action is-danger" type="button" @click="removeFile(file)">
+              Deletar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <EmptyState v-if="isEmpty" title="Pasta vazia">
+        Envie um arquivo ou crie uma pasta para começar.
+      </EmptyState>
     </div>
 
-    <hr class="divider">
+    <!-- ------------------------------------------------------------ shares -->
+    <ModalDialog v-if="sharing" wide :title="'Compartilhar ' + sharing.item.name" @close="sharing = null">
+      <div class="vc-table-wrap" v-if="shares.length">
+        <table class="vc-table">
+          <thead><tr><th>Para</th><th>Nível</th><th>Origem</th><th></th></tr></thead>
+          <tbody>
+            <tr v-for="share in shares" :key="share.shareId">
+              <td>
+                {{ share.granteeUserName || share.granteeDivisionName || share.granteeTenantName }}
+                <span class="vc-faint">({{ granteeLabel(share.granteeType) }})</span>
+              </td>
+              <td>{{ accessLabel(share.accessLevel) }}</td>
+              <td>
+                <span v-if="share.external" class="vc-chip vc-chip--warning">externo</span>
+                <span v-else class="vc-chip">interno</span>
+              </td>
+              <td style="text-align: right">
+                <button class="vc-btn vc-btn--danger vc-btn--small" type="button" @click="removeShare(share)">
+                  Remover
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-else class="vc-faint" style="margin: 0">Nenhum compartilhamento explícito ainda.</p>
 
-    <div class="folder-grid">
-      <div 
-        class="folder-card back-folder" 
-        v-if="openedFolder.id != 1" 
-        @click="goToFolder(openedFolder.parent.id)"
-      >
-        <div class="icon-wrapper back-icon">
-          <img class="folderPicture" src="../../assets/folder.png" alt="Voltar">
-        </div>
-        <span class="folder-name">Voltar (..)</span>
+      <hr class="vc-divider" />
+
+      <div class="vc-field">
+        <label class="vc-label" for="granteeType">Compartilhar com</label>
+        <select id="granteeType" class="vc-select" v-model="newShare.granteeType">
+          <option value="USER">Uma pessoa</option>
+          <option value="DIVISION">Uma divisão (e suas subdivisões)</option>
+          <option value="TENANT">Uma equipe inteira</option>
+        </select>
       </div>
 
-      <div 
-        class="folder-card" 
-        v-for="folder in childFolders" 
-        :key="folder.id" 
-        @click="goToFolder(folder.id)"
-      >
-        <div class="icon-wrapper">
-          <img class="folderPicture" src="../../assets/folder.png" alt="Pasta">
-        </div>
-        <span class="folder-name">{{ folder.name }}</span>
-        <br>
-        <span class="deleteBtn" @click.stop="deleteFolder(folder.id)">Deletar</span>
+      <div v-if="newShare.granteeType === 'USER'" class="vc-field">
+        <label class="vc-label" for="granteeUsername">Usuário</label>
+        <input id="granteeUsername" class="vc-input" type="text" v-model="newShare.granteeUsername"
+               placeholder="username da pessoa" />
+        <span class="vc-faint">Pode ser alguém de outra equipe: aí é um compartilhamento externo.</span>
       </div>
-      <div 
-        class="folder-card" 
-        v-for="file in filesInFolder" 
-        :key="file.fileId" 
-        @click="goToFile(file.fileId)"
-      >
-        <div class="icon-wrapper">
-          <img class="folderPicture" src="../../assets/file.png" alt="Pasta">
-        </div>
-        <span class="folder-name">{{ file.name }}</span>
-        <br>
-        <span class="deleteBtn" @click.stop="deleteFile(file.fileId)">Deletar</span>
-      </div>
-    </div>
 
-  </div>
+      <div v-else-if="newShare.granteeType === 'DIVISION'" class="vc-field">
+        <label class="vc-label" for="granteeDivision">Divisão</label>
+        <select id="granteeDivision" class="vc-select" v-model="newShare.granteeDivisionId">
+          <option :value="null">Escolha uma divisão</option>
+          <option v-for="division in divisionList" :key="division.divisionId" :value="division.divisionId">
+            {{ division.visibleName }}
+          </option>
+        </select>
+      </div>
+
+      <div v-else class="vc-field">
+        <label class="vc-label" for="granteeTenant">Equipe</label>
+        <select id="granteeTenant" class="vc-select" v-model="newShare.granteeTenantId">
+          <option :value="null">Escolha uma equipe</option>
+          <option v-for="tenant in tenantList" :key="tenant.tenantId" :value="tenant.tenantId">
+            {{ tenant.visibleName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="vc-field">
+        <label class="vc-label" for="accessLevel">Nível de acesso</label>
+        <select id="accessLevel" class="vc-select" v-model="newShare.accessLevel">
+          <option value="VIEW">Ver e baixar</option>
+          <option value="EDIT">Ver, enviar e alterar</option>
+          <option value="MANAGE">Gerenciar e compartilhar</option>
+        </select>
+      </div>
+
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="sharing = null">Fechar</button>
+        <button class="vc-btn" type="button" @click="addShare">Compartilhar</button>
+      </template>
+    </ModalDialog>
+
+    <!-- ---------------------------------------------------------- settings -->
+    <ModalDialog v-if="settings" :title="'Configurar ' + settings.item.name" @close="settings = null">
+      <div class="vc-field">
+        <label class="vc-label" for="itemName">Nome</label>
+        <input id="itemName" class="vc-input" type="text" v-model="settingsForm.name" />
+      </div>
+      <div v-if="settings.kind === 'folder'" class="vc-field">
+        <label class="vc-label" for="visibility">Quem alcança esta pasta</label>
+        <select id="visibility" class="vc-select" v-model="settingsForm.visibility">
+          <option value="INHERIT">Herdar da pasta acima</option>
+          <option value="TENANT">Toda a equipe</option>
+          <option value="RESTRICTED">Somente quem eu compartilhar</option>
+        </select>
+      </div>
+      <label class="vc-checkbox">
+        <input type="checkbox" v-model="settingsForm.hiddenTitle" />
+        <span>
+          Esconder o nome de quem não tem acesso
+          <span class="vc-faint" style="display: block">
+            Quem não pode abrir vê "[redacted]" em vez do nome.
+          </span>
+        </span>
+      </label>
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="settings = null">Cancelar</button>
+        <button class="vc-btn" type="button" @click="saveSettings">Salvar</button>
+      </template>
+    </ModalDialog>
+
+    <!-- ---------------------------------------------------------- comments -->
+    <ModalDialog v-if="commenting" :title="'Comentários de ' + commenting.item.name" @close="commenting = null">
+      <p v-if="!comments.length" class="vc-faint" style="margin: 0">Nenhum comentário ainda.</p>
+      <article v-for="comment in comments" :key="comment.commentId" class="cloud__comment">
+        <div class="vc-row vc-row--between">
+          <strong class="vc-small">{{ comment.authorName }}</strong>
+          <span class="vc-faint">{{ formatWhen(comment.createdAt) }}</span>
+        </div>
+        <p style="margin: 4px 0 0">{{ comment.content }}</p>
+        <button v-if="comment.authorId === auth.getId" class="vc-btn vc-btn--ghost vc-btn--small"
+                style="margin-top: 6px" type="button" @click="removeComment(comment)">
+          Remover
+        </button>
+      </article>
+
+      <hr class="vc-divider" />
+      <div class="vc-field">
+        <label class="vc-label" for="newComment">Novo comentário</label>
+        <textarea id="newComment" class="vc-textarea" v-model="newComment"
+                  placeholder="Escreva algo sobre este item."></textarea>
+      </div>
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="commenting = null">Fechar</button>
+        <button class="vc-btn" type="button" :disabled="!newComment.trim()" @click="addComment">Comentar</button>
+      </template>
+    </ModalDialog>
+  </main>
 </template>
+
 <script setup>
-import { ref, onMounted, watch, reactive } from 'vue'
-import http from '@/services/http.js'
-import { authStore } from '@/store/auth.js'
-import { useRouter,useRoute } from 'vue-router'
-import { useToast } from "vue-toastification"
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import TabBar from '@/components/TabBar.vue';
+import AlertBanner from '@/components/AlertBanner.vue';
+import PanelCard from '@/components/PanelCard.vue';
+import ModalDialog from '@/components/ModalDialog.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import { authStore } from '@/store/auth.js';
+import { cloud, divisions, tenants } from '@/services/api.js';
+import { apiMessage } from '@/services/http.js';
 
-const toast = useToast();
-const router = useRouter();
-const route = useRoute();
+/*
+ * The file manager.
+ *
+ * Items the user cannot open still appear on the grid, locked, because the server sends
+ * them with access NONE. Opening one lands on the "solicitar acesso" screen instead of
+ * an error, which is what the denied branch of the template draws.
+ */
 const auth = authStore();
-const childFolders = ref([]);
-const openedFolder = ref({});
-const filesInFolder = ref({});
-const directory = ref("");
-const selectedFile = ref(null);
+const route = useRoute();
+const router = useRouter();
+const toast = useToast();
 
-let newFolder = reactive({
-    name:'',
-    parentFolderId: route.params.id
-  });
+const tab = ref('files');
+const tabs = [
+  { key: 'files', label: 'Arquivos' },
+  { key: 'shared', label: 'Compartilhados comigo', to: { name: 'sharedWithMe' } },
+  { key: 'requests', label: 'Pedidos de acesso', to: { name: 'accessRequests' } },
+];
 
-async function fetchFolders() {
-  try{
-    try{
-      const response = await http.get('/cloud/folder/' + route.params.id, {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      });
-      openedFolder.value = response.data;
-    }catch (err) {
-      throw new Error("Erro ao carregar informações da pasta.");
-    }
+const content = ref({});
+const newFolderName = ref('');
+const uploading = ref(false);
+const uploadProgress = ref(0);
 
-    try {
-      const response = await http.get('/cloud/childFolders/' + route.params.id, {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      });
-      childFolders.value = response.data;
-    } catch (err) {
-      throw new Error("Erro ao carregar o conteúdo.");
-    }
+const accessRequest = reactive({ message: '', requestedLevel: 'VIEW' });
 
-  }catch(err){
-    toast.error(err.message);
-  }
-
-  try{
-    const response = await http.get('/cloud/folder/getDirectory/' + route.params.id, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }
-    });
-    directory.value = response.data;
-  }catch (err) {
-    directory.value = "não foi possível obter o diretório";
-    toast.error("A pasta que você tentou acessar não existe!")
-    router.push({name: 'cloud'});
-  }
-  fetchFiles();
-}
-
-async function fetchFiles() {
-  try{
-    const response = await http.get('/cloud/folder/' + route.params.id + '/listFiles', {
-      headers:{
-        Authorization: `Bearer ${auth.getToken}`
-      }
-    });
-    filesInFolder.value = response.data;
-  }catch(err){
-    toast.error(err.message);
-  }
-  
-}
-
-onMounted(fetchFolders);
-
-watch(() => route.params.id, (newId) => {
-  fetchFolders();
-  newFolder.parentFolderId = newId;
+const sharing = ref(null);
+const shares = ref([]);
+const divisionList = ref([]);
+const tenantList = ref([]);
+const newShare = reactive({
+  granteeType: 'USER', granteeUsername: '', granteeDivisionId: null,
+  granteeTenantId: null, accessLevel: 'VIEW',
 });
 
-function goToFolder(folderId){
-  router.push(`/cloud/${folderId}`);
-}
+const settings = ref(null);
+const settingsForm = reactive({ name: '', visibility: 'INHERIT', hiddenTitle: false });
 
-async function createFolder(){
-  try{
-      await http.post('/cloud/folder', newFolder, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }});
-      toast.success("Pasta " + newFolder.name + " criada com sucesso!");
-      newFolder.name = '';
-      fetchFolders();
-    }catch(error){
-      toast.error("Erro ao criar pasta");
+const commenting = ref(null);
+const comments = ref([]);
+const newComment = ref('');
+
+const isRoot = computed(() => !content.value.folder?.parentId);
+const isEmpty = computed(
+  () => !content.value.denied && !(content.value.folders || []).length && !(content.value.files || []).length,
+);
+
+onMounted(load);
+watch(() => route.params.id, load);
+watch(() => auth.activeTenantId, () => {
+  if (route.name === 'cloud') load();
+  else router.push({ name: 'cloud' });
+});
+
+async function load() {
+  try {
+    const folderId = route.params.id || (await rootId());
+    if (!folderId) return;
+    if (!route.params.id) {
+      router.replace({ name: 'cloudFolder', params: { id: folderId } });
+      return;
     }
+    const { data } = await cloud.folder(folderId);
+    content.value = data;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao abrir a pasta'));
+    content.value = {};
+  }
 }
 
-async function deleteFolder(folderId){
-  try{
-      await http.delete('/cloud/folder/' + folderId, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }});
-      toast.success("Pasta deletada com sucesso!");
-      fetchFolders();
-    }catch(error){
-      toast.warning("A pasta possui conteúdo e não pode ser deletada!");
-    }
+/** Root folder of the team currently open, used when no folder is on the URL. */
+async function rootId() {
+  if (!auth.activeTenantId) return null;
+  try {
+    const { data } = await cloud.root(auth.activeTenantId);
+    return data.id;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao abrir os arquivos da equipe'));
+    return null;
+  }
 }
 
-function onFileChange(){
-  const file = event.target.files[0];
+function openFolder(folder) {
+  router.push({ name: 'cloudFolder', params: { id: folder.id } });
+}
+
+function goUp() {
+  const parentId = content.value.folder?.parentId;
+  if (parentId) {
+    router.push({ name: 'cloudFolder', params: { id: parentId } });
+  } else {
+    router.push({ name: 'cloud' });
+  }
+}
+
+async function createFolder() {
+  try {
+    await cloud.createFolder({ name: newFolderName.value, parentFolderId: content.value.folder.id });
+    newFolderName.value = '';
+    await load();
+    toast.success('Pasta criada!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao criar pasta'));
+  }
+}
+
+async function removeFolder(folder) {
+  if (!window.confirm('Remover a pasta ' + folder.name + ' e tudo dentro dela?')) return;
+  try {
+    await cloud.removeFolder(folder.id);
+    await load();
+    toast.info('Pasta removida.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao remover pasta'));
+  }
+}
+
+async function upload(event) {
+  const file = event.target.files?.[0];
   if (!file) return;
-
-  selectedFile.value = file;
+  uploading.value = true;
+  uploadProgress.value = 0;
+  try {
+    await cloud.upload(content.value.folder.id, file, (progress) => {
+      if (progress.total) {
+        uploadProgress.value = Math.round((progress.loaded / progress.total) * 100);
+      }
+    });
+    await load();
+    toast.success('Upload concluído!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao enviar arquivo'));
+  } finally {
+    uploading.value = false;
+    event.target.value = '';
+  }
 }
 
-async function uploadFile(){
-  onFileChange();
-  if (!selectedFile.value) {
-    toast.error("Selecione um arquivo");
+async function openFile(file) {
+  if (file.access === 'NONE') {
+    await requestFileAccess(file);
     return;
   }
-
-  const formData = new FormData();
-  formData.append("file", selectedFile.value);
-  formData.append("folderId", route.params.id);
-
+  toast.info('Solicitando o arquivo ao servidor...');
   try {
-    toast.info("Iniciando upload, aguarde nessa página...")
-    await http.post(
-      `/cloud/uploadFile`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      }
-    );
+    const response = await cloud.download(file.fileId);
+    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
 
-    toast.success("Upload feito com sucesso!");
-    fetchFiles();
-    selectedFile.value = null;
-  } catch (error) {
-    toast.error("Erro!");
-  }
-}
-
-async function goToFile(fileId) {
-  toast.info("Solicitando ao Vernum Server para baixar/abrir o arquivo.");
-  try{
-    const response = await http.get(
-      `/cloud/file/${fileId}`,
-      {
-        responseType: 'blob',
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      }
-    );
-    const contentType = response.headers['content-type'] || 'application/pdf';
-    const blob = new Blob([response.data], { type: contentType })
-    const fileURL = window.URL.createObjectURL(blob);
-
-    if(contentType.startsWith("image/") || contentType.startsWith("application/pdf") || contentType.startsWith("video/")){
-      window.open(fileURL, '_blank');
-    }else{
-
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'arquivo'; 
-
-      if (contentDisposition) {
-
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match && match[1]) {
-            fileName = match[1];
-        }
-      }
-      const link = document.createElement('a');
-      link.href = fileURL;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-
-
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(fileURL);
-      toast.info("Baixando arquivo");
+    const openable = ['image/', 'application/pdf', 'video/', 'audio/', 'text/'];
+    if (openable.some((prefix) => contentType.startsWith(prefix))) {
+      window.open(url, '_blank');
+      return;
     }
-  }
-  catch(error){
-    toast.warning("Erro ao baixar arquivo.");
-  }
-}
-
-async function deleteFile(fileId){
-  try{
-    await http.delete(
-      `/cloud/file/${fileId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      }
-    );
-    toast.info("Arquivo deletado.");
-    fetchFiles();
-  }catch(error){
-    toast.error("Erro ao deletar arquivo");
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.originalName || file.name || 'arquivo';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao baixar arquivo'));
   }
 }
 
+async function removeFile(file) {
+  if (!window.confirm('Remover o arquivo ' + file.name + '?')) return;
+  try {
+    await cloud.removeFile(file.fileId);
+    await load();
+    toast.info('Arquivo removido.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao remover arquivo'));
+  }
+}
+
+/* ------------------------------------------------------------ access requests */
+
+async function requestAccess() {
+  try {
+    await cloud.requestFolderAccess(content.value.folder.id, { ...accessRequest });
+    await load();
+    toast.success('Pedido enviado! Quem pode liberar foi notificado.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao enviar pedido'));
+  }
+}
+
+async function requestFileAccess(file) {
+  try {
+    await cloud.requestFileAccess(file.fileId, { requestedLevel: 'VIEW' });
+    toast.success('Pedido de acesso enviado!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao enviar pedido'));
+  }
+}
+
+/* -------------------------------------------------------------------- shares */
+
+function canManageItem(item) {
+  return item.access === 'MANAGE';
+}
+
+function canEditItem(item) {
+  return item.access === 'MANAGE' || item.access === 'EDIT';
+}
+
+async function openShares(kind, item) {
+  sharing.value = { kind, item };
+  Object.assign(newShare, {
+    granteeType: 'USER', granteeUsername: '', granteeDivisionId: null,
+    granteeTenantId: null, accessLevel: 'VIEW',
+  });
+  await Promise.all([loadShares(), loadShareTargets()]);
+}
+
+async function loadShares() {
+  try {
+    const { data } = sharing.value.kind === 'folder'
+      ? await cloud.folderShares(sharing.value.item.id)
+      : await cloud.fileShares(sharing.value.item.fileId);
+    shares.value = data;
+  } catch (error) {
+    shares.value = [];
+  }
+}
+
+async function loadShareTargets() {
+  try {
+    const { data } = await divisions.list(auth.activeTenantId);
+    divisionList.value = data;
+  } catch (error) {
+    divisionList.value = [];
+  }
+  try {
+    const { data } = await tenants.list();
+    tenantList.value = data;
+  } catch (error) {
+    tenantList.value = [];
+  }
+}
+
+async function addShare() {
+  try {
+    const body = { ...newShare };
+    if (sharing.value.kind === 'folder') {
+      await cloud.shareFolder(sharing.value.item.id, body);
+    } else {
+      await cloud.shareFile(sharing.value.item.fileId, body);
+    }
+    await loadShares();
+    toast.success('Compartilhado!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao compartilhar'));
+  }
+}
+
+async function removeShare(share) {
+  try {
+    await cloud.removeShare(share.shareId);
+    await loadShares();
+    toast.info('Compartilhamento removido.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao remover compartilhamento'));
+  }
+}
+
+/* ------------------------------------------------------------------ settings */
+
+function openFolderSettings() {
+  openItemSettings('folder', content.value.folder);
+}
+
+function openItemSettings(kind, item) {
+  settings.value = { kind, item };
+  settingsForm.name = item.name;
+  settingsForm.visibility = item.visibility || 'INHERIT';
+  settingsForm.hiddenTitle = !!item.hiddenTitle;
+}
+
+async function saveSettings() {
+  try {
+    if (settings.value.kind === 'folder') {
+      await cloud.updateFolder(settings.value.item.id, {
+        name: settingsForm.name,
+        visibility: settingsForm.visibility,
+        hiddenTitle: settingsForm.hiddenTitle,
+      });
+    } else {
+      await cloud.updateFile(settings.value.item.fileId, {
+        name: settingsForm.name,
+        hiddenTitle: settingsForm.hiddenTitle,
+      });
+    }
+    settings.value = null;
+    await load();
+    toast.success('Alterações salvas!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao salvar alterações'));
+  }
+}
+
+/* ------------------------------------------------------------------ comments */
+
+async function openComments(kind, item) {
+  if (!item) return;
+  commenting.value = { kind, item };
+  newComment.value = '';
+  await loadComments();
+}
+
+async function loadComments() {
+  try {
+    const { data } = commenting.value.kind === 'folder'
+      ? await cloud.folderComments(commenting.value.item.id)
+      : await cloud.fileComments(commenting.value.item.fileId);
+    comments.value = data;
+  } catch (error) {
+    comments.value = [];
+  }
+}
+
+async function addComment() {
+  try {
+    if (commenting.value.kind === 'folder') {
+      await cloud.commentFolder(commenting.value.item.id, newComment.value);
+    } else {
+      await cloud.commentFile(commenting.value.item.fileId, newComment.value);
+    }
+    newComment.value = '';
+    await loadComments();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao comentar'));
+  }
+}
+
+async function removeComment(comment) {
+  try {
+    await cloud.removeComment(comment.commentId);
+    await loadComments();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao remover comentário'));
+  }
+}
+
+/* -------------------------------------------------------------------- labels */
+
+function accessLabel(level) {
+  return {
+    NONE: 'Sem acesso',
+    VIEW: 'Ver e baixar',
+    EDIT: 'Ver, enviar e alterar',
+    MANAGE: 'Gerenciar e compartilhar',
+  }[level] || level;
+}
+
+function granteeLabel(type) {
+  return { USER: 'pessoa', DIVISION: 'divisão', TENANT: 'equipe' }[type] || type;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+function formatWhen(value) {
+  return value ? new Date(value).toLocaleString('pt-BR') : '';
+}
 </script>
-<style>
-  :root {
-  --primary-color: #865faf;
-  --primary-hover: #6a4b8c;
-  --bg-color: #f8f9fa;
-  --card-bg: #ffffff;
-  --text-main: #333;
-  --text-light: #666;
-  --border-radius: 8px;
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
-}
 
-.file-manager-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  color: #333;
-}
-
-/* --- Cabeçalho --- */
-.top-bar {
+<style scoped>
+.cloud__path {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  gap: 6px;
   flex-wrap: wrap;
-  gap: 1rem;
-}
-
-h1 {
-  color: #865faf;
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
-
-.create-form {
-  display: flex;
-  gap: 10px;
-}
-
-.input-styled {
-  padding: 0.6rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  outline: none;
-  transition: border-color 0.2s;
-  min-width: 250px;
-}
-
-.input-styled:focus {
-  border-color: #865faf;
-}
-
-.btn-primary {
-  background-color: #865faf;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.2s, transform 0.1s;
-}
-
-.btn-primary:hover {
-  background-color: #6a4b8c;
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-input[type="file"] {
-  display: none;
-}
-
-.file-upload {
-  border: 1px solid #ccc;
-  display: inline-block;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
-/* --- Navegação --- */
-.navigation-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 0.5rem;
-}
-
-.current-path {
-  background: #f0f0f5;
-  padding: 4px 12px;
-  border-radius: 4px;
   font-size: 0.9rem;
-  color: #555;
 }
 
-.label {
-  font-weight: bold;
-  margin-right: 5px;
-  color: #865faf;
+.cloud__crumb {
+  color: var(--vc-text-muted);
+  text-decoration: none;
 }
 
-.folder-title {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #444;
+.cloud__crumb:hover {
+  color: var(--vc-purple-strong);
+  text-decoration: underline;
 }
 
-.divider {
-  border: none;
-  border-top: 1px solid #eee;
-  margin-bottom: 2rem;
+.cloud__crumb:last-of-type {
+  color: var(--vc-text);
+  font-weight: 600;
 }
 
-/* --- Grid de Pastas --- */
-.folder-grid {
+.cloud__sep {
+  color: var(--vc-border-strong);
+}
+
+.cloud__grid {
   display: grid;
-  /* Cria colunas automáticas de no mínimo 140px */
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
 }
 
-.folder-card {
-  background-color: white;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 1.5rem 1rem;
+.cloud__item {
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  box-shadow: var(--vc-shadow);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  overflow: hidden;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.folder-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(134, 95, 175, 0.15); /* Sombra roxa suave */
-  border-color: #e0d4f0;
+.cloud__item:hover {
+  border-color: var(--vc-purple-border);
+  box-shadow: var(--vc-shadow-lg);
 }
 
-.icon-wrapper {
-  margin-bottom: 10px;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.folderPicture {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-.folder-name {
-  font-size: 0.95rem;
-  font-weight: 500;
-  text-align: center;
-  color: #333;
-  word-break: break-word; /* Quebra nomes longos */
-  line-height: 1.2;
-}
-
-.deleteBtn{
-  font-size: 14px;
-  color:rgb(180, 0, 0);
-}
-
-/* Estilo específico para o botão de voltar */
-.back-folder {
-  background-color: #f9f9f9;
+.cloud__item.is-locked {
+  background: var(--vc-surface-muted);
   border-style: dashed;
 }
 
-.back-folder .folder-name {
-  color: #888;
+.cloud__item--back {
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 10px;
+  border-style: dashed;
+  font: inherit;
+  color: var(--vc-text-muted);
 }
 
-/* Responsividade para telas pequenas */
-@media (max-width: 600px) {
-  .top-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .create-form {
-    flex-direction: column;
-  }
-  
-  .input-styled {
-    width: 100%;
-  }
-  
-  .folder-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  }
+.cloud__open {
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  padding: 18px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  width: 100%;
 }
-  
+
+.cloud__icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.cloud__name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.cloud__actions {
+  display: flex;
+  border-top: 1px solid var(--vc-border);
+}
+
+.cloud__action {
+  flex: 1;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 6px 2px;
+  cursor: pointer;
+  color: var(--vc-text-muted);
+  border-right: 1px solid var(--vc-border);
+}
+
+.cloud__action:last-child {
+  border-right: none;
+}
+
+.cloud__action:hover {
+  background: var(--vc-purple-soft);
+  color: var(--vc-purple-strong);
+}
+
+.cloud__action.is-danger:hover {
+  background: var(--vc-danger-bg);
+  color: var(--vc-danger-text);
+}
+
+.cloud__comment {
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 10px 12px;
+  background: var(--vc-surface);
+}
 </style>
