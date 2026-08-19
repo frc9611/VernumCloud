@@ -2,8 +2,13 @@ import axios from 'axios';
 import router from '@/router';
 import { authStore } from '@/store/auth.js';
 
+/*
+ * The axios instance every call goes through. It attaches the token when there is one,
+ * which is why the public endpoints work the same before and after the login, and it
+ * sends the user back to the login when the server says the token is gone.
+ */
 const axiosInstance = axios.create({
-    baseURL:'http://localhost:8080'
+    baseURL: process.env.VUE_APP_API_URL || 'http://localhost:8080'
 });
 
 axiosInstance.interceptors.request.use(
@@ -24,19 +29,20 @@ axiosInstance.interceptors.response.use(
         const status = error?.response?.status;
         if (status === 401) {
             try {
-                const auth = authStore();
-                auth.clear();
+                authStore().clear(false);
             } catch (e) {
                 localStorage.removeItem('token');
-                localStorage.removeItem('name');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('divisions');
-                localStorage.removeItem('roles');
+                localStorage.removeItem('activeTenantId');
             }
             router.push('/');
         }
         return Promise.reject(error);
     }
 );
+
+/** Message the server sent with an error, ready to be shown on a toast. */
+export function apiMessage(error, fallback) {
+    return error?.response?.data?.message || fallback || 'Não foi possível concluir a ação.';
+}
 
 export default axiosInstance;

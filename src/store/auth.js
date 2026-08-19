@@ -1,125 +1,206 @@
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import http from '@/services/http.js';
+import { session } from '@/services/api.js';
 import router from '../router';
 
+const TOKEN_KEY = 'token';
+const TENANT_KEY = 'activeTenantId';
+
+/*
+ * Session of the dashboard.
+ *
+ * The server answers the login with every team of the user, the permissions of each
+ * one and the divisions the user is in. The store keeps that picture and the id of
+ * the team currently open, so a screen only has to ask `auth.can('FILE_UPLOAD')`
+ * instead of knowing anything about memberships.
+ *
+ * Three situations come out of the memberships and drive the routing:
+ *   - no team at all  -> the waiting screen with the processos seletivos abertos;
+ *   - more than one   -> the team chooser, unless one was already picked;
+ *   - exactly one     -> it is opened right away.
+ */
 export const authStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token'));
-  const name = ref(localStorage.getItem('name'));
-  const userId = ref(localStorage.getItem('userId'));
-  const divisions = ref(JSON.parse(localStorage.getItem('divisions') || '[]'));
-  const roles = ref(JSON.parse(localStorage.getItem('roles') || '[]'));
-  const isAuth = ref(false);
-  const isAdmin = ref(null);
+  const token = ref(localStorage.getItem(TOKEN_KEY) || '');
+  const user = ref(null);
+  const memberships = ref([]);
+  const platformPermissions = ref([]);
+  const platformAdmin = ref(false);
+  const activeTenantId = ref(readStoredTenantId());
+  const isAuth = ref(!!localStorage.getItem(TOKEN_KEY));
+  const ready = ref(false);
 
-  function setToken(tokenValue) {
-    localStorage.setItem('token', tokenValue);
-    token.value = tokenValue;
-  }
-  function setName(nameValue) {
-    localStorage.setItem('name', nameValue);
-    name.value = nameValue;
-  }
-  function setUserId(idValue){
-    localStorage.setItem('userId', idValue);
-    userId.value = idValue;
-  }
-  function setDivisions(divisionsValue) {
-    localStorage.setItem('divisions', JSON.stringify(divisionsValue));
-    divisions.value = divisionsValue;
-  }
-  function setRoles(rolesValue) {
-    localStorage.setItem('roles', JSON.stringify(rolesValue));
-    roles.value = rolesValue;
+  function readStoredTenantId() {
+    const stored = localStorage.getItem(TENANT_KEY);
+    return stored ? Number(stored) : null;
   }
 
-  const isAuthenticated = computed(() => !!token.value && !!name.value);
-  const getName = computed(() => name.value);
-  const getId = computed(() => userId.value);
-  const getDivision = computed(() => divisions.value?.[0]?.visibleName);
-  const getDivisionId = computed(() => divisions.value?.[0]?.divisionId);
-  const getDivisionColor = computed(() => divisions.value?.[0]?.color);
-  const getRole = computed(() => roles.value?.[0]?.name);
+  /* ------------------------------------------------------------- computed */
+
+  const isAuthenticated = computed(() => !!token.value);
   const getToken = computed(() => token.value);
+  const getId = computed(() => user.value?.userId || null);
+  const getName = computed(() => user.value?.name || '');
+  const getUsername = computed(() => user.value?.username || '');
 
-  function setIsAuth(auth) {
-    isAuth.value = auth;
-  }
-  function setIsAdmin(admin) {
-    isAdmin.value = admin;
+  const activeMembership = computed(() =>
+    memberships.value.find((membership) => membership.tenant?.tenantId === activeTenantId.value) || null,
+  );
+  const activeTenant = computed(() => activeMembership.value?.tenant || null);
+  const activeTenantName = computed(() => activeTenant.value?.visibleName || '');
+  const activeTenantColor = computed(() => activeTenant.value?.color || '#8864AE');
+  const activeRoleLabel = computed(() => activeMembership.value?.roleLabel || '');
+  const activePermissions = computed(() => activeMembership.value?.permissions || []);
+  const activeDivisions = computed(() => activeMembership.value?.divisions || []);
+
+  const hasNoTenant = computed(() => isAuth.value && memberships.value.length === 0);
+  const needsTenantChoice = computed(
+    () => isAuth.value && memberships.value.length > 1 && !activeMembership.value,
+  );
+  /** True while the store still does not know which team is open. */
+  const withoutActiveTenant = computed(() => isAuth.value && !activeMembership.value);
+
+  /* ------------------------------------------------------------ questions */
+
+  /** Whether the user has a permission inside the team currently open. */
+  function can(permission) {
+    return activePermissions.value.includes(permission);
   }
 
-  async function checkToken() {
-    if (!token.value) return false;
-    try {
-      const response = await http.get('/login/verify', {
-        headers: { Authorization: 'Bearer ' + token.value },
-      });
-      return response.status === 200;
-    } catch (error) {
-      clear();
-      return false;
+  function canAny(...permissions) {
+    return permissions.some((permission) => can(permission));
+  }
+
+  /** Whether the user has a permission over the platform, granted by the admin tenant. */
+  function canPlatform(permission) {
+    return platformPermissions.value.includes(permission);
+  }
+
+  /** Permissions the user has on a specific team, which may not be the one open. */
+  function permissionsOn(tenantId) {
+    const membership = memberships.value.find((item) => item.tenant?.tenantId === Number(tenantId));
+    return membership?.permissions || [];
+  }
+
+  function membershipOn(tenantId) {
+    return memberships.value.find((item) => item.tenant?.tenantId === Number(tenantId)) || null;
+  }
+
+  /* -------------------------------------------------------------- actions */
+
+  function setToken(value) {
+    token.value = value || '';
+    if (value) {
+      localStorage.setItem(TOKEN_KEY, value);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    isAuth.value = !!value;
+  }
+
+  /** Stores what /me and /login answer about the user. */
+  function applyMe(me) {
+    if (!me) return;
+    user.value = me.user || null;
+    memberships.value = me.memberships || [];
+    platformPermissions.value = me.platformPermissions || [];
+    platformAdmin.value = !!me.platformAdmin;
+
+    //A team that is gone, or was never chosen, must not stay selected
+    if (activeTenantId.value && !membershipOn(activeTenantId.value)) {
+      setActiveTenant(null);
+    }
+    if (!activeTenantId.value && memberships.value.length === 1) {
+      setActiveTenant(memberships.value[0].tenant.tenantId);
     }
   }
 
-  async function checkRole() {
+  function setActiveTenant(tenantId) {
+    if (tenantId === null || tenantId === undefined) {
+      activeTenantId.value = null;
+      localStorage.removeItem(TENANT_KEY);
+      return;
+    }
+    activeTenantId.value = Number(tenantId);
+    localStorage.setItem(TENANT_KEY, String(tenantId));
+  }
+
+  async function login(credentials) {
+    const { data } = await session.login(credentials);
+    setToken(data.accessToken);
+    applyMe(data.me);
+    ready.value = true;
+    return data;
+  }
+
+  /** Reloads the session from the server. Used on boot and after changing a team. */
+  async function loadMe() {
     if (!token.value) {
-      isAdmin.value = false;
+      ready.value = true;
       return false;
     }
     try {
-      const response = await http.get('/login/verify', {
-        headers: { Authorization: 'Bearer ' + token.value },
-      });
-      const admin = response.data.role?.[0]?.name === 'ADMIN';
-      isAdmin.value = admin;
-      return admin;
+      const { data } = await session.me();
+      applyMe(data);
+      isAuth.value = true;
+      ready.value = true;
+      return true;
     } catch (error) {
-      isAdmin.value = false;
+      clear(false);
+      ready.value = true;
       return false;
     }
   }
 
-  function clear() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('name');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('divisions');
-    localStorage.removeItem('roles');
+  function clear(redirect = true) {
+    setToken('');
+    setActiveTenant(null);
+    user.value = null;
+    memberships.value = [];
+    platformPermissions.value = [];
+    platformAdmin.value = false;
     isAuth.value = false;
-    isAdmin.value = null;
-    token.value = '';
-    name.value = '';
-    userId.value = '';
-    divisions.value = [];
-    roles.value = [];
-    router.push('/');
+    if (redirect) {
+      router.push({ name: 'login' });
+    }
   }
 
   return {
     token,
-    name,
-    divisions,
-    roles,
+    user,
+    memberships,
+    platformPermissions,
+    platformAdmin,
+    activeTenantId,
     isAuth,
-    isAdmin,
-    setToken,
-    setName,
-    setUserId,
-    setDivisions,
-    setRoles,
-    setIsAuth,
-    setIsAdmin,
-    checkToken,
-    checkRole,
-    clear,
+    ready,
+
     isAuthenticated,
-    getName,
-    getId,
-    getDivision,
-    getDivisionId,
-    getDivisionColor,
-    getRole,
     getToken,
+    getId,
+    getName,
+    getUsername,
+    activeMembership,
+    activeTenant,
+    activeTenantName,
+    activeTenantColor,
+    activeRoleLabel,
+    activePermissions,
+    activeDivisions,
+    hasNoTenant,
+    needsTenantChoice,
+    withoutActiveTenant,
+
+    can,
+    canAny,
+    canPlatform,
+    permissionsOn,
+    membershipOn,
+
+    setToken,
+    applyMe,
+    setActiveTenant,
+    login,
+    loadMe,
+    clear,
   };
 });

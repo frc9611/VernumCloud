@@ -1,3 +1,3 @@
 import { StoreDefinition } from 'pinia';
 
-export const authStore: StoreDefinition; 
+export const authStore: StoreDefinition;
