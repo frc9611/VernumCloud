@@ -13,7 +13,7 @@
 
     <template v-else>
       <section class="apply__card">
-        <header class="apply__header" :style="{ background: process.tenantColor || '#8864AE' }">
+        <header class="apply__header">
           <span>{{ process.tenantName }}</span>
           <span v-if="process.tenantTeamNumber">#{{ process.tenantTeamNumber }}</span>
         </header>
@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from '@/components/VernumLogo.vue';
@@ -157,6 +157,7 @@ import AlertBanner from '@/components/AlertBanner.vue';
 import { authStore } from '@/store/auth.js';
 import { publicRecruitment } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { applyAccent, resetAccent } from '@/services/theme.js';
 
 /*
  * The public application form.
@@ -191,6 +192,8 @@ onMounted(async () => {
   try {
     const { data } = await publicRecruitment.process(token);
     process.value = data;
+    //The form takes the color of the team that opened the process
+    applyAccent(data.tenantColor);
   } catch (error) {
     notFound.value = true;
   } finally {
@@ -200,6 +203,8 @@ onMounted(async () => {
     await prefill();
   }
 });
+
+onUnmounted(resetAccent);
 
 /** Copies the profile of the logged user into the form. */
 async function prefill() {
@@ -290,6 +295,7 @@ async function submit() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
+  background: var(--vc-purple);
   color: #fff;
   font-weight: 600;
 }

@@ -41,6 +41,9 @@
   --vc-info-border: #c3d6ec;
 
   /* Shape */
+  /* Overwritten at runtime by services/theme.js with the color of the team currently open */
+  --vc-focus-ring: rgba(136, 100, 174, 0.17);
+
   --vc-radius: 8px;
   --vc-radius-lg: 12px;
   --vc-shadow: 0 1px 2px rgba(20, 20, 30, 0.04);
@@ -457,7 +460,7 @@ a {
 }
 
 .vc-btn--outline:hover {
-  background: #e7dff2;
+  background: var(--vc-purple-border);
 }
 
 .vc-btn--danger {
@@ -520,7 +523,7 @@ a {
 .vc-textarea:focus {
   outline: none;
   border-color: var(--vc-purple);
-  box-shadow: 0 0 0 3px rgba(136, 100, 174, 0.16);
+  box-shadow: 0 0 0 3px var(--vc-focus-ring);
 }
 
 .vc-input:disabled,

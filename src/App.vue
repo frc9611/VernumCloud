@@ -13,10 +13,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppHeader from './components/AppHeader.vue';
 import { authStore } from '@/store/auth.js';
+import { applyAccent } from '@/services/theme.js';
 
 const route = useRoute();
 const auth = authStore();
@@ -24,6 +25,16 @@ const auth = authStore();
 /* The login and the public application form have no header, like in the mockups. */
 const showHeader = computed(() => auth.isAuth && !route.meta?.bare);
 const showFooter = computed(() => !!route.meta?.footer);
+
+/*
+ * The accent of the whole application is the color of the team currently open. Outside a team,
+ * and on the public screens, it falls back to the default purple.
+ */
+watch(
+  () => (route.meta?.bare ? null : auth.activeTenant?.color),
+  (color) => applyAccent(color),
+  { immediate: true },
+);
 </script>
 
 <style>
