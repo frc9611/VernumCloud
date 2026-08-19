@@ -21,15 +21,7 @@
         {{ auth.getName }}
       </AlertBanner>
 
-      <AlertBanner
-        v-for="announcement in announcements"
-        :key="announcement.announcementId"
-        variant="warning"
-        :title="announcement.title"
-        :aside="announcement.senderName"
-      >
-        {{ announcement.content }}
-      </AlertBanner>
+      <AnnouncementBoard />
 
       <SectionTitle lead="Atalhos" title="da Equipe" />
       <div class="vc-grid">
@@ -149,18 +141,18 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import TabBar from '@/components/TabBar.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
+import AnnouncementBoard from '@/components/AnnouncementBoard.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
-import { announcements as announcementsApi, apps as appsApi, cloud } from '@/services/api.js';
+import { apps as appsApi, cloud } from '@/services/api.js';
 
 const auth = authStore();
 const toast = useToast();
 
 const tab = ref('home');
-const announcements = ref([]);
 const pendingAccessRequests = ref([]);
 const apps = ref([]);
 
@@ -196,12 +188,6 @@ watch(() => auth.activeTenantId, load);
 
 async function load() {
   if (!auth.activeTenantId) return;
-  try {
-    const { data } = await announcementsApi.list(auth.activeTenantId);
-    announcements.value = data;
-  } catch (error) {
-    announcements.value = [];
-  }
   try {
     const { data } = await cloud.accessRequests();
     pendingAccessRequests.value = data;

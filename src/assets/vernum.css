@@ -430,6 +430,75 @@ a {
   border-color: var(--vc-purple-border);
 }
 
+/* ----------------------------------------------------------- announcements */
+
+/*
+ * One entry of the board. It is a card, but not a .vc-card__header one: the reach chip, the title
+ * and who wrote it share a line, so the colored bar of a normal card would fight the chip for the
+ * job of saying where the announcement came from.
+ */
+.vc-announcement {
+  display: flex;
+  flex-direction: column;
+}
+
+.vc-announcement__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-announcement__title {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.vc-announcement__body {
+  padding: 14px;
+  color: var(--vc-text-muted);
+  font-size: 0.95rem;
+}
+
+.vc-announcement__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 12px;
+}
+
+.vc-announcement__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--vc-border);
+  background: var(--vc-surface-muted);
+}
+
+.vc-announcement__comment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vc-announcement__author {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* The text takes a line of its own, under the name, however long the name is */
+.vc-announcement__text {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--vc-text-muted);
+  white-space: pre-line;
+}
+
 /* --------------------------------------------------------------- buttons */
 
 .vc-btn {

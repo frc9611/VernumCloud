@@ -78,9 +78,16 @@ export const users = {
 /* ------------------------------------------------------------ announcements */
 
 export const announcements = {
+  /* The board of a team: the platform announcements, the team ones and the divisions of the reader. */
   list: (tenantId) => http.get(`/tenants/${tenantId}/announcements`),
+  /* Which reaches this person may publish to — the server decides, leading a division is not a permission. */
+  scopes: (tenantId) => http.get(`/tenants/${tenantId}/announcements/scopes`),
   create: (tenantId, body) => http.post(`/tenants/${tenantId}/announcements`, body),
   remove: (announcementId) => http.delete(`/announcements/${announcementId}`),
+
+  comments: (announcementId) => http.get(`/announcements/${announcementId}/comments`),
+  comment: (announcementId, body) => http.post(`/announcements/${announcementId}/comments`, body),
+  removeComment: (commentId) => http.delete(`/announcementComments/${commentId}`),
 };
 
 /* -------------------------------------------------------------------- cloud */
