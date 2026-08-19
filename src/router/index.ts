@@ -99,6 +99,18 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'MEMBER_INVITE' }
   },
   {
+    path: '/admin/apps',
+    name: 'adminApps',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/AppsAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'APP_MANAGE' }
+  },
+  {
+    path: '/admin/chaves',
+    name: 'adminApiKeys',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/ApiKeysAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'API_KEY_MANAGE' }
+  },
+  {
     path: '/admin/processos',
     name: 'adminRecruitment',
     component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessesAdminView.vue'),
@@ -135,6 +147,14 @@ const routes: Array<RouteRecordRaw> = [
     name: 'accessRequests',
     component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/AccessRequestsView.vue'),
     meta: { auth: true }
+  },
+
+  /* --------------------------------------------------------------- sso / apps */
+  {
+    path: '/entrar-com-vernum',
+    name: 'ssoConsent',
+    component: () => import(/* webpackChunkName: "sso" */ '../views/SsoConsentView.vue'),
+    meta: { bare: true, footer: true }
   },
 
   /* ------------------------------------------------------- public / candidate */

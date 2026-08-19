@@ -56,7 +56,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from '@/components/VernumLogo.vue';
 import AppIcon from '@/components/AppIcon.vue';
@@ -65,6 +65,7 @@ import { session } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 const toast = useToast();
+const route = useRoute();
 const router = useRouter();
 const auth = authStore();
 
@@ -99,8 +100,16 @@ async function login() {
 /*
  * Where to land depends on the teams of the user: the waiting screen when there is
  * none, the chooser when there is more than one and no team was picked yet.
+ *
+ * A `next` on the query wins over all of that: it is how the consent screen of an app
+ * gets the person back to the authorization they were in the middle of.
  */
 function goInside() {
+  const next = route.query.next;
+  if (typeof next === 'string' && next.startsWith('/')) {
+    router.replace(next);
+    return;
+  }
   if (auth.hasNoTenant) {
     router.push({ name: 'waiting' });
   } else if (!auth.activeTenantId) {

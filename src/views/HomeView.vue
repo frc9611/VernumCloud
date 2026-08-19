@@ -77,19 +77,30 @@
 
     <!-- ------------------------------------------------------------- apps -->
     <div v-else-if="tab === 'apps'" class="vc-stack">
-      <SectionTitle lead="Apps" title="da Equipe" />
-      <p class="vc-faint">
-        Links e ferramentas que a equipe usa no dia a dia. Publique um aviso com o link enquanto o
-        cadastro de apps não existe no servidor.
-      </p>
+      <SectionTitle lead="Apps" title="da Equipe">
+        <template #actions>
+          <router-link v-if="auth.can('APP_MANAGE')" class="vc-btn vc-btn--ghost vc-btn--small"
+                       :to="{ name: 'adminApps' }">
+            Cadastrar apps
+          </router-link>
+        </template>
+      </SectionTitle>
+      <p class="vc-faint">Ferramentas que a equipe usa no dia a dia.</p>
+
       <div class="vc-grid">
-        <PanelCard title="Discord" icon="comment" color="#5865F2">
-          <p>O server do Discord do time. Fazemos calls quando precisamos nos reunir ou trabalhar em conjunto remotamente.</p>
-          <div class="vc-input-group">
-            <input class="vc-input" readonly :value="discordPlaceholder" />
-            <button class="vc-btn vc-btn--icon" type="button" title="Copiar" @click="copy(discordPlaceholder)">
+        <PanelCard v-for="app in apps" :key="app.appId" :title="app.visibleName"
+                   :icon="app.icon || 'link'" :color="app.color">
+          <p>{{ app.description || 'Sem descrição.' }}</p>
+          <div v-if="app.url" class="vc-input-group">
+            <input class="vc-input" readonly :value="app.url" />
+            <button class="vc-btn vc-btn--icon" type="button" title="Copiar" @click="copy(app.url)">
               <AppIcon name="copy" :size="16" />
             </button>
+          </div>
+          <div class="vc-row">
+            <a v-if="app.url" class="vc-btn" :href="app.url" target="_blank" rel="noopener">Abrir</a>
+            <span v-if="app.ssoEnabled" class="vc-chip vc-chip--purple">entra com o Vernum</span>
+            <span v-if="!app.ownedByThisTenant" class="vc-chip">de {{ app.ownerTenantName }}</span>
           </div>
         </PanelCard>
 
@@ -98,6 +109,12 @@
           <router-link class="vc-btn" :to="{ name: 'cloud' }">Abrir arquivos</router-link>
         </PanelCard>
       </div>
+
+      <EmptyState v-if="!apps.length" title="Nenhum app cadastrado">
+        {{ auth.can('APP_MANAGE')
+          ? 'Cadastre o Discord, o quiosque de presença ou qualquer ferramenta da equipe.'
+          : 'Quem administra a equipe pode cadastrar as ferramentas que vocês usam.' }}
+      </EmptyState>
     </div>
 
     <!-- --------------------------------------------------------- scouting -->
@@ -134,9 +151,10 @@ import TabBar from '@/components/TabBar.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import PanelCard from '@/components/PanelCard.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
-import { announcements as announcementsApi, cloud } from '@/services/api.js';
+import { announcements as announcementsApi, apps as appsApi, cloud } from '@/services/api.js';
 
 const auth = authStore();
 const toast = useToast();
@@ -144,7 +162,7 @@ const toast = useToast();
 const tab = ref('home');
 const announcements = ref([]);
 const pendingAccessRequests = ref([]);
-const discordPlaceholder = 'https://discord.gg/server-super-cyber';
+const apps = ref([]);
 
 const tabs = [
   { key: 'home', label: 'Home' },
@@ -188,6 +206,12 @@ async function load() {
     pendingAccessRequests.value = data;
   } catch (error) {
     pendingAccessRequests.value = [];
+  }
+  try {
+    const { data } = await appsApi.list(auth.activeTenantId);
+    apps.value = data;
+  } catch (error) {
+    apps.value = [];
   }
 }
 

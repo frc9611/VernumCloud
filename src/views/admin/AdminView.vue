@@ -86,6 +86,22 @@ const teamCards = computed(() => {
       to: { name: 'adminRecruitment' },
     });
   }
+  if (auth.can('APP_MANAGE')) {
+    cards.push({
+      label: 'Apps da equipe',
+      icon: 'link',
+      hint: 'Cadastrar ferramentas, ligar o login pelo Vernum e instalar apps de outras equipes.',
+      to: { name: 'adminApps' },
+    });
+  }
+  if (auth.can('API_KEY_MANAGE')) {
+    cards.push({
+      label: 'Chaves de API',
+      icon: 'key',
+      hint: 'Credenciais para um programa falar com a API sem abrir o dashboard.',
+      to: { name: 'adminApiKeys' },
+    });
+  }
   if (auth.can('MEMBER_INVITE')) {
     cards.push({
       label: 'Cadastrar usuário',

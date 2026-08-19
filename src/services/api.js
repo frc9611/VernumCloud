@@ -131,6 +131,50 @@ export const cloud = {
   removeComment: (commentId) => http.delete(`/cloud/comments/${commentId}`),
 };
 
+/* --------------------------------------------------------------------- apps */
+
+export const apps = {
+  list: (tenantId) => http.get(`/tenants/${tenantId}/apps`),
+  available: (tenantId) => http.get(`/tenants/${tenantId}/apps/available`),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/apps`, body),
+  install: (tenantId, appId) => http.post(`/tenants/${tenantId}/apps/${appId}/install`),
+  uninstall: (tenantId, appId) => http.delete(`/tenants/${tenantId}/apps/${appId}/install`),
+
+  get: (appId, tenantId) => http.get(`/apps/${appId}`, { params: tenantId ? { tenantId } : {} }),
+  update: (appId, body) => http.put(`/apps/${appId}`, body),
+  rotateSecret: (appId) => http.post(`/apps/${appId}/rotateSecret`),
+  remove: (appId) => http.delete(`/apps/${appId}`),
+
+  apiKeys: (tenantId) => http.get(`/tenants/${tenantId}/apiKeys`),
+  createApiKey: (tenantId, body) => http.post(`/tenants/${tenantId}/apiKeys`, body),
+  revokeApiKey: (apiKeyId) => http.delete(`/apiKeys/${apiKeyId}`),
+};
+
+/*
+ * "Entrar com o VernumCloud". The app sends the browser to the consent screen with its
+ * client id; the screen asks the server what the app is — that call needs no token,
+ * because it happens before the login — and posts the authorization when the person
+ * says yes.
+ */
+export const sso = {
+  app: (clientId, redirectUri) => http.get('/public/sso/app', { params: { clientId, redirectUri } }),
+  authorize: (body) => http.post('/sso/authorize', body),
+};
+
+/* --------------------------------------------------------------- attendance */
+
+export const attendance = {
+  me: () => http.get('/attendance/me'),
+  enter: () => http.post('/attendance/enter'),
+  leave: () => http.post('/attendance/leave'),
+  now: (tenantId) => http.get(`/tenants/${tenantId}/attendance/now`),
+  ranking: (tenantId) => http.get(`/tenants/${tenantId}/attendance/ranking`),
+  entries: (tenantId, params) =>
+    http.get(`/tenants/${tenantId}/attendance/entries`, { params: params || {} }),
+  close: (attendanceId, endTime) =>
+    http.post(`/attendance/${attendanceId}/close`, null, { params: endTime ? { endTime } : {} }),
+};
+
 /* ------------------------------------------------------------ notifications */
 
 export const notifications = {
@@ -188,6 +232,9 @@ export default {
   users,
   announcements,
   cloud,
+  apps,
+  sso,
+  attendance,
   notifications,
   recruitment,
   publicRecruitment,
