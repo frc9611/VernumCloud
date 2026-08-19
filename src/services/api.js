@@ -100,6 +100,9 @@ export const cloud = {
     return http.post('/cloud/uploadFile', form, { onUploadProgress: onProgress });
   },
   download: (fileId) => http.get(`/cloud/file/${fileId}`, { responseType: 'blob' }),
+  createTextFile: (body) => http.post('/cloud/file', body),
+  fileContent: (fileId) => http.get(`/cloud/file/${fileId}/content`),
+  saveFileContent: (fileId, content) => http.put(`/cloud/file/${fileId}/content`, { content }),
   fileDetails: (fileId) => http.get(`/cloud/file/${fileId}/details`),
   updateFile: (fileId, body) => http.put(`/cloud/file/${fileId}`, body),
   removeFile: (fileId) => http.delete(`/cloud/file/${fileId}`),
@@ -109,6 +112,10 @@ export const cloud = {
   fileShares: (fileId) => http.get(`/cloud/file/${fileId}/shares`),
   shareFile: (fileId, body) => http.post(`/cloud/file/${fileId}/shares`, body),
   removeShare: (shareId) => http.delete(`/cloud/shares/${shareId}`),
+  folderShareTargets: (folderId, search) =>
+    http.get(`/cloud/folder/${folderId}/shareTargets`, { params: search ? { search } : {} }),
+  fileShareTargets: (fileId, search) =>
+    http.get(`/cloud/file/${fileId}/shareTargets`, { params: search ? { search } : {} }),
 
   requestFolderAccess: (folderId, body) => http.post(`/cloud/folder/${folderId}/accessRequests`, body || {}),
   requestFileAccess: (fileId, body) => http.post(`/cloud/file/${fileId}/accessRequests`, body || {}),

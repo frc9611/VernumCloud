@@ -72,6 +72,10 @@
           Enviar arquivo
           <input type="file" style="display: none" @change="upload" />
         </label>
+        <button v-if="content.canUpload" class="vc-btn vc-btn--outline" type="button" @click="newTextFile">
+          <AppIcon name="file" :size="16" />
+          Novo arquivo
+        </button>
         <form v-if="content.canUpload" class="cloud__new-folder" @submit.prevent="createFolder">
           <input class="vc-input" style="flex: 1; min-width: 150px" type="text" v-model="newFolderName"
                  placeholder="Nome da nova pasta..." required />
@@ -107,10 +111,11 @@
           :class="['cloud__item', folder.access === 'NONE' ? 'is-locked' : '']"
         >
           <button type="button" class="cloud__open" @click="openFolder(folder)">
-            <AppIcon class="cloud__icon" :name="folder.access === 'NONE' ? 'lock' : 'folder'"
-                     :size="26" :stroke="1.6" />
+            <AppIcon class="cloud__icon" :name="folderIcon(folder)" :size="26" :stroke="1.6"
+                     :style="folder.divisionColor ? { color: folder.divisionColor } : null" />
             <span class="cloud__name">{{ folder.name }}</span>
-            <span v-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
+            <span v-if="folder.divisionId" class="vc-chip">divisão</span>
+            <span v-else-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
             <span v-else-if="folder.access === 'NONE'" class="vc-chip">sem acesso</span>
           </button>
           <div v-if="folderActions(folder)" class="cloud__actions">
@@ -118,10 +123,12 @@
                     title="Compartilhar" @click="openShares('folder', folder)">
               Acesso
             </button>
-            <button v-if="canManageItem(folder)" class="cloud__action" type="button" @click="openItemSettings('folder', folder)">
+            <button v-if="canManageItem(folder) && !folder.systemFolder" class="cloud__action" type="button"
+                    @click="openItemSettings('folder', folder)">
               Editar
             </button>
-            <button v-if="canManageItem(folder)" class="cloud__action is-danger" type="button" @click="removeFolder(folder)">
+            <button v-if="canManageItem(folder) && !folder.systemFolder" class="cloud__action is-danger" type="button"
+                    @click="removeFolder(folder)">
               Deletar
             </button>
             <button v-if="folder.access === 'NONE'" class="cloud__action" type="button" @click="openFolder(folder)">
@@ -143,6 +150,8 @@
             <span v-else-if="file.access === 'NONE'" class="vc-chip">sem acesso</span>
           </button>
           <div class="cloud__actions">
+            <button v-if="isTextFile(file) && canEditItem(file)" class="cloud__action" type="button"
+                    @click="editTextFile(file)">Texto</button>
             <button class="cloud__action" type="button" title="Comentários"
                     @click="openComments('file', file)">Comentar</button>
             <button v-if="canManageItem(file)" class="cloud__action" type="button"
@@ -194,39 +203,32 @@
       <hr class="vc-divider" />
 
       <div class="vc-field">
-        <label class="vc-label" for="granteeType">Compartilhar com</label>
-        <select id="granteeType" class="vc-select" v-model="newShare.granteeType">
-          <option value="USER">Uma pessoa</option>
-          <option value="DIVISION">Uma divisão (e suas subdivisões)</option>
-          <option value="TENANT">Uma equipe inteira</option>
-        </select>
-      </div>
+        <label class="vc-label" for="shareSearch">Compartilhar com</label>
 
-      <div v-if="newShare.granteeType === 'USER'" class="vc-field">
-        <label class="vc-label" for="granteeUsername">Usuário</label>
-        <input id="granteeUsername" class="vc-input" type="text" v-model="newShare.granteeUsername"
-               placeholder="username da pessoa" />
-        <span class="vc-faint">Pode ser alguém de outra equipe: aí é um compartilhamento externo.</span>
-      </div>
+        <div v-if="chosenTarget" class="cloud__chosen">
+          <AppIcon :name="targetIcon(chosenTarget)" :size="16"
+                   :style="chosenTarget.color ? { color: chosenTarget.color } : null" />
+          <strong>{{ chosenTarget.label }}</strong>
+          <span class="vc-faint">{{ chosenTarget.hint }}</span>
+          <span v-if="chosenTarget.external" class="vc-chip vc-chip--warning">externo</span>
+          <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="clearTarget">Trocar</button>
+        </div>
 
-      <div v-else-if="newShare.granteeType === 'DIVISION'" class="vc-field">
-        <label class="vc-label" for="granteeDivision">Divisão</label>
-        <select id="granteeDivision" class="vc-select" v-model="newShare.granteeDivisionId">
-          <option :value="null">Escolha uma divisão</option>
-          <option v-for="division in divisionList" :key="division.divisionId" :value="division.divisionId">
-            {{ division.visibleName }}
-          </option>
-        </select>
-      </div>
-
-      <div v-else class="vc-field">
-        <label class="vc-label" for="granteeTenant">Equipe</label>
-        <select id="granteeTenant" class="vc-select" v-model="newShare.granteeTenantId">
-          <option :value="null">Escolha uma equipe</option>
-          <option v-for="tenant in tenantList" :key="tenant.tenantId" :value="tenant.tenantId">
-            {{ tenant.visibleName }}
-          </option>
-        </select>
+        <template v-else>
+          <input id="shareSearch" class="vc-input" type="text" autocomplete="off" v-model="targetSearch"
+                 placeholder="Nome de uma pessoa, de uma divisão ou de uma equipe..." @input="searchTargets" />
+          <div v-if="targets.length" class="cloud__suggest">
+            <button v-for="target in targets" :key="target.granteeType + target.id" type="button"
+                    class="cloud__suggest-item" @click="chooseTarget(target)">
+              <AppIcon :name="targetIcon(target)" :size="15"
+                       :style="target.color ? { color: target.color } : null" />
+              <span class="cloud__suggest-label">{{ target.label }}</span>
+              <span class="vc-faint">{{ target.hint }}</span>
+              <span v-if="target.external" class="vc-chip vc-chip--warning">externo</span>
+            </button>
+          </div>
+          <span v-else class="vc-faint">Nenhum destino com esse nome.</span>
+        </template>
       </div>
 
       <div class="vc-field">
@@ -240,7 +242,7 @@
 
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="sharing = null">Fechar</button>
-        <button class="vc-btn" type="button" @click="addShare">Compartilhar</button>
+        <button class="vc-btn" type="button" :disabled="!chosenTarget" @click="addShare">Compartilhar</button>
       </template>
     </ModalDialog>
 
@@ -270,6 +272,24 @@
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="settings = null">Cancelar</button>
         <button class="vc-btn" type="button" @click="saveSettings">Salvar</button>
+      </template>
+    </ModalDialog>
+
+    <!-- ------------------------------------------------------ text editor -->
+    <ModalDialog v-if="editor" wide :title="editor.creating ? 'Novo arquivo' : 'Editar ' + editor.name"
+                 @close="editor = null">
+      <div v-if="editor.creating" class="vc-field">
+        <label class="vc-label" for="editorName">Nome</label>
+        <input id="editorName" class="vc-input" type="text" v-model="editor.name" placeholder="anotacoes.md" />
+        <span class="vc-faint">Sem extensão vira .txt. Também aceita .md, .csv e .json.</span>
+      </div>
+      <div class="vc-field">
+        <label class="vc-label" for="editorContent">Conteúdo</label>
+        <textarea id="editorContent" class="vc-textarea cloud__editor" v-model="editor.content"></textarea>
+      </div>
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="editor = null">Cancelar</button>
+        <button class="vc-btn" type="button" :disabled="editor.saving" @click="saveTextFile">Salvar</button>
       </template>
     </ModalDialog>
 
@@ -313,7 +333,7 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
-import { cloud, divisions, tenants } from '@/services/api.js';
+import { cloud } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 /*
@@ -322,6 +342,11 @@ import { apiMessage } from '@/services/http.js';
  * Items the user cannot open still appear on the grid, locked, because the server sends
  * them with access NONE. Opening one lands on the "solicitar acesso" screen instead of
  * an error, which is what the denied branch of the template draws.
+ *
+ * The root of the team is the "Geral" and, right below it, the server keeps one folder
+ * per division: those come with divisionId and divisionColor, are drawn with the color
+ * of the division and cannot be renamed or removed here, because the server keeps them
+ * following the division itself.
  */
 const auth = authStore();
 const route = useRoute();
@@ -344,12 +369,13 @@ const accessRequest = reactive({ message: '', requestedLevel: 'VIEW' });
 
 const sharing = ref(null);
 const shares = ref([]);
-const divisionList = ref([]);
-const tenantList = ref([]);
-const newShare = reactive({
-  granteeType: 'USER', granteeUsername: '', granteeDivisionId: null,
-  granteeTenantId: null, accessLevel: 'VIEW',
-});
+const targets = ref([]);
+const targetSearch = ref('');
+const chosenTarget = ref(null);
+let targetTimer = null;
+const newShare = reactive({ accessLevel: 'VIEW' });
+
+const editor = ref(null);
 
 const settings = ref(null);
 const settingsForm = reactive({ name: '', visibility: 'INHERIT', hiddenTitle: false });
@@ -493,6 +519,49 @@ async function removeFile(file) {
   }
 }
 
+/* ---------------------------------------------------------------- text files */
+
+/** Files the small editor knows how to open. Anything else has to be downloaded. */
+function isTextFile(file) {
+  const type = file.contentType || '';
+  return type.startsWith('text/') || type === 'application/json' || type === 'application/xml';
+}
+
+function newTextFile() {
+  editor.value = { creating: true, name: '', content: '', saving: false };
+}
+
+async function editTextFile(file) {
+  try {
+    const { data } = await cloud.fileContent(file.fileId);
+    editor.value = { creating: false, fileId: file.fileId, name: data.name, content: data.content, saving: false };
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao abrir o arquivo'));
+  }
+}
+
+async function saveTextFile() {
+  const current = editor.value;
+  current.saving = true;
+  try {
+    if (current.creating) {
+      await cloud.createTextFile({
+        name: current.name,
+        folderId: content.value.folder.id,
+        content: current.content,
+      });
+    } else {
+      await cloud.saveFileContent(current.fileId, current.content);
+    }
+    editor.value = null;
+    await load();
+    toast.success('Arquivo salvo!');
+  } catch (error) {
+    current.saving = false;
+    toast.error(apiMessage(error, 'Erro ao salvar o arquivo'));
+  }
+}
+
 /* ------------------------------------------------------------ access requests */
 
 async function requestAccess() {
@@ -531,10 +600,9 @@ function canEditItem(item) {
 
 async function openShares(kind, item) {
   sharing.value = { kind, item };
-  Object.assign(newShare, {
-    granteeType: 'USER', granteeUsername: '', granteeDivisionId: null,
-    granteeTenantId: null, accessLevel: 'VIEW',
-  });
+  newShare.accessLevel = 'VIEW';
+  targetSearch.value = '';
+  chosenTarget.value = null;
   await Promise.all([loadShares(), loadShareTargets()]);
 }
 
@@ -549,29 +617,57 @@ async function loadShares() {
   }
 }
 
+/*
+ * The server answers who the caller may share with: members of the team, its divisions and,
+ * only for whoever can share externally, people and teams from outside. Asking it instead of
+ * listing everything keeps the field from suggesting a destination the server would refuse.
+ */
 async function loadShareTargets() {
+  if (!sharing.value) return;
   try {
-    const { data } = await divisions.list(auth.activeTenantId);
-    divisionList.value = data;
+    const { data } = sharing.value.kind === 'folder'
+      ? await cloud.folderShareTargets(sharing.value.item.id, targetSearch.value)
+      : await cloud.fileShareTargets(sharing.value.item.fileId, targetSearch.value);
+    targets.value = data;
   } catch (error) {
-    divisionList.value = [];
-  }
-  try {
-    const { data } = await tenants.list();
-    tenantList.value = data;
-  } catch (error) {
-    tenantList.value = [];
+    targets.value = [];
   }
 }
 
+/** Waits for the typing to stop before asking the server again. */
+function searchTargets() {
+  if (targetTimer) clearTimeout(targetTimer);
+  targetTimer = setTimeout(loadShareTargets, 180);
+}
+
+function chooseTarget(target) {
+  chosenTarget.value = target;
+}
+
+function clearTarget() {
+  chosenTarget.value = null;
+  targetSearch.value = '';
+  loadShareTargets();
+}
+
+function targetIcon(target) {
+  return { USER: 'users', DIVISION: 'divisions', TENANT: 'shield' }[target.granteeType] || 'users';
+}
+
 async function addShare() {
+  if (!chosenTarget.value) return;
   try {
-    const body = { ...newShare };
+    const target = chosenTarget.value;
+    const body = { granteeType: target.granteeType, accessLevel: newShare.accessLevel };
+    if (target.granteeType === 'USER') body.granteeUserId = target.id;
+    if (target.granteeType === 'DIVISION') body.granteeDivisionId = Number(target.id);
+    if (target.granteeType === 'TENANT') body.granteeTenantId = Number(target.id);
     if (sharing.value.kind === 'folder') {
       await cloud.shareFolder(sharing.value.item.id, body);
     } else {
       await cloud.shareFile(sharing.value.item.fileId, body);
     }
+    clearTarget();
     await loadShares();
     toast.success('Compartilhado!');
   } catch (error) {
@@ -668,6 +764,12 @@ async function removeComment(comment) {
 }
 
 /* -------------------------------------------------------------------- labels */
+
+/** A locked folder shows a padlock; the folder of a division carries the division icon. */
+function folderIcon(folder) {
+  if (folder.access === 'NONE') return 'lock';
+  return folder.divisionId ? 'divisions' : 'folder';
+}
 
 function accessLabel(level) {
   return {
@@ -808,16 +910,20 @@ function formatWhen(value) {
 
 .cloud__actions {
   display: flex;
+  flex-wrap: wrap;
   border-top: 1px solid var(--vc-border);
 }
 
+/* The card is narrow and an item can offer up to five actions, so they wrap instead of
+   being cut off at the edge of the card. */
 .cloud__action {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 56px;
   border: none;
   background: none;
   font: inherit;
   font-size: 0.74rem;
-  padding: 6px 2px;
+  padding: 6px 4px;
   cursor: pointer;
   color: var(--vc-text-muted);
   border-right: 1px solid var(--vc-border);
@@ -835,6 +941,58 @@ function formatWhen(value) {
 .cloud__action.is-danger:hover {
   background: var(--vc-danger-bg);
   color: var(--vc-danger-text);
+}
+
+.cloud__suggest {
+  margin-top: 6px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface);
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.cloud__suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--vc-border);
+  background: none;
+  font: inherit;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.cloud__suggest-item:last-child {
+  border-bottom: none;
+}
+
+.cloud__suggest-item:hover {
+  background: var(--vc-purple-soft);
+}
+
+.cloud__suggest-label {
+  font-weight: 500;
+}
+
+.cloud__chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 1px solid var(--vc-purple-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-purple-soft);
+  padding: 8px 10px;
+}
+
+.cloud__editor {
+  min-height: 320px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
 }
 
 .cloud__comment {
