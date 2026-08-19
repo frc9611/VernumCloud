@@ -226,6 +226,11 @@ async function copy(value) {
 </script>
 
 <style scoped>
+/* Chips that sit right after a name in the table need to breathe. */
+.vc-table .vc-chip {
+  margin-left: 6px;
+}
+
 .keys__code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.8rem;

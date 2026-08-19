@@ -10,6 +10,7 @@ tudo na ordem certa.
 | `docs/CONTINUE.md` | o que existe, o que falta, como mexer |
 | `docs/ARCHITECTURE.md` | tenants, permissões, cloud, notificações |
 | `docs/API.md` | todas as rotas e a permissão de cada uma |
+| `~/VernumAttendance/README.md` | o quiosque de presença, que entra por esse dashboard via SSO |
 
 Referências visuais aqui: `docs/mockups/` (mockups originais) e `docs/screens/` (screenshot de cada
 tela como está hoje).
@@ -27,6 +28,8 @@ src/
   store/auth.js            sessão: memberships, equipe ativa, can() / canPlatform()
   store/notifications.js   sino do header
   views/                   telas: admin/ cloud/ divisions/ recruitment/ public/
+  views/SsoConsentView.vue tela do "Entrar com o Vernum" (rota bare, abre antes do login)
+  views/ChangePasswordView.vue  troca obrigatória da senha de uso único
   router/index.ts          rotas + guard por permissão
 ```
 
@@ -44,6 +47,10 @@ src/
 - **Depois de mexer em equipe, divisão ou permissão**: `await auth.loadMe()`, senão a interface
   segue com as permissões antigas.
 - Tela administrativa nova também entra como card em `views/admin/AdminView.vue`.
+- Quem tem `user.mustChangePassword` só abre `/trocar-senha`: é a senha de uso único que veio na
+  folha de boas-vindas de um processo seletivo. O guard do router cuida disso.
+- `/entrar-com-vernum` é `bare` porque um app manda a pessoa para lá antes de qualquer login; o
+  `?next=` do login é o que a traz de volta para a autorização.
 - Comentários e nomes de código em inglês; textos de interface em português.
 
 ### `meta` das rotas
