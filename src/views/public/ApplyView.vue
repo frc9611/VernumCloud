@@ -44,7 +44,9 @@
           <div v-else-if="!auth.isAuth" class="apply__login">
             <p class="vc-small" style="margin: 0">
               <strong>Já tem conta no Vernum Cloud?</strong>
-              Entre para preencher o formulário automaticamente e acompanhar o resultado por aqui.
+              <span style="margin-left: 5px">
+                Entre para preencher o formulário automaticamente e acompanhar o resultado por aqui.
+              </span>
             </p>
             <form class="vc-row" style="gap: 6px" @submit.prevent="loginAndPrefill">
               <input class="vc-input" style="flex: 1; min-width: 120px" type="text"

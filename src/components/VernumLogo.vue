@@ -1,6 +1,6 @@
 <template>
   <span class="vc-logo">
-    <img src="../assets/logo.png" alt="Vernum" :style="{ height: size + 'px', width: size + 'px' }" />
+    <img src="../assets/logo.svg" alt="Vernum" :style="{ height: size + 'px', width: size + 'px' }" />
     <span v-if="withWordmark" class="vc-logo__text" :style="{ fontSize: fontSize }">
       Vernum <strong>Cloud</strong>
     </span>

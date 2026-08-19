@@ -70,8 +70,8 @@
           Enviar arquivo
           <input type="file" style="display: none" @change="upload" />
         </label>
-        <form v-if="content.canUpload" class="vc-row" style="gap: 6px" @submit.prevent="createFolder">
-          <input class="vc-input" style="min-width: 220px" type="text" v-model="newFolderName"
+        <form v-if="content.canUpload" class="cloud__new-folder" @submit.prevent="createFolder">
+          <input class="vc-input" style="flex: 1; min-width: 150px" type="text" v-model="newFolderName"
                  placeholder="Nome da nova pasta..." required />
           <button class="vc-btn vc-btn--outline" type="submit">+ Criar pasta</button>
         </form>
@@ -107,9 +107,10 @@
             <span v-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
             <span v-else-if="folder.access === 'NONE'" class="vc-chip">sem acesso</span>
           </button>
-          <div class="cloud__actions">
-            <button v-if="canManageItem(folder)" class="cloud__action" type="button" @click="openShares('folder', folder)">
-              Compartilhar
+          <div v-if="folderActions(folder)" class="cloud__actions">
+            <button v-if="canManageItem(folder)" class="cloud__action" type="button"
+                    title="Compartilhar" @click="openShares('folder', folder)">
+              Acesso
             </button>
             <button v-if="canManageItem(folder)" class="cloud__action" type="button" @click="openItemSettings('folder', folder)">
               Editar
@@ -135,9 +136,11 @@
             <span v-else-if="file.access === 'NONE'" class="vc-chip">sem acesso</span>
           </button>
           <div class="cloud__actions">
-            <button class="cloud__action" type="button" @click="openComments('file', file)">Comentar</button>
-            <button v-if="canManageItem(file)" class="cloud__action" type="button" @click="openShares('file', file)">
-              Compartilhar
+            <button class="cloud__action" type="button" title="Comentários"
+                    @click="openComments('file', file)">Comentar</button>
+            <button v-if="canManageItem(file)" class="cloud__action" type="button"
+                    title="Compartilhar" @click="openShares('file', file)">
+              Acesso
             </button>
             <button v-if="canManageItem(file)" class="cloud__action" type="button" @click="openItemSettings('file', file)">
               Editar
@@ -509,6 +512,11 @@ function canManageItem(item) {
   return item.access === 'MANAGE';
 }
 
+/** Whether a folder has any action to offer, so an empty action bar is not drawn. */
+function folderActions(folder) {
+  return canManageItem(folder) || folder.access === 'NONE';
+}
+
 function canEditItem(item) {
   return item.access === 'MANAGE' || item.access === 'EDIT';
 }
@@ -706,9 +714,18 @@ function formatWhen(value) {
   color: var(--vc-border-strong);
 }
 
+.cloud__new-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  flex: 1 1 300px;
+  max-width: 430px;
+}
+
 .cloud__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
 }
 
