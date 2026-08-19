@@ -2,27 +2,46 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 // eslint-disable-next-line
 import {authStore} from '@/store/auth.js' //Maybe the IDE says there is an error, but it's ok
 
+/*
+ * Route meta used by the guard below:
+ *   auth        the route needs a logged user
+ *   tenant      the route only makes sense inside a team, so the user is sent to the
+ *               chooser or to the waiting screen when there is no team open
+ *   permission  permission needed in the team currently open
+ *   platform    permission needed on the "Administracao Vernum" team
+ *   bare        no header (login and the public application form)
+ *   footer      shows the footer links
+ */
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'login',
-    component: () => import(/* webpackChunkName: "login" */ '../views/LoginView.vue')
+    component: () => import(/* webpackChunkName: "login" */ '../views/LoginView.vue'),
+    meta: { bare: true, footer: true }
+  },
+  {
+    path: '/equipes',
+    name: 'chooseTenant',
+    component: () => import(/* webpackChunkName: "tenants" */ '../views/ChooseTenantView.vue'),
+    meta: { auth: true }
+  },
+  {
+    path: '/aguardando',
+    name: 'waiting',
+    component: () => import(/* webpackChunkName: "waiting" */ '../views/WaitingRoomView.vue'),
+    meta: { auth: true }
   },
   {
     path: '/home',
     name: 'home',
     component: () => import(/* webpackChunkName: "home" */ '../views/HomeView.vue'),
-    meta:{
-      auth: true
-    }
+    meta: { auth: true, tenant: true }
   },
   {
     path: '/profile',
     name: 'profile',
     component: () => import(/* webpackChunkName: "profile" */ '../views/ProfileView.vue'),
-    meta:{
-      auth: true
-    }
+    meta: { auth: true }
   },
   {
     path: '/about',
@@ -30,97 +49,115 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
   },
   {
+    path: '/equipe',
+    name: 'teamMembers',
+    component: () => import(/* webpackChunkName: "team" */ '../views/TeamMembersView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEMBER_VIEW' }
+  },
+  {
+    path: '/divisoes',
+    name: 'divisions',
+    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisions/DivisionsView.vue'),
+    meta: { auth: true, tenant: true, permission: 'DIVISION_VIEW' }
+  },
+  {
+    path: '/divisoes/:id',
+    name: 'divisionDetail',
+    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisions/DivisionDetailView.vue'),
+    meta: { auth: true, tenant: true, permission: 'DIVISION_VIEW' }
+  },
+
+  /* ------------------------------------------------------------ admin panel */
+  {
     path: '/admin',
     name: 'admin',
-    component: () => import(/* webpackChunkName: "admin" */ '../views/AdminView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/AdminView.vue'),
+    meta: { auth: true }
   },
   {
-    path: '/division',
-    name: 'listDivision',
-    component: () => import(/* webpackChunkName: "division" */ '../views/divisionsManagement/ListUsersDivisionView.vue'),
-    meta:{
-      auth: true, 
-    }
+    path: '/admin/tenants',
+    name: 'adminTenants',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/TenantsAdminView.vue'),
+    meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
   },
   {
-    path: '/users',
-    name: 'users',
-    component: () => import(/* webpackChunkName: "users" */ '../views/UsersView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
+    path: '/admin/membros',
+    name: 'adminMembers',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/MembersAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEMBER_VIEW' }
   },
   {
-    path: '/listusers',
-    name: 'listusers',
-    component: () => import(/* webpackChunkName: "listusers" */ '../views/ListUsersView.vue'),
-    meta:{
-      auth: true,
-    }
+    path: '/admin/divisoes',
+    name: 'adminDivisions',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/DivisionsAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'DIVISION_VIEW' }
   },
   {
-    path: '/admin/users/:id',
-    name: 'editUsers',
-    component: () => import(/* webpackChunkName: "users" */ '../views/EditUsersView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
-  },
-  {
-    path: '/admin/divisions',
-    name: 'editDivisions',
-    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/DivisionsAdminView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
-  },
-  
-  {
-    path: '/admin/createDivision',
-    name: 'createDivision',
-    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/CreateDivisionView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
-  },
-  {
-    path: '/admin/division/:id',
-    name: 'editDivision',
-    component: () => import(/* webpackChunkName: "divisions" */ '../views/divisionsManagement/EditDivisionView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
-  },
-  {
-    path: '/admin/createuser',
+    path: '/admin/usuarios/novo',
     name: 'createUser',
-    component: () => import(/* webpackChunkName: "createuser" */ '../views/usersManagement/CreateUserView.vue'),
-    meta:{
-      auth: true,
-      requireAdmin: true
-    }
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/CreateUserView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEMBER_INVITE' }
   },
+  {
+    path: '/admin/processos',
+    name: 'adminRecruitment',
+    component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessesAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'RECRUITMENT_VIEW' }
+  },
+  {
+    path: '/admin/processos/:id',
+    name: 'recruitmentPanel',
+    component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessPanelView.vue'),
+    meta: { auth: true, tenant: true, permission: 'RECRUITMENT_VIEW' }
+  },
+
+  /* ------------------------------------------------------------------ cloud */
   {
     path: '/cloud',
     name: 'cloud',
-    redirect: '/cloud/1'
+    component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/CloudView.vue'),
+    meta: { auth: true, tenant: true }
   },
   {
     path: '/cloud/:id',
+    name: 'cloudFolder',
     component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/CloudView.vue'),
-    meta:{
-      auth: true, 
-    }
+    meta: { auth: true }
   },
+  {
+    path: '/compartilhados',
+    name: 'sharedWithMe',
+    component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/SharedWithMeView.vue'),
+    meta: { auth: true }
+  },
+  {
+    path: '/pedidos-de-acesso',
+    name: 'accessRequests',
+    component: () => import(/* webpackChunkName: "cloud" */ '../views/cloud/AccessRequestsView.vue'),
+    meta: { auth: true }
+  },
+
+  /* ------------------------------------------------------- public / candidate */
+  {
+    path: '/processos-seletivos',
+    name: 'openProcesses',
+    component: () => import(/* webpackChunkName: "public" */ '../views/public/OpenProcessesView.vue'),
+    meta: { bare: true, footer: true }
+  },
+  {
+    path: '/candidatar/:token',
+    name: 'apply',
+    component: () => import(/* webpackChunkName: "public" */ '../views/public/ApplyView.vue'),
+    meta: { bare: true, footer: true }
+  },
+  {
+    path: '/minhas-candidaturas',
+    name: 'myApplications',
+    component: () => import(/* webpackChunkName: "public" */ '../views/public/MyApplicationsView.vue'),
+    meta: { auth: true }
+  },
+
+  { path: '/:pathMatch(.*)*', redirect: '/home' },
 ]
 
 const router = createRouter({
@@ -131,22 +168,40 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const auth = authStore();
 
-  if (to.meta?.auth) {
-    if (!auth.isAuth) {
-      return next({ name: 'login' });
-    }
-
-    if (to.meta?.requireAdmin) {
-      if (auth.isAdmin === null || auth.isAdmin === undefined) {
-        await auth.checkRole();
-      }
-      return auth.isAdmin ? next() : next({ name: 'home' });
-    }
-
+  if (!to.meta?.auth && !to.meta?.tenant && !to.meta?.permission && !to.meta?.platform) {
     return next();
   }
 
-  next();
+  if (!auth.isAuth) {
+    return next({ name: 'login' });
+  }
+
+  //On a reload the guard can run before /me answered
+  if (!auth.ready) {
+    await auth.loadMe();
+    if (!auth.isAuth) {
+      return next({ name: 'login' });
+    }
+  }
+
+  //A user with no team waits on the public processes screen
+  if (auth.hasNoTenant && to.name !== 'waiting' && to.name !== 'profile' && to.name !== 'myApplications') {
+    return next({ name: 'waiting' });
+  }
+
+  if (to.meta?.tenant && !auth.activeTenantId) {
+    return next({ name: auth.memberships.length ? 'chooseTenant' : 'waiting' });
+  }
+
+  if (to.meta?.permission && !auth.can(to.meta.permission as string)) {
+    return next({ name: 'home' });
+  }
+
+  if (to.meta?.platform && !auth.canPlatform(to.meta.platform as string)) {
+    return next({ name: 'home' });
+  }
+
+  return next();
 });
 
 
