@@ -186,6 +186,7 @@ const shortcuts = computed(() => {
   if (auth.can('RECRUITMENT_VIEW')) {
     items.push({ label: 'Processos Seletivos', icon: 'clipboard', hint: 'Inscrições, etapas e candidatos.', to: { name: 'adminRecruitment' } });
   }
+  items.push({ label: 'Presença', icon: 'clock', hint: 'Quem está na sala, o ranking e o seu histórico de presença.', to: { name: 'attendance' } });
   items.push({ label: 'Compartilhados comigo', icon: 'share', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
   return items;
 });

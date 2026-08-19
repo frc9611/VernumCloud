@@ -86,6 +86,14 @@ const teamCards = computed(() => {
       to: { name: 'adminRecruitment' },
     });
   }
+  if (auth.canAny('ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE')) {
+    cards.push({
+      label: 'Presença',
+      icon: 'clock',
+      hint: 'Quem está na sala, o ranking e o histórico de estadas — com o fecho das que ficaram abertas.',
+      to: { name: 'attendance' },
+    });
+  }
   if (auth.can('APP_MANAGE')) {
     cards.push({
       label: 'Apps da equipe',

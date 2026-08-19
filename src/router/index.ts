@@ -61,6 +61,17 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'MEMBER_VIEW' }
   },
   {
+    /*
+     * No permission on the route on purpose: everybody reads their own presence. How far the screen
+     * reaches — the team, the divisions the person leads, or only themselves — is decided by the
+     * server and answered by /attendance/scope.
+     */
+    path: '/presenca',
+    name: 'attendance',
+    component: () => import(/* webpackChunkName: "attendance" */ '../views/AttendanceView.vue'),
+    meta: { auth: true, tenant: true }
+  },
+  {
     path: '/divisoes',
     name: 'divisions',
     component: () => import(/* webpackChunkName: "divisions" */ '../views/divisions/DivisionsView.vue'),

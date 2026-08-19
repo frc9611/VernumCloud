@@ -167,8 +167,11 @@ export const attendance = {
   me: () => http.get('/attendance/me'),
   enter: () => http.post('/attendance/enter'),
   leave: () => http.post('/attendance/leave'),
+  /* How far the register of the team reaches for whoever is asking: team, divisions or self. */
+  scope: (tenantId) => http.get(`/tenants/${tenantId}/attendance/scope`),
   now: (tenantId) => http.get(`/tenants/${tenantId}/attendance/now`),
-  ranking: (tenantId) => http.get(`/tenants/${tenantId}/attendance/ranking`),
+  ranking: (tenantId, params) =>
+    http.get(`/tenants/${tenantId}/attendance/ranking`, { params: params || {} }),
   entries: (tenantId, params) =>
     http.get(`/tenants/${tenantId}/attendance/entries`, { params: params || {} }),
   close: (attendanceId, endTime) =>
