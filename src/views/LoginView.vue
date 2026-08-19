@@ -1,158 +1,223 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h2>Faça login no Vernum Cloud</h2>
-
-      <template v-if="!auth.isAuth">
-        <form @submit.prevent="login">
-          <div class="field">
-            <input
-              type="text"
-              placeholder="Usuário"
-              v-model="user.username"
-              required
-            />
-          </div>
-
-          <div class="field">
-            <input
-              type="password"
-              placeholder="Senha"
-              v-model="user.password"
-              required
-            />
-          </div>
-          <button type="submit" class="buttonLogin">Entrar</button>
-        </form>
-      </template>
-
-      <template v-else>
-        <p class="already-auth">Você já está logado.</p>
-      </template>
+  <main class="login">
+    <div class="login__brand">
+      <VernumLogo :size="46" :with-wordmark="false" />
+      <h1 class="login__wordmark">Cyber <strong>Login</strong></h1>
     </div>
-  </div>
+
+    <section class="login__card">
+      <h2 class="login__title">Entre no <strong>Vernum Cloud</strong></h2>
+
+      <form v-if="!auth.isAuth" @submit.prevent="login">
+        <input
+          class="vc-input"
+          type="text"
+          placeholder="Usuário"
+          autocomplete="username"
+          v-model="credentials.username"
+          required
+        />
+
+        <div class="login__password">
+          <label class="login__floating" for="password">Senha</label>
+          <input
+            id="password"
+            class="vc-input"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
+            v-model="credentials.password"
+            required
+          />
+          <button
+            class="login__eye"
+            type="button"
+            :aria-label="showPassword ? 'Esconder senha' : 'Mostrar senha'"
+            @click="showPassword = !showPassword"
+          >
+            {{ showPassword ? '🙈' : '👁' }}
+          </button>
+        </div>
+
+        <div class="login__actions">
+          <router-link :to="{ name: 'openProcesses' }" class="login__link">Não se candidatou?</router-link>
+          <button class="vc-btn" type="submit" :disabled="busy">{{ busy ? 'Entrando...' : 'Entrar' }}</button>
+        </div>
+      </form>
+
+      <div v-else class="vc-stack">
+        <p class="vc-muted" style="text-align: center; margin: 0">Você já está logado.</p>
+        <button class="vc-btn vc-btn--block" type="button" @click="goInside">Ir para o Dashboard</button>
+      </div>
+    </section>
+
+    <p v-if="serverOffline" class="login__offline">Vernum Server offline. Contate a equipe de P&amp;D.</p>
+  </main>
 </template>
 
 <script setup>
-  import http from '@/services/http.js';
-  import { reactive } from 'vue';
-  import {authStore} from '@/store/auth.js'
-  import { useRouter } from 'vue-router';
-  import { useToast } from "vue-toastification";
-  const toast = useToast();
+import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import VernumLogo from '@/components/VernumLogo.vue';
+import { authStore } from '@/store/auth.js';
+import { session } from '@/services/api.js';
+import { apiMessage } from '@/services/http.js';
 
-  const router = useRouter();
-
+const toast = useToast();
+const router = useRouter();
 const auth = authStore();
+
+const credentials = reactive({ username: '', password: '' });
+const showPassword = ref(false);
+const busy = ref(false);
+const serverOffline = ref(false);
 
 verifyServer();
 
-  const user = reactive({
-    username:'',
-    password:''
-  });
-
-  async function login(){
-    try{
-      const {data} = await http.post('/login', user);
-      console.log(data);
-      auth.setToken(data.accessToken);
-      auth.setName(data.name);
-      auth.setUserId(data.userId);
-      auth.setDivisions(data.divisions);
-      auth.setRoles(data.role);
-      auth.setIsAuth(true);
-      ((data.role)[0].name == 'ADMIN')? auth.setIsAdmin(true) : auth.setIsAdmin(false);
-      router.push({name: 'home'});
-    }catch(error){
-      console.log(error?.response?.data);
-      toast.error('Usuário ou senha incorretos!');
-    }
+async function verifyServer() {
+  try {
+    await session.serverInfo();
+  } catch (error) {
+    serverOffline.value = true;
+    toast.error('Vernum Server offline!');
   }
-
-  async function verifyServer() {
-    try{
-      await http.get("/serverInfo");
-    }catch(err){
-      toast.error("Vernum Server Offline!");
-    }
-  }
-
-</script>
-<style>
-* {
-  box-sizing: border-box;
 }
 
-.login-container {
-  height: 90vh;
+async function login() {
+  busy.value = true;
+  try {
+    await auth.login(credentials);
+    goInside();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Usuário ou senha incorretos!'));
+  } finally {
+    busy.value = false;
+  }
+}
+
+/*
+ * Where to land depends on the teams of the user: the waiting screen when there is
+ * none, the chooser when there is more than one and no team was picked yet.
+ */
+function goInside() {
+  if (auth.hasNoTenant) {
+    router.push({ name: 'waiting' });
+  } else if (!auth.activeTenantId) {
+    router.push({ name: 'chooseTenant' });
+  } else {
+    router.push({ name: 'home' });
+  }
+}
+</script>
+
+<style scoped>
+.login {
+  min-height: calc(100vh - 120px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  gap: 22px;
+  padding: 40px 20px;
 }
 
-.login-card {
-  background: #171717;
+.login__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.login__wordmark {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.login__wordmark strong {
+  font-weight: 700;
+}
+
+.login__card {
   width: 100%;
-  max-width: 380px;
-  padding: 2rem;
-  border-radius: 14px;
-  box-shadow: 0 15px 40px #865faf;
+  max-width: 340px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius-lg);
+  box-shadow: var(--vc-shadow);
+  padding: 18px 20px 20px;
 }
 
-.login-card h2 {
+.login__title {
+  margin: 0 0 16px;
   text-align: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.6rem;
-  color: #865faf;
-}
-
-.field {
-  margin-bottom: 1rem;
-}
-
-.field input {
-  width: 100%;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 0.95rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.field input:focus {
-  outline: none;
-  border-color: #865faf;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-}
-
-.buttonLogin {
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: none;
-  background: #865faf;
-  color: #fff;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
+}
+
+.login__title strong {
+  font-weight: 700;
+}
+
+.login__card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* The password field of the mockup, with the label cut into the border */
+.login__password {
+  position: relative;
+}
+
+.login__floating {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  padding: 0 5px;
+  background: var(--vc-surface);
+  font-size: 0.74rem;
+  color: var(--vc-text-muted);
+}
+
+.login__password .vc-input {
+  padding-right: 40px;
+}
+
+.login__eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.6;
 }
 
-.buttonLogin:hover {
-  background: #694b89;
+.login__eye:hover {
+  opacity: 1;
 }
 
-.buttonLogin:active {
-  transform: scale(0.98);
+.login__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
 }
 
-.already-auth {
-  text-align: center;
-  font-weight: 500;
-  color: #444;
+.login__link {
+  color: var(--vc-purple);
+  font-size: 0.9rem;
+  text-decoration: underline;
 }
 
+.login__offline {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--vc-danger-text);
+}
 </style>

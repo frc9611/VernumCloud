@@ -1,279 +1,381 @@
 <template>
-  <main>
-    <form class="profile-section" @submit.prevent="editUser">
-      <div class="left-side">
-        <img v-if="pictureUrl" :src="pictureUrl" alt="Foto de Perfil" class="profile-picture">
-        
-        <form @submit.prevent="submitPicture">
-          <div class="profile-image-form">
-            <input
-              type="file"
-              accept="image/*"
-              @change="onFileChange"
-            />
+  <main class="vc-page profile">
+    <div class="profile__left">
+      <div class="profile__picture">
+        <img v-if="pictureUrl" :src="pictureUrl" alt="Foto de perfil" />
+        <div v-else class="profile__picture-empty" aria-hidden="true"></div>
+        <label class="profile__change">
+          📷 Alterar
+          <input type="file" accept="image/*" @change="uploadPicture" />
+        </label>
+      </div>
+    </div>
 
-            <button type="submit" :disabled="!selectedFile">
-              Enviar foto
+    <div class="profile__right">
+      <h1 class="vc-title vc-title--underlined">{{ auth.getName }}</h1>
+
+      <!-- ------------------------------------------------ teams and divisions -->
+      <SectionTitle lead="Cyber" title="Dados" />
+
+      <div v-for="membership in auth.memberships" :key="membership.membershipId" class="profile__tenant">
+        <div class="profile__tenant-mark">
+          <span class="profile__tenant-dot" :style="{ background: membership.tenant.color || '#8864AE' }"></span>
+          <button
+            type="button"
+            class="profile__tenant-name"
+            :class="{ 'is-active': membership.tenant.tenantId === auth.activeTenantId }"
+            @click="switchTenant(membership.tenant.tenantId)"
+          >
+            {{ membership.tenant.visibleName }}
+          </button>
+        </div>
+
+        <div class="profile__tenant-body">
+          <p class="profile__label">Subdivisões:</p>
+          <div class="vc-row">
+            <span
+              v-for="division in membership.divisions"
+              :key="division.divisionMembershipId"
+              class="vc-chip vc-chip--purple"
+              :title="division.position || 'Sem cargo definido'"
+            >
+              {{ division.divisionVisibleName }}
+              <template v-if="division.position"> · {{ division.position }}</template>
+              <template v-if="division.leader"> ★</template>
+            </span>
+            <span v-if="!membership.divisions.length" class="vc-faint">Nenhuma divisão ainda.</span>
+            <router-link
+              v-if="membership.tenant.tenantId === auth.activeTenantId && auth.can('DIVISION_VIEW')"
+              class="vc-chip vc-chip--button"
+              :to="{ name: 'divisions' }"
+            >+</router-link>
+          </div>
+
+          <p class="profile__label" style="margin-top: 10px">Role</p>
+          <div class="vc-row">
+            <span class="vc-chip vc-chip--purple">{{ membership.roleLabel }}</span>
+            <span v-if="membership.tenant.systemTenant" class="vc-chip vc-chip--warning">Administração</span>
+            <button class="vc-chip vc-chip--button" type="button" @click="showPermissions = membership">
+              ✎ Permissões
             </button>
           </div>
-        </form>
-        <h1 class="name">{{userRead.name}}</h1>
-        <span>{{userRead.division}}</span>
+        </div>
       </div>
-      <div class="right-side">
-        <label for="username">Nome de Usuário</label>
-        <input type="text" name="username" id="username" v-model="userWrite.username">
-        <label for="username">E-mail:</label>
-        <input type="text" name="email" id="email" v-model="userRead.email" disabled>
-        <label for="birthDate">Data de Nascimento:</label>
-        <input type="date" name="birthDate" id="birthDate" v-model="userWrite.birthDate">
-        <label for="schoolClass">Turma Escolar:</label>
-        <input type="text" name="schoolClass" id="schoolClass" v-model="userWrite.schoolClass">
-        <span>Insira apenas informações verdadeiras.</span>
-        <button class="button">Atualizar Dados</button>
+
+      <p v-if="!auth.memberships.length" class="vc-faint">
+        Você ainda não faz parte de nenhuma equipe.
+        <router-link :to="{ name: 'waiting' }">Ver processos seletivos abertos</router-link>.
+      </p>
+
+      <!-- ------------------------------------------------------ personal data -->
+      <SectionTitle lead="Dados" title="Importantes" />
+
+      <p class="vc-callout">
+        <strong>Atenção:</strong> esses dados ajudam os mentores do time a identificar o competidor no
+        ambiente da instituição. Procure sempre mantê-los atualizados.
+      </p>
+
+      <form class="profile__form" @submit.prevent="save">
+        <div class="profile__fields">
+          <div class="vc-field">
+            <label class="vc-label" for="course">Itinerário:</label>
+            <input id="course" class="vc-input" type="text" v-model="form.course" placeholder="Curso Técnico em..." />
+          </div>
+          <div class="vc-field">
+            <label class="vc-label" for="schoolClass">Sala e Ano:</label>
+            <input id="schoolClass" class="vc-input" type="text" v-model="form.schoolClass" placeholder="GETIC2024 | 3ºAno" />
+          </div>
+        </div>
+
+        <div class="vc-field">
+          <label class="vc-label" for="email">E-mail de Estudante:</label>
+          <div class="vc-input-group">
+            <input id="email" class="vc-input" type="email" v-model="form.email" />
+            <button class="vc-btn vc-btn--icon vc-btn--ghost" type="button" @click="copy(form.email)">⧉</button>
+          </div>
+        </div>
+
+        <div class="profile__fields">
+          <div class="vc-field">
+            <label class="vc-label" for="username">Nome de usuário:</label>
+            <input id="username" class="vc-input" type="text" v-model="form.username" />
+          </div>
+          <div class="vc-field">
+            <label class="vc-label" for="birthDate">Data de nascimento:</label>
+            <input id="birthDate" class="vc-input" type="date" v-model="form.birthDate" />
+          </div>
+        </div>
+
+        <div class="vc-row">
+          <button class="vc-btn" type="submit" :disabled="saving">Salvar Alterações ✎</button>
+          <button class="vc-btn vc-btn--danger" type="button" @click="auth.clear()">Logout ⏻</button>
+        </div>
+      </form>
+
+      <SectionTitle lead="Alterar" title="Senha" />
+      <form class="profile__form" @submit.prevent="changePassword">
+        <div class="profile__fields">
+          <div class="vc-field">
+            <label class="vc-label" for="oldPassword">Senha atual:</label>
+            <input id="oldPassword" class="vc-input" type="password" v-model="passwords.oldPassword" />
+          </div>
+          <div class="vc-field">
+            <label class="vc-label" for="newPassword">Senha nova:</label>
+            <input id="newPassword" class="vc-input" type="password" v-model="passwords.password" />
+          </div>
+        </div>
+        <div>
+          <button class="vc-btn vc-btn--outline" type="submit">Redefinir senha</button>
+        </div>
+      </form>
+    </div>
+
+    <ModalDialog v-if="showPermissions" :title="'Permissões em ' + showPermissions.tenant.visibleName"
+                 @close="showPermissions = null">
+      <p class="vc-faint" style="margin: 0">
+        Cargo {{ showPermissions.roleLabel }}. Somente quem tem PERMISSION_MANAGE na equipe pode alterar
+        essa lista.
+      </p>
+      <div class="vc-row">
+        <span v-for="permission in showPermissions.permissions" :key="permission" class="vc-chip">{{ permission }}</span>
       </div>
-    </form>
-  
-    <hr>
-  <div class="pass-box">
-    <form @submit.prevent="editPassword">
-      <label for="oldPassword">Senha Atual:</label>
-      <input type="password" name="oldPassword" id="oldPassword" v-model="userPassword.oldPassword">
-      <label for="newPassword">Senha Nova:</label>
-      <input type="password" name="newPassword" id="newPassword" v-model="userPassword.password">
-      <button class="button" type="submit">Redefinir Senha</button>
-    </form>
-  </div>
-</main>
+    </ModalDialog>
+  </main>
 </template>
 
 <script setup>
-  import { ref, onMounted, reactive } from 'vue'
-  import http from '@/services/http.js'
-  import { authStore } from '@/store/auth.js'
-  import { useRouter } from 'vue-router'
-  import { useToast } from "vue-toastification";
-  const toast = useToast();
-  const router = useRouter();
-  const auth = authStore();
-  const userId = auth.getId;
-  const selectedFile = ref(null);
-  const pictureUrl = ref(null);
+import { onMounted, reactive, ref } from 'vue';
+import { useToast } from 'vue-toastification';
+import SectionTitle from '@/components/SectionTitle.vue';
+import ModalDialog from '@/components/ModalDialog.vue';
+import { authStore } from '@/store/auth.js';
+import { users } from '@/services/api.js';
+import { apiMessage } from '@/services/http.js';
 
-  loadProfileImage();
+/*
+ * The profile screen of the mockup: the picture on the left, and on the right the teams
+ * of the user with the divisions and cargo of each one, then the personal data.
+ */
+const auth = authStore();
+const toast = useToast();
 
-  let userRead = reactive({
-    email:'',
-    name:'',
-    division:''
-  });
-  let userWrite = reactive({
-    username:'',
-    birthDate:'',
-    schoolClass:''
-  });
-  let userPassword = reactive({
-    oldPassword:'',
-    password:'',
-  });
+const pictureUrl = ref(null);
+const saving = ref(false);
+const showPermissions = ref(null);
 
-  onMounted(async () => {
-    try {
-      const response = await http.get('/user/'+userId, {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      })
-      userRead.name = response.data.name
-      userWrite.username = response.data.username
-      userRead.email = response.data.email
-      userRead.division = response.data.divisions?.[0]?.visibleName
-      userWrite.birthDate = response.data.birthDate
-      userWrite.schoolClass = response.data.schoolClass
-    } catch (err) {
-      toast.error("Erro ao carregar perfil");
-    }
-  });
+const form = reactive({ username: '', email: '', birthDate: '', schoolClass: '', course: '' });
+const passwords = reactive({ oldPassword: '', password: '' });
 
-  async function editUser(){
-    try{
-      await http.put('/users/'+userId, userWrite, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }});
-      toast.success("Perfil atualizado com sucesso!");
-    }catch(error){
-      toast.error("Erro ao atualizar perfil");
-    }
+onMounted(async () => {
+  await loadProfile();
+  await loadPicture();
+});
+
+async function loadProfile() {
+  try {
+    const { data } = await users.get(auth.getId);
+    form.username = data.username || '';
+    form.email = data.email || '';
+    form.birthDate = data.birthDate || '';
+    form.schoolClass = data.schoolClass || '';
+    form.course = data.course || '';
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar perfil'));
   }
-
-  async function editPassword() {
-    try{
-      await http.put('/users/'+userId, userPassword, {
-      headers: {
-        Authorization: `Bearer ${auth.getToken}`
-      }});
-      toast.success("Senha alterada com sucesso!");
-    }catch(error){
-      toast.error("Alteração de senha não autorizada");
-    }
-  }
-
-  
-
-function onFileChange(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  selectedFile.value = file;
 }
 
-async function submitPicture() {
-  if (!selectedFile.value) {
-    toast.error("Selecione uma imagem");
+async function loadPicture() {
+  try {
+    const { data } = await users.picture(auth.getId);
+    pictureUrl.value = URL.createObjectURL(data);
+  } catch (error) {
+    pictureUrl.value = null;
+  }
+}
+
+async function save() {
+  saving.value = true;
+  try {
+    await users.update(auth.getId, { ...form });
+    await auth.loadMe();
+    toast.success('Perfil atualizado!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao atualizar perfil'));
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function changePassword() {
+  if (!passwords.password) {
+    toast.warning('Informe a senha nova.');
     return;
   }
-
-  const formData = new FormData();
-  formData.append("file", selectedFile.value);
-
   try {
-    await http.put(
-      `/users/${userId}/picture`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      }
-    );
-
-    toast.success("Foto de perfil atualizada com sucesso!");
-    selectedFile.value = null;
+    await users.update(auth.getId, { ...passwords });
+    passwords.oldPassword = '';
+    passwords.password = '';
+    toast.success('Senha alterada!');
   } catch (error) {
-    toast.error("Erro ao atualizar foto de perfil");
+    toast.error(apiMessage(error, 'Alteração de senha não autorizada'));
   }
 }
 
-async function loadProfileImage() {
-  try{
-    const response = await http.get(
-      `/users/${userId}/picture`,
-      {
-        responseType: 'blob',
-        headers: {
-          Authorization: `Bearer ${auth.getToken}`
-        }
-      }
-    );
-
-    pictureUrl.value = URL.createObjectURL(response.data);
+async function uploadPicture(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    await users.uploadPicture(auth.getId, file);
+    await loadPicture();
+    toast.success('Foto atualizada!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao atualizar foto'));
   }
-  catch(error){
-    toast.warning("Erro ao obter foto de perfil");
+}
+
+function switchTenant(tenantId) {
+  auth.setActiveTenant(tenantId);
+  toast.info('Equipe ativa alterada.');
+}
+
+async function copy(value) {
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    toast.success('Copiado!');
+  } catch (error) {
+    toast.warning('Copie manualmente: ' + value);
   }
 }
 </script>
-<style>
-  main{
-    margin-top: 10%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 80%;
-    flex-direction: column;
-    width: 100%;
-  }
-  .profile-section{
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 100%;
-    align-items: center;
-  }
-  .profile-section div{
-    display: flex;
-    flex-direction: column;
-    margin: 10px 30px;
-  }
-  .name{
-    margin: 0 !important;
-    color: #865faf !important;
-  }
-  .pass-box, hr{
-    margin-top: 10px;
-  }
-  .pass-box{
-    border: 3px solid #865faf;
-    padding: 10px 30px;
-    color: #865faf;
-    border-radius: 10px;
-  }
-  .pass-box form{
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .profile-picture{
-    width: 200px;
-    border-radius: 100px;
-  }
-  .left-side{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 3px solid #865faf;
-    padding: 10px 30px;
-    color: #865faf;
-    border-radius: 10px;
-  }
 
-  input[type="text"], 
-  input[type="password"], 
-  input[type="date"], 
-  select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #865faf;
-    border-radius: 6px;
-    box-sizing: border-box;
-    font-size: 1em;
-    color: #865faf;
-    transition: border-color 0.3s, box-shadow 0.3s;
-  }
+<style scoped>
+.profile {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
 
-  input[type="text"]:focus, 
-  input[type="password"]:focus, 
-  input[type="date"]:focus, 
-  select:focus {
-    border-color: #865faf;
-    box-shadow: 0 0 0 3px #865faf;
-    outline: none;
-  }
-
-  .button {
-  display: block;
+.profile__picture {
+  position: relative;
   width: 100%;
-  padding: 5px;
-  margin-top: 10px;
-  background-color: #865faf;
-  color: white;
-  border: none;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e2e2e6;
+}
+
+.profile__picture img,
+.profile__picture-empty {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile__change {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border-strong);
   border-radius: 6px;
-  font-size: 1.1em;
-  font-weight: 500;
+  padding: 4px 12px;
+  font-size: 0.82rem;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
+  white-space: nowrap;
 }
 
-.button:hover {
-  background-color: #865faf;
-  transform: translateY(-1px);
+.profile__change input {
+  display: none;
 }
 
-.button:active {
-  transform: translateY(0);
+.profile__right {
+  border-left: 1px solid var(--vc-border);
+  padding-left: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
+.profile__tenant {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.profile__tenant-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.profile__tenant-dot {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.profile__tenant-name {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--vc-purple);
+  cursor: pointer;
+  text-align: center;
+  padding: 0;
+}
+
+.profile__tenant-name.is-active {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.profile__label {
+  margin: 0 0 5px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.profile__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 820px) {
+  .profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile__picture {
+    max-width: 240px;
+  }
+
+  .profile__right {
+    border-left: none;
+    padding-left: 0;
+  }
+
+  .profile__tenant {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile__tenant-mark {
+    flex-direction: row;
+    align-items: center;
+  }
+}
 </style>

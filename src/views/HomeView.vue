@@ -1,62 +1,204 @@
 <template>
-  <div class="home">
-    <h1>Olá {{ auth.getName }}</h1>
-    <span v-for="announcement in data" :key="announcement.announcementId" class="information"><strong> {{ announcement.title }} </strong> <br> {{ announcement.content }} <br><br> {{ announcement.sender.name }}</span> 
+  <main class="vc-page">
+    <TabBar v-model="tab" :tabs="tabs">
+      <template #context>
+        <span class="vc-chip">{{ today }}</span>
+        <span class="vc-chip">{{ auth.activeRoleLabel }}</span>
+        <span class="vc-chip">{{ auth.getName }}</span>
+        <span
+          v-for="division in auth.activeDivisions.slice(0, 2)"
+          :key="division.divisionMembershipId"
+          class="vc-chip vc-chip--purple"
+        >
+          {{ division.divisionVisibleName }}
+        </span>
+      </template>
+    </TabBar>
 
-    <ul class="main-menu">
-      <li><Router-link :to="{ name: 'home' }" class="menu-button">
-        Registro diário
-      </Router-link></li>
-      <li><Router-link :to="{ name: 'home' }" class="menu-button">
-        Fórum
-      </Router-link></li>
-      <li><Router-link :to="{ name: 'cloud' }" class="menu-button">
-        Arquivos
-      </Router-link></li>
-      <li><Router-link :to="{ name: 'listDivision' }" class="menu-button">
-        Minha Divisão
-      </Router-link></li>
-      <li><Router-link :to="{ name: 'listusers' }" class="menu-button">
-        Equipe
-      </Router-link></li>
-    </ul>
-  </div>
+    <!-- ------------------------------------------------------------- home -->
+    <div v-if="tab === 'home'" class="vc-stack">
+      <AlertBanner variant="success" icon="🏠" title="Bem-vindo(a)!" :aside="auth.activeTenantName">
+        {{ auth.getName }}
+      </AlertBanner>
+
+      <AlertBanner
+        v-for="announcement in announcements"
+        :key="announcement.announcementId"
+        variant="warning"
+        icon="!"
+        :title="announcement.title"
+        :aside="announcement.senderName"
+      >
+        {{ announcement.content }}
+      </AlertBanner>
+
+      <SectionTitle lead="Atalhos" title="da Equipe" />
+      <div class="vc-grid">
+        <router-link
+          v-for="shortcut in shortcuts"
+          :key="shortcut.label"
+          :to="shortcut.to"
+          class="vc-card vc-card--action"
+        >
+          <div class="vc-card__header">
+            <span>{{ shortcut.label }}</span>
+            <span class="vc-card__icon" aria-hidden="true">{{ shortcut.icon }}</span>
+          </div>
+          <div class="vc-card__body">
+            <p>{{ shortcut.hint }}</p>
+          </div>
+        </router-link>
+      </div>
+
+      <div v-if="pendingAccessRequests.length" class="vc-stack">
+        <SectionTitle lead="Pedidos" title="de Acesso">
+          <template #actions>
+            <router-link class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'accessRequests' }">
+              Ver todos
+            </router-link>
+          </template>
+        </SectionTitle>
+        <div class="vc-table-wrap">
+          <table class="vc-table">
+            <thead>
+              <tr><th>Quem pediu</th><th>Item</th><th>Nível</th><th>Quando</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="request in pendingAccessRequests.slice(0, 5)" :key="request.accessRequestId">
+                <td>{{ request.requesterName }}</td>
+                <td>{{ request.targetName }}</td>
+                <td>{{ request.requestedLevel }}</td>
+                <td class="vc-faint">{{ formatWhen(request.createdAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------- apps -->
+    <div v-else-if="tab === 'apps'" class="vc-stack">
+      <SectionTitle lead="Apps" title="da Equipe" />
+      <p class="vc-faint">
+        Links e ferramentas que a equipe usa no dia a dia. Publique um aviso com o link enquanto o
+        cadastro de apps não existe no servidor.
+      </p>
+      <div class="vc-grid">
+        <PanelCard title="Discord" icon="💬" color="#5865F2">
+          <p>O server do Discord do time. Fazemos calls quando precisamos nos reunir ou trabalhar em conjunto remotamente.</p>
+          <div class="vc-input-group">
+            <input class="vc-input" readonly :value="discordPlaceholder" />
+            <button class="vc-btn vc-btn--icon" type="button" @click="copy(discordPlaceholder)">⧉</button>
+          </div>
+        </PanelCard>
+
+        <PanelCard title="Vernum Cloud" icon="☁">
+          <p>Os arquivos da equipe, com permissão por pessoa e por divisão.</p>
+          <router-link class="vc-btn" :to="{ name: 'cloud' }">Abrir arquivos</router-link>
+        </PanelCard>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------- scouting -->
+    <div v-else class="vc-stack">
+      <AlertBanner variant="warning" icon="!" title="Scouting ainda não implementado"
+                   aside="Próxima etapa do desenvolvimento">
+        A tela está reservada e segue o mesmo modelo das outras: abas, banners e cards.
+      </AlertBanner>
+
+      <SectionTitle lead="On-Cloud" title="Scouting" />
+      <div class="vc-split">
+        <div class="vc-grid">
+          <PanelCard title="Criar uma Scout Entry">
+            <p>Todos os membros podem analisar o desempenho de uma equipe e seu robô durante uma partida.</p>
+            <button class="vc-btn" type="button" disabled>Scoutar</button>
+          </PanelCard>
+          <PanelCard title="Criar uma Scouting Analysis">
+            <p>Com os dados dos outros times em mãos é possível criar uma análise para determinar o parceiro de aliança ideal.</p>
+            <button class="vc-btn" type="button" disabled>Analisar</button>
+          </PanelCard>
+        </div>
+        <PanelCard title="My Last Scouts" icon="📊">
+          <p class="vc-faint" style="margin: 0">Sem dados enquanto o scouting não existir no servidor.</p>
+        </PanelCard>
+      </div>
+    </div>
+  </main>
 </template>
 
 <script setup>
-  import {authStore} from '@/store/auth.js';
-import { onMounted, ref } from 'vue';
-import http from '@/services/http.js';
-import { useToast } from "vue-toastification"
+import { computed, onMounted, ref, watch } from 'vue';
+import { useToast } from 'vue-toastification';
+import TabBar from '@/components/TabBar.vue';
+import AlertBanner from '@/components/AlertBanner.vue';
+import SectionTitle from '@/components/SectionTitle.vue';
+import PanelCard from '@/components/PanelCard.vue';
+import { authStore } from '@/store/auth.js';
+import { announcements as announcementsApi, cloud } from '@/services/api.js';
 
+const auth = authStore();
 const toast = useToast();
-  const auth = authStore();
-const data = ref([]);
 
-  onMounted(async () => {
-    try{
-      const response = await http.get('/allAnnouncements', {
-        headers: {
-        Authorization: `Bearer ${auth.getToken}`
-        }
-      });
-      data.value = response.data;
-    }catch (err){
-      toast.error("Erro ao carregar avisos");
-    }
-  });
+const tab = ref('home');
+const announcements = ref([]);
+const pendingAccessRequests = ref([]);
+const discordPlaceholder = 'https://discord.gg/server-super-cyber';
+
+const tabs = [
+  { key: 'home', label: 'Home' },
+  { key: 'apps', label: 'Apps' },
+  { key: 'scouting', label: 'Scouting', hint: 'Ainda não implementado' },
+];
+
+const today = computed(() => new Date().toLocaleDateString('pt-BR'));
+
+/* Only the shortcuts the user is actually allowed to open. */
+const shortcuts = computed(() => {
+  const items = [
+    { label: 'Arquivos', icon: '📁', hint: 'Pastas e arquivos da equipe, com compartilhamento.', to: { name: 'cloud' } },
+  ];
+  if (auth.can('MEMBER_VIEW')) {
+    items.push({ label: 'Equipe', icon: '👥', hint: 'Todos os membros e seus cargos.', to: { name: 'teamMembers' } });
+  }
+  if (auth.can('DIVISION_VIEW')) {
+    items.push({ label: 'Divisões', icon: '🧩', hint: 'Divisões, subdivisões e quem está em cada uma.', to: { name: 'divisions' } });
+  }
+  if (auth.can('RECRUITMENT_VIEW')) {
+    items.push({ label: 'Processos Seletivos', icon: '📝', hint: 'Inscrições, etapas e candidatos.', to: { name: 'adminRecruitment' } });
+  }
+  items.push({ label: 'Compartilhados comigo', icon: '🔗', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
+  return items;
+});
+
+onMounted(load);
+watch(() => auth.activeTenantId, load);
+
+async function load() {
+  if (!auth.activeTenantId) return;
+  try {
+    const { data } = await announcementsApi.list(auth.activeTenantId);
+    announcements.value = data;
+  } catch (error) {
+    announcements.value = [];
+  }
+  try {
+    const { data } = await cloud.accessRequests();
+    pendingAccessRequests.value = data;
+  } catch (error) {
+    pendingAccessRequests.value = [];
+  }
+}
+
+async function copy(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast.success('Link copiado!');
+  } catch (error) {
+    toast.warning('Copie manualmente: ' + value);
+  }
+}
+
+function formatWhen(value) {
+  return value ? new Date(value).toLocaleString('pt-BR') : '';
+}
 </script>
-
-<style>
-  .home {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-  }
-
-  h1 {
-    color: #5c288f;
-    margin-bottom: 25px;
-  }
-</style>
