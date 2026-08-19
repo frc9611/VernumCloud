@@ -45,6 +45,8 @@
               <td>
                 {{ entry.socialName || entry.name }}
                 <span v-if="entry.userId" class="vc-chip vc-chip--info" title="Tem conta no Vernum">conta</span>
+                <span v-else-if="entry.createdUsername" class="vc-chip vc-chip--info"
+                      :title="'Conta criada: ' + entry.createdUsername">virou membro</span>
               </td>
               <td class="vc-faint">{{ entry.email }}</td>
               <td>
@@ -143,6 +145,36 @@
         <hr class="vc-divider" />
       </template>
 
+      <!-- ------------------------------------------------- approved -> member -->
+      <template v-if="canConvert && selected.status === 'APPROVED'">
+        <SectionTitle lead="Entrada na" title="Equipe" />
+        <p v-if="selected.createdUsername" class="vc-muted" style="margin: 0">
+          Conta criada: <strong>{{ selected.createdUsername }}</strong>.
+        </p>
+        <p v-else-if="selected.userId" class="vc-muted" style="margin: 0">
+          O candidato já tinha conta no Vernum, então entra na equipe com ela.
+        </p>
+        <p v-else class="vc-muted" style="margin: 0">
+          Criar a conta gera uma senha de uso único, que aparece uma vez só e vai na folha de
+          boas-vindas para imprimir.
+        </p>
+        <div class="vc-row">
+          <button class="vc-btn" type="button" :disabled="onboarding" @click="convert">
+            {{ selected.createdUsername || selected.userId ? 'Garantir entrada na equipe' : 'Criar conta e colocar na equipe' }}
+          </button>
+          <button v-if="!selected.userId" class="vc-btn vc-btn--outline" type="button"
+                  :disabled="onboarding" @click="printWelcome">
+            Imprimir boas-vindas
+          </button>
+        </div>
+        <p v-if="!selected.userId" class="vc-faint" style="margin: 0">
+          Imprimir gera uma senha nova: a anterior para de valer. O servidor guarda só o hash dela,
+          então não existe como reimprimir a mesma.
+        </p>
+
+        <hr class="vc-divider" />
+      </template>
+
       <SectionTitle lead="Histórico de" title="Anotações" />
       <p v-if="!notes.length" class="vc-faint" style="margin: 0">Nenhuma anotação ainda.</p>
       <article v-for="item in notes" :key="item.recruitmentNoteId" class="panel__note">
@@ -169,6 +201,31 @@
         </template>
       </template>
     </ModalDialog>
+    <!-- ------------------------------------------------------- credentials -->
+    <ModalDialog v-if="credentials" title="Conta criada" @close="credentials = null">
+      <AlertBanner variant="warning" icon="key" title="Anote agora">
+        A senha aparece uma única vez. O servidor guarda só o hash dela — para ter a senha de novo,
+        é gerar outra pela folha de boas-vindas.
+      </AlertBanner>
+      <div class="vc-field">
+        <label class="vc-label" for="createdUsername">Usuário</label>
+        <input id="createdUsername" class="vc-input" readonly :value="credentials.username" />
+      </div>
+      <div class="vc-field">
+        <label class="vc-label" for="createdPassword">Senha de uso único</label>
+        <input id="createdPassword" class="vc-input" readonly :value="credentials.password" />
+      </div>
+      <p class="vc-muted" style="margin: 0">
+        {{ credentials.name }} entrou em {{ credentials.tenantName }}
+        <template v-if="credentials.divisions.length">
+          nas divisões {{ credentials.divisions.join(', ') }}
+        </template>.
+      </p>
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="credentials = null">Fechar</button>
+        <button class="vc-btn" type="button" @click="printWelcome">Imprimir boas-vindas</button>
+      </template>
+    </ModalDialog>
   </main>
 </template>
 
@@ -178,6 +235,7 @@ import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import TabBar from '@/components/TabBar.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
+import AlertBanner from '@/components/AlertBanner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import { authStore } from '@/store/auth.js';
@@ -201,6 +259,8 @@ const stageFilter = ref(null);
 const selected = ref(null);
 const notes = ref([]);
 const moveStageId = ref(null);
+const credentials = ref(null);
+const onboarding = ref(false);
 const note = reactive({ content: '', decision: 'NONE', score: null, visibleToCandidate: false });
 
 const statusTabs = [
@@ -212,6 +272,8 @@ const statusTabs = [
 ];
 
 const canEvaluate = computed(() => auth.can('RECRUITMENT_EVALUATE'));
+/* Turning a candidate into a member is two things at once, so it asks for both permissions. */
+const canConvert = computed(() => auth.can('RECRUITMENT_EVALUATE') && auth.can('MEMBER_INVITE'));
 
 onMounted(async () => {
   await loadProcess();
@@ -282,6 +344,46 @@ async function addNote() {
     toast.success('Anotação salva!');
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao salvar anotação'));
+  }
+}
+
+/*
+ * Approved candidate -> member of the team.
+ *
+ * The password comes back on this call and nowhere else, so it goes straight to a modal that
+ * says so. Calling it again on somebody who already has an account changes nothing.
+ */
+async function convert() {
+  onboarding.value = true;
+  try {
+    const { data } = await recruitment.convert(selected.value.recruitmentEntryId);
+    await refreshSelected();
+    if (data.password) {
+      credentials.value = data;
+    } else {
+      toast.success(data.name + ' está na equipe.');
+    }
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao criar a conta do candidato'));
+  } finally {
+    onboarding.value = false;
+  }
+}
+
+/** Downloads the welcome sheet. Every call draws a new one-time password. */
+async function printWelcome() {
+  onboarding.value = true;
+  try {
+    const response = await recruitment.welcomeSheet(selected.value.recruitmentEntryId);
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    window.open(url, '_blank');
+    credentials.value = null;
+    await refreshSelected();
+    toast.success('Folha de boas-vindas gerada com uma senha nova.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao gerar a folha de boas-vindas'));
+  } finally {
+    onboarding.value = false;
   }
 }
 

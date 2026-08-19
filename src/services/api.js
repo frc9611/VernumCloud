@@ -205,6 +205,9 @@ export const recruitment = {
   updateEntry: (entryId, body) => http.put(`/recruitment/entries/${entryId}`, body),
   approve: (entryId, body) => http.post(`/recruitment/entries/${entryId}/approve`, body || {}),
   reject: (entryId, body) => http.post(`/recruitment/entries/${entryId}/reject`, body || {}),
+  convert: (entryId, body) => http.post(`/recruitment/entries/${entryId}/convert`, body || {}),
+  welcomeSheet: (entryId) =>
+    http.post(`/recruitment/entries/${entryId}/welcomeSheet`, null, { responseType: 'blob' }),
 
   notes: (entryId) => http.get(`/recruitment/entries/${entryId}/notes`),
   addNote: (entryId, body) => http.post(`/recruitment/entries/${entryId}/notes`, body),

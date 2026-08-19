@@ -44,6 +44,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true }
   },
   {
+    path: '/trocar-senha',
+    name: 'changePassword',
+    component: () => import(/* webpackChunkName: "profile" */ '../views/ChangePasswordView.vue'),
+    meta: { auth: true }
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
@@ -202,6 +208,14 @@ router.beforeEach(async (to, from, next) => {
     if (!auth.isAuth) {
       return next({ name: 'login' });
     }
+  }
+
+  /*
+   * An account that came out of a selection process still carries the one-time password that was
+   * printed on paper. Nothing else in the dashboard opens until the person picks their own.
+   */
+  if (auth.user?.mustChangePassword && to.name !== 'changePassword') {
+    return next({ name: 'changePassword' });
   }
 
   //A user with no team waits on the public processes screen
