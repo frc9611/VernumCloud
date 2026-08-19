@@ -401,7 +401,27 @@ a {
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   text-decoration: none;
   color: inherit;
-  display: block;
+  /*
+   * Flex column, not block, and this matters when the card is a <button>: the browser wraps the
+   * children of a button in an anonymous box that centers them, and display:block does not undo it.
+   * A card stretched by .vc-grid to the height of the tallest one in the row would then float its
+   * colored header down the middle of the card, each one by a different amount — the team chooser
+   * showed a row of crooked bars. Declaring the button a flex container makes the children real
+   * flex items again, so the header goes back to the top edge. On an <a> card this changes nothing.
+   *
+   * The direction is part of the contract: an action card is a vertical stack. A card that reads as
+   * a line has to say so itself — .division-node__card does, and broke when it did not.
+   */
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * The white body takes the slack, so the card keeps the row height without a gap under the text.
+ * Direct child on purpose: the body of this card, never the body of a card nested inside it.
+ */
+.vc-card--action > .vc-card__body {
+  flex-grow: 1;
 }
 
 .vc-card--action:hover {

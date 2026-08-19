@@ -43,6 +43,12 @@ defineProps({
 
 .division-node__card {
   display: flex;
+  /*
+   * Row on purpose. An action card of the design system is a vertical stack — header, body, footer —
+   * and this is the one card that reads as a line instead: colored rail, body, chips. Without saying
+   * so here it inherits the column of .vc-card--action and the whole tree falls apart.
+   */
+  flex-direction: row;
   align-items: center;
   gap: 12px;
   padding: 0 14px 0 0;
