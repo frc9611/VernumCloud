@@ -9,12 +9,12 @@
 
     <!-- ------------------------------------------------------ access denied -->
     <div v-if="content.denied" class="vc-stack">
-      <AlertBanner variant="warning" icon="🔒" :title="'Sem acesso a ' + (content.folder?.name || 'esta pasta')"
+      <AlertBanner variant="warning" icon="lock" :title="'Sem acesso a ' + (content.folder?.name || 'esta pasta')"
                    aside="Você pode solicitar acesso">
         Esta pasta existe, mas ainda não foi liberada para você.
       </AlertBanner>
 
-      <PanelCard title="Solicitar acesso" icon="🔐">
+      <PanelCard title="Solicitar acesso" icon="key">
         <p v-if="content.myAccessRequest">
           Seu pedido está <strong>{{ content.myAccessRequest.statusLabel }}</strong> desde
           {{ formatWhen(content.myAccessRequest.createdAt) }}. Quem pode liberar já foi notificado.
@@ -49,7 +49,8 @@
         <nav class="cloud__path">
           <template v-for="(item, index) in content.path || []" :key="item.id">
             <router-link :to="{ name: 'cloudFolder', params: { id: item.id } }" class="cloud__crumb">
-              {{ index === 0 ? '🏠 ' + item.name : item.name }}
+              <AppIcon v-if="index === 0" name="home" :size="15" />
+              {{ item.name }}
             </router-link>
             <span v-if="index < (content.path || []).length - 1" class="cloud__sep">/</span>
           </template>
@@ -67,13 +68,17 @@
 
       <div class="vc-row">
         <label v-if="content.canUpload" class="vc-btn">
+          <AppIcon name="upload" :size="16" />
           Enviar arquivo
           <input type="file" style="display: none" @change="upload" />
         </label>
         <form v-if="content.canUpload" class="cloud__new-folder" @submit.prevent="createFolder">
           <input class="vc-input" style="flex: 1; min-width: 150px" type="text" v-model="newFolderName"
                  placeholder="Nome da nova pasta..." required />
-          <button class="vc-btn vc-btn--outline" type="submit">+ Criar pasta</button>
+          <button class="vc-btn vc-btn--outline" type="submit">
+            <AppIcon name="plus" :size="15" />
+            Criar pasta
+          </button>
         </form>
         <span class="vc-spacer"></span>
         <button v-if="content.canManage && !isRoot" class="vc-btn vc-btn--ghost vc-btn--small"
@@ -92,7 +97,7 @@
       <!-- content grid -->
       <div class="cloud__grid">
         <button v-if="!isRoot" type="button" class="cloud__item cloud__item--back" @click="goUp">
-          <span class="cloud__icon">↩</span>
+          <AppIcon class="cloud__icon" name="back" :size="26" :stroke="1.6" />
           <span class="cloud__name">Voltar</span>
         </button>
 
@@ -102,7 +107,8 @@
           :class="['cloud__item', folder.access === 'NONE' ? 'is-locked' : '']"
         >
           <button type="button" class="cloud__open" @click="openFolder(folder)">
-            <span class="cloud__icon">{{ folder.access === 'NONE' ? '🔒' : '📁' }}</span>
+            <AppIcon class="cloud__icon" :name="folder.access === 'NONE' ? 'lock' : 'folder'"
+                     :size="26" :stroke="1.6" />
             <span class="cloud__name">{{ folder.name }}</span>
             <span v-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
             <span v-else-if="folder.access === 'NONE'" class="vc-chip">sem acesso</span>
@@ -130,7 +136,8 @@
           :class="['cloud__item', file.access === 'NONE' ? 'is-locked' : '']"
         >
           <button type="button" class="cloud__open" @click="openFile(file)">
-            <span class="cloud__icon">{{ file.access === 'NONE' ? '🔒' : '📄' }}</span>
+            <AppIcon class="cloud__icon" :name="file.access === 'NONE' ? 'lock' : 'file'"
+                     :size="26" :stroke="1.6" />
             <span class="cloud__name">{{ file.name }}</span>
             <span v-if="file.sizeBytes" class="vc-faint">{{ formatSize(file.sizeBytes) }}</span>
             <span v-else-if="file.access === 'NONE'" class="vc-chip">sem acesso</span>
@@ -304,6 +311,7 @@ import AlertBanner from '@/components/AlertBanner.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { cloud, divisions, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
@@ -700,6 +708,10 @@ function formatWhen(value) {
   text-decoration: none;
 }
 
+.cloud__item--back .cloud__icon {
+  color: var(--vc-text-muted);
+}
+
 .cloud__crumb:hover {
   color: var(--vc-purple-strong);
   text-decoration: underline;
@@ -775,8 +787,17 @@ function formatWhen(value) {
 }
 
 .cloud__icon {
-  font-size: 26px;
-  line-height: 1;
+  color: var(--vc-purple);
+}
+
+.cloud__item.is-locked .cloud__icon {
+  color: var(--vc-text-faint);
+}
+
+.cloud__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .cloud__name {

@@ -29,7 +29,7 @@
             As inscrições deste processo não estão abertas neste momento.
           </AlertBanner>
 
-          <AlertBanner v-else-if="sent" variant="success" icon="✓" title="Candidatura enviada!"
+          <AlertBanner v-else-if="sent" variant="success" title="Candidatura enviada!"
                        :aside="linkedToAccount ? 'Ligada à sua conta' : 'Guarde seu e-mail'">
             <template v-if="linkedToAccount">
               Você pode acompanhar o resultado em

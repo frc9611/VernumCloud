@@ -5,15 +5,22 @@
         <VernumLogo />
       </router-link>
 
-      <button class="vc-header__toggle" type="button" @click="menuOpen = !menuOpen" aria-label="Menu">☰</button>
+      <button class="vc-header__toggle" type="button" aria-label="Menu" @click.stop="menuOpen = !menuOpen">
+        <AppIcon name="menu" :size="22" />
+      </button>
 
       <nav :class="['vc-header__nav', menuOpen ? 'is-open' : '']">
         <!-- Which team is open. Only shown when the user is in more than one. -->
         <div v-if="auth.memberships.length > 1" class="vc-header__tenant">
-          <button class="vc-chip vc-chip--purple vc-chip--button" type="button" @click="tenantOpen = !tenantOpen">
+          <button
+            class="vc-header__tenant-toggle"
+            type="button"
+            :aria-expanded="tenantOpen"
+            @click.stop="toggleTenants"
+          >
             <span class="vc-dot" :style="{ background: auth.activeTenantColor }"></span>
             {{ auth.activeTenantName || 'Escolher equipe' }}
-            <span aria-hidden="true">▾</span>
+            <AppIcon name="chevronDown" :size="14" />
           </button>
           <div v-if="tenantOpen" class="vc-header__dropdown" @click.stop>
             <p class="vc-header__dropdown-title">Suas equipes</p>
@@ -29,6 +36,7 @@
                 <span class="vc-header__tenant-name">{{ membership.tenant.visibleName }}</span>
                 <span class="vc-faint">{{ membership.roleLabel }}</span>
               </span>
+              <AppIcon v-if="membership.tenant.tenantId === auth.activeTenantId" name="check" :size="15" />
             </button>
           </div>
         </div>
@@ -40,21 +48,34 @@
 
         <!-- Notification bell -->
         <div class="vc-header__bell">
-          <button class="vc-header__bell-btn" type="button" @click="toggleNotifications" aria-label="Notificações">
-            <span aria-hidden="true">🔔</span>
+          <button
+            :class="['vc-header__bell-btn', notificationsOpen ? 'is-open' : '']"
+            type="button"
+            aria-label="Notificações"
+            @click.stop="toggleNotifications"
+          >
+            <AppIcon name="bell" :size="19" />
             <span v-if="notifications.unread" class="vc-header__bell-count">{{ badge }}</span>
           </button>
+
           <div v-if="notificationsOpen" class="vc-header__dropdown vc-header__dropdown--wide" @click.stop>
-            <div class="vc-row vc-row--between" style="padding: 0 4px 8px">
-              <strong style="font-size: 0.9rem">Notificações</strong>
-              <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="notifications.markAllRead()">
+            <div class="vc-header__dropdown-head">
+              <strong>Notificações</strong>
+              <button
+                v-if="notifications.unread"
+                class="vc-btn vc-btn--ghost vc-btn--small"
+                type="button"
+                @click="notifications.markAllRead()"
+              >
                 Marcar como lidas
               </button>
             </div>
-            <p v-if="notifications.loading" class="vc-faint" style="padding: 8px 4px">Carregando...</p>
-            <p v-else-if="!visibleNotifications.length" class="vc-faint" style="padding: 8px 4px">
+
+            <p v-if="notifications.loading" class="vc-faint vc-header__dropdown-empty">Carregando...</p>
+            <p v-else-if="!visibleNotifications.length" class="vc-faint vc-header__dropdown-empty">
               Nenhuma notificação por enquanto.
             </p>
+
             <button
               v-for="item in visibleNotifications"
               :key="item.notificationId"
@@ -62,10 +83,15 @@
               :class="['vc-notification', item.read ? '' : 'is-unread']"
               @click="openNotification(item)"
             >
-              <span class="vc-notification__type">{{ item.typeLabel }}</span>
-              <span class="vc-notification__title">{{ item.title }}</span>
-              <span class="vc-notification__message">{{ item.message }}</span>
-              <span class="vc-faint">{{ formatWhen(item.createdAt) }}<template v-if="item.tenantName"> · {{ item.tenantName }}</template></span>
+              <span class="vc-notification__icon"><AppIcon :name="iconFor(item.type)" :size="16" /></span>
+              <span class="vc-notification__content">
+                <span class="vc-notification__title">{{ item.title }}</span>
+                <span class="vc-notification__message">{{ item.message }}</span>
+                <span class="vc-faint">
+                  {{ item.typeLabel }} · {{ formatWhen(item.createdAt) }}
+                  <template v-if="item.tenantName"> · {{ item.tenantName }}</template>
+                </span>
+              </span>
             </button>
           </div>
         </div>
@@ -81,6 +107,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from './VernumLogo.vue';
+import AppIcon from './AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { notificationStore } from '@/store/notifications.js';
 
@@ -113,18 +140,25 @@ const homeTarget = computed(() => (auth.isAuth ? { name: 'home' } : { name: 'log
 const badge = computed(() => (notifications.unread > 9 ? '9+' : notifications.unread));
 const visibleNotifications = computed(() => notifications.forTenant(auth.activeTenantId));
 
+/* One dropdown at a time. The click stops here so the document listener does not close it again. */
+function toggleTenants() {
+  notificationsOpen.value = false;
+  tenantOpen.value = !tenantOpen.value;
+}
+
+async function toggleNotifications() {
+  tenantOpen.value = false;
+  notificationsOpen.value = !notificationsOpen.value;
+  if (notificationsOpen.value) {
+    await notifications.load();
+  }
+}
+
 function chooseTenant(tenantId) {
   auth.setActiveTenant(tenantId);
   tenantOpen.value = false;
   menuOpen.value = false;
   router.push({ name: 'home' });
-}
-
-async function toggleNotifications() {
-  notificationsOpen.value = !notificationsOpen.value;
-  if (notificationsOpen.value) {
-    await notifications.load();
-  }
 }
 
 async function openNotification(item) {
@@ -137,6 +171,18 @@ async function openNotification(item) {
     //A notification may point to a route the user cannot open any more
     router.push(item.link).catch(() => toast.warning('Não foi possível abrir esse item.'));
   }
+}
+
+/** Icon of each notification type, so the list is readable at a glance. */
+function iconFor(type) {
+  if (type.startsWith('CLOUD_ACCESS')) return 'key';
+  if (type === 'CLOUD_SHARED') return 'share';
+  if (type === 'CLOUD_COMMENT') return 'comment';
+  if (type.startsWith('TENANT_MEMBER')) return 'users';
+  if (type.startsWith('DIVISION_MEMBER')) return 'divisions';
+  if (type === 'ANNOUNCEMENT_PUBLISHED') return 'alert';
+  if (type.startsWith('RECRUITMENT')) return 'clipboard';
+  return 'info';
 }
 
 function formatWhen(value) {
@@ -199,9 +245,9 @@ watch(
   margin-left: auto;
   background: none;
   border: none;
-  font-size: 22px;
   cursor: pointer;
   color: var(--vc-text);
+  padding: 4px;
 }
 
 .vc-header__nav {
@@ -249,28 +295,68 @@ watch(
   position: relative;
 }
 
-.vc-header__bell-btn {
-  background: none;
-  border: none;
+.vc-header__tenant-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--vc-purple-border);
+  background: var(--vc-purple-soft);
+  color: var(--vc-purple-strong);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 18px;
+  white-space: nowrap;
+}
+
+.vc-header__tenant-toggle:hover {
+  border-color: var(--vc-purple);
+}
+
+/* ---------------------------------------------------------------- bell */
+
+.vc-header__bell-btn {
   position: relative;
-  padding: 2px 4px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vc-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.vc-header__bell-btn:hover,
+.vc-header__bell-btn.is-open {
+  background: var(--vc-purple-soft);
+  border-color: var(--vc-purple-border);
+  color: var(--vc-purple-strong);
 }
 
 .vc-header__bell-count {
   position: absolute;
-  top: -4px;
-  right: -6px;
+  top: -1px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
   background: #e03131;
+  border: 2px solid var(--vc-surface);
   color: #fff;
-  border-radius: 10px;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  padding: 1px 5px;
-  line-height: 1.3;
+  line-height: 12px;
+  text-align: center;
 }
+
+/* ------------------------------------------------------------ dropdowns */
 
 .vc-header__dropdown {
   position: absolute;
@@ -278,25 +364,41 @@ watch(
   top: calc(100% + 10px);
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
-  border-radius: var(--vc-radius);
+  border-radius: var(--vc-radius-lg);
   box-shadow: var(--vc-shadow-lg);
-  padding: 10px;
-  min-width: 240px;
+  padding: 8px;
+  min-width: 250px;
   z-index: 50;
 }
 
 .vc-header__dropdown--wide {
-  min-width: 340px;
-  max-height: 420px;
+  min-width: 360px;
+  max-height: 440px;
   overflow-y: auto;
 }
 
 .vc-header__dropdown-title {
-  margin: 0 4px 6px;
-  font-size: 0.78rem;
+  margin: 4px 8px 6px;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--vc-text-faint);
+}
+
+.vc-header__dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid var(--vc-border);
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.vc-header__dropdown-empty {
+  padding: 10px 6px;
+  margin: 0;
 }
 
 .vc-header__tenant-item {
@@ -306,20 +408,26 @@ watch(
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--vc-radius);
   background: transparent;
   font: inherit;
   text-align: left;
   cursor: pointer;
+  color: var(--vc-text);
 }
 
 .vc-header__tenant-item:hover {
-  background: var(--vc-purple-soft);
+  background: var(--vc-surface-muted);
 }
 
 .vc-header__tenant-item.is-active {
   background: var(--vc-purple-soft);
-  font-weight: 600;
+  color: var(--vc-purple-strong);
+}
+
+.vc-header__tenant-item > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
 }
 
 .vc-header__tenant-item span span {
@@ -329,45 +437,63 @@ watch(
 
 .vc-header__tenant-name {
   font-size: 0.92rem;
+  font-weight: 500;
 }
 
+/* -------------------------------------------------------- notifications */
+
 .vc-notification {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   width: 100%;
   text-align: left;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--vc-radius);
   background: transparent;
-  padding: 8px 10px;
+  padding: 9px 10px;
   font: inherit;
   cursor: pointer;
-  border-left: 3px solid transparent;
+  color: var(--vc-text);
 }
 
 .vc-notification:hover {
   background: var(--vc-surface-muted);
 }
 
-.vc-notification.is-unread {
-  border-left-color: var(--vc-purple);
-  background: var(--vc-purple-soft);
+.vc-notification__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--vc-surface-muted);
+  color: var(--vc-text-muted);
 }
 
-.vc-notification span {
+.vc-notification.is-unread .vc-notification__icon {
+  background: var(--vc-purple-soft);
+  color: var(--vc-purple-strong);
+}
+
+.vc-notification__content {
+  min-width: 0;
   display: block;
 }
 
-.vc-notification__type {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--vc-purple-strong);
-  font-weight: 600;
+.vc-notification__content > span {
+  display: block;
 }
 
 .vc-notification__title {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.vc-notification.is-unread .vc-notification__title {
+  font-weight: 700;
 }
 
 .vc-notification__message {

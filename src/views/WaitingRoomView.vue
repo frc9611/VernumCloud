@@ -1,7 +1,7 @@
 <template>
   <main class="vc-page">
     <div class="vc-stack">
-      <AlertBanner variant="warning" icon="⏳" title="Você ainda não faz parte de nenhuma equipe."
+      <AlertBanner variant="warning" icon="clock" title="Você ainda não faz parte de nenhuma equipe."
                    aside="Um administrador precisa te adicionar">
         Enquanto isso, você pode se candidatar a um dos processos seletivos abertos abaixo.
       </AlertBanner>

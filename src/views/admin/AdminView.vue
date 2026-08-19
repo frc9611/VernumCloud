@@ -3,7 +3,7 @@
     <div class="vc-stack">
       <h1 class="vc-title vc-title--underlined">Admin Panel</h1>
 
-      <AlertBanner variant="danger" icon="!" title="Área sensível."
+      <AlertBanner variant="danger" title="Área sensível."
                    :aside="auth.activeTenantName || 'Sem equipe selecionada'">
         Você está acessando opções confidenciais. Não permaneça com login sem supervisão.
       </AlertBanner>
@@ -13,7 +13,7 @@
         <router-link v-for="card in platformCards" :key="card.label" :to="card.to" class="vc-card vc-card--action">
           <div class="vc-card__header">
             <span>{{ card.label }}</span>
-            <span class="vc-card__icon" aria-hidden="true">{{ card.icon }}</span>
+            <AppIcon class="vc-card__icon" :name="card.icon" :size="17" />
           </div>
           <div class="vc-card__body"><p>{{ card.hint }}</p></div>
         </router-link>
@@ -27,7 +27,7 @@
         <router-link v-for="card in teamCards" :key="card.label" :to="card.to" class="vc-card vc-card--action">
           <div class="vc-card__header">
             <span>{{ card.label }}</span>
-            <span class="vc-card__icon" aria-hidden="true">{{ card.icon }}</span>
+            <AppIcon class="vc-card__icon" :name="card.icon" :size="17" />
           </div>
           <div class="vc-card__body"><p>{{ card.hint }}</p></div>
         </router-link>
@@ -41,6 +41,7 @@ import { computed } from 'vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 
 /* Hub of the admin panel. Each card only shows up when the user has the permission. */
@@ -51,7 +52,7 @@ const platformCards = computed(() => {
   if (auth.canPlatform('TENANT_VIEW_ALL') || auth.canPlatform('TENANT_CREATE')) {
     cards.push({
       label: 'Equipes',
-      icon: '🏳',
+      icon: 'flag',
       hint: 'Criar, alterar e desativar as equipes da plataforma.',
       to: { name: 'adminTenants' },
     });
@@ -64,7 +65,7 @@ const teamCards = computed(() => {
   if (auth.can('MEMBER_VIEW')) {
     cards.push({
       label: 'Membros e permissões',
-      icon: '👥',
+      icon: 'users',
       hint: 'Cargos na equipe, permissões individuais e entrada de novas pessoas.',
       to: { name: 'adminMembers' },
     });
@@ -72,7 +73,7 @@ const teamCards = computed(() => {
   if (auth.can('DIVISION_VIEW')) {
     cards.push({
       label: 'Divisões e subdivisões',
-      icon: '🧩',
+      icon: 'divisions',
       hint: 'Montar a árvore de divisões e definir quem lidera cada uma.',
       to: { name: 'adminDivisions' },
     });
@@ -80,7 +81,7 @@ const teamCards = computed(() => {
   if (auth.can('RECRUITMENT_VIEW')) {
     cards.push({
       label: 'Processos seletivos',
-      icon: '📝',
+      icon: 'clipboard',
       hint: 'Link público de inscrição, etapas e painel de candidatos.',
       to: { name: 'adminRecruitment' },
     });
@@ -88,14 +89,14 @@ const teamCards = computed(() => {
   if (auth.can('MEMBER_INVITE')) {
     cards.push({
       label: 'Cadastrar usuário',
-      icon: '➕',
+      icon: 'userPlus',
       hint: 'Criar uma conta nova e já colocar a pessoa na equipe.',
       to: { name: 'createUser' },
     });
   }
   cards.push({
     label: 'Pedidos de acesso',
-    icon: '🔐',
+    icon: 'key',
     hint: 'Responder quem pediu acesso a uma pasta ou arquivo.',
     to: { name: 'accessRequests' },
   });

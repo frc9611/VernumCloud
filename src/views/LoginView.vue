@@ -34,7 +34,7 @@
             :aria-label="showPassword ? 'Esconder senha' : 'Mostrar senha'"
             @click="showPassword = !showPassword"
           >
-            {{ showPassword ? '🙈' : '👁' }}
+            <AppIcon :name="showPassword ? 'eyeOff' : 'eye'" :size="17" />
           </button>
         </div>
 
@@ -59,6 +59,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from '@/components/VernumLogo.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { session } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
@@ -189,16 +190,18 @@ function goInside() {
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  padding: 2px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  opacity: 0.6;
+  color: var(--vc-text-muted);
+  opacity: 0.75;
 }
 
 .login__eye:hover {
   opacity: 1;
+  color: var(--vc-purple-strong);
 }
 
 .login__actions {

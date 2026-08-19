@@ -17,7 +17,7 @@
 
     <!-- ------------------------------------------------------------- home -->
     <div v-if="tab === 'home'" class="vc-stack">
-      <AlertBanner variant="success" icon="🏠" title="Bem-vindo(a)!" :aside="auth.activeTenantName">
+      <AlertBanner variant="success" icon="home" title="Bem-vindo(a)!" :aside="auth.activeTenantName">
         {{ auth.getName }}
       </AlertBanner>
 
@@ -25,7 +25,6 @@
         v-for="announcement in announcements"
         :key="announcement.announcementId"
         variant="warning"
-        icon="!"
         :title="announcement.title"
         :aside="announcement.senderName"
       >
@@ -42,7 +41,7 @@
         >
           <div class="vc-card__header">
             <span>{{ shortcut.label }}</span>
-            <span class="vc-card__icon" aria-hidden="true">{{ shortcut.icon }}</span>
+            <AppIcon class="vc-card__icon" :name="shortcut.icon" :size="17" />
           </div>
           <div class="vc-card__body">
             <p>{{ shortcut.hint }}</p>
@@ -84,15 +83,17 @@
         cadastro de apps não existe no servidor.
       </p>
       <div class="vc-grid">
-        <PanelCard title="Discord" icon="💬" color="#5865F2">
+        <PanelCard title="Discord" icon="comment" color="#5865F2">
           <p>O server do Discord do time. Fazemos calls quando precisamos nos reunir ou trabalhar em conjunto remotamente.</p>
           <div class="vc-input-group">
             <input class="vc-input" readonly :value="discordPlaceholder" />
-            <button class="vc-btn vc-btn--icon" type="button" @click="copy(discordPlaceholder)">⧉</button>
+            <button class="vc-btn vc-btn--icon" type="button" title="Copiar" @click="copy(discordPlaceholder)">
+              <AppIcon name="copy" :size="16" />
+            </button>
           </div>
         </PanelCard>
 
-        <PanelCard title="Vernum Cloud" icon="☁">
+        <PanelCard title="Vernum Cloud" icon="cloud">
           <p>Os arquivos da equipe, com permissão por pessoa e por divisão.</p>
           <router-link class="vc-btn" :to="{ name: 'cloud' }">Abrir arquivos</router-link>
         </PanelCard>
@@ -101,7 +102,7 @@
 
     <!-- --------------------------------------------------------- scouting -->
     <div v-else class="vc-stack">
-      <AlertBanner variant="warning" icon="!" title="Scouting ainda não implementado"
+      <AlertBanner variant="warning" title="Scouting ainda não implementado"
                    aside="Próxima etapa do desenvolvimento">
         A tela está reservada e segue o mesmo modelo das outras: abas, banners e cards.
       </AlertBanner>
@@ -118,7 +119,7 @@
             <button class="vc-btn" type="button" disabled>Analisar</button>
           </PanelCard>
         </div>
-        <PanelCard title="My Last Scouts" icon="📊">
+        <PanelCard title="My Last Scouts" icon="chart">
           <p class="vc-faint" style="margin: 0">Sem dados enquanto o scouting não existir no servidor.</p>
         </PanelCard>
       </div>
@@ -133,6 +134,7 @@ import TabBar from '@/components/TabBar.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import PanelCard from '@/components/PanelCard.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { announcements as announcementsApi, cloud } from '@/services/api.js';
 
@@ -155,18 +157,18 @@ const today = computed(() => new Date().toLocaleDateString('pt-BR'));
 /* Only the shortcuts the user is actually allowed to open. */
 const shortcuts = computed(() => {
   const items = [
-    { label: 'Arquivos', icon: '📁', hint: 'Pastas e arquivos da equipe, com compartilhamento.', to: { name: 'cloud' } },
+    { label: 'Arquivos', icon: 'folder', hint: 'Pastas e arquivos da equipe, com compartilhamento.', to: { name: 'cloud' } },
   ];
   if (auth.can('MEMBER_VIEW')) {
-    items.push({ label: 'Equipe', icon: '👥', hint: 'Todos os membros e seus cargos.', to: { name: 'teamMembers' } });
+    items.push({ label: 'Equipe', icon: 'users', hint: 'Todos os membros e seus cargos.', to: { name: 'teamMembers' } });
   }
   if (auth.can('DIVISION_VIEW')) {
-    items.push({ label: 'Divisões', icon: '🧩', hint: 'Divisões, subdivisões e quem está em cada uma.', to: { name: 'divisions' } });
+    items.push({ label: 'Divisões', icon: 'divisions', hint: 'Divisões, subdivisões e quem está em cada uma.', to: { name: 'divisions' } });
   }
   if (auth.can('RECRUITMENT_VIEW')) {
-    items.push({ label: 'Processos Seletivos', icon: '📝', hint: 'Inscrições, etapas e candidatos.', to: { name: 'adminRecruitment' } });
+    items.push({ label: 'Processos Seletivos', icon: 'clipboard', hint: 'Inscrições, etapas e candidatos.', to: { name: 'adminRecruitment' } });
   }
-  items.push({ label: 'Compartilhados comigo', icon: '🔗', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
+  items.push({ label: 'Compartilhados comigo', icon: 'share', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
   return items;
 });
 

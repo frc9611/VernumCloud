@@ -15,7 +15,12 @@
           <tbody>
             <tr v-for="request in pending" :key="request.accessRequestId">
               <td>{{ request.requesterName }}</td>
-              <td>{{ request.targetType === 'FOLDER' ? '📁' : '📄' }} {{ request.targetName }}</td>
+              <td>
+                <span class="vc-row" style="gap: 7px">
+                  <AppIcon :name="request.targetType === 'FOLDER' ? 'folder' : 'file'" :size="16" />
+                  {{ request.targetName }}
+                </span>
+              </td>
               <td>{{ request.requestedLevel }}</td>
               <td class="vc-faint">{{ request.message || '—' }}</td>
               <td class="vc-faint">{{ formatWhen(request.createdAt) }}</td>
@@ -40,7 +45,12 @@
           </thead>
           <tbody>
             <tr v-for="request in mine" :key="request.accessRequestId">
-              <td>{{ request.targetType === 'FOLDER' ? '📁' : '📄' }} {{ request.targetName }}</td>
+              <td>
+                <span class="vc-row" style="gap: 7px">
+                  <AppIcon :name="request.targetType === 'FOLDER' ? 'folder' : 'file'" :size="16" />
+                  {{ request.targetName }}
+                </span>
+              </td>
               <td>{{ request.requestedLevel }}</td>
               <td><span class="vc-badge" :class="badgeClass(request.status)">{{ request.statusLabel }}</span></td>
               <td class="vc-faint">{{ request.decisionNote || '—' }}</td>
@@ -58,6 +68,7 @@ import { onMounted, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { cloud } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 

@@ -17,7 +17,12 @@
           <thead><tr><th>Item</th><th>Equipe dona</th><th>Nível</th><th></th></tr></thead>
           <tbody>
             <tr v-for="item in items" :key="item.id || item.fileId">
-              <td>{{ item.id ? '📁' : '📄' }} {{ item.name }}</td>
+              <td>
+                <span class="vc-row" style="gap: 7px">
+                  <AppIcon :name="item.id ? 'folder' : 'file'" :size="16" />
+                  {{ item.name }}
+                </span>
+              </td>
               <td>{{ item.tenantName }}</td>
               <td>{{ accessLabel(item.access) }}</td>
               <td style="text-align: right">
@@ -41,6 +46,7 @@
 import { onMounted, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import EmptyState from '@/components/EmptyState.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { cloud } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 

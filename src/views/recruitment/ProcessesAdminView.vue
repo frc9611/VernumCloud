@@ -8,7 +8,7 @@
         </button>
       </div>
 
-      <AlertBanner variant="info" icon="🔗" title="Link público de inscrição."
+      <AlertBanner variant="info" icon="link" title="Link público de inscrição."
                    aside="Funciona sem conta">
         Cada processo tem um link próprio. Qualquer pessoa pode se candidatar por ele, e quem já tem conta
         pode entrar para preencher o formulário automaticamente.
@@ -50,7 +50,10 @@
               <label class="vc-label">Link de inscrição</label>
               <div class="vc-input-group">
                 <input class="vc-input" readonly :value="publicLink(process)" />
-                <button class="vc-btn vc-btn--icon vc-btn--ghost" type="button" @click="copy(publicLink(process))">⧉</button>
+                <button class="vc-btn vc-btn--icon vc-btn--ghost" type="button" title="Copiar link"
+                        @click="copy(publicLink(process))">
+                  <AppIcon name="copy" :size="16" />
+                </button>
                 <a class="vc-btn vc-btn--ghost" :href="publicLink(process)" target="_blank" rel="noopener">Abrir</a>
               </div>
             </div>
@@ -176,6 +179,7 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';

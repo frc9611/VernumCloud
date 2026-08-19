@@ -5,7 +5,8 @@
         <img v-if="pictureUrl" :src="pictureUrl" alt="Foto de perfil" />
         <div v-else class="profile__picture-empty" aria-hidden="true"></div>
         <label class="profile__change">
-          📷 Alterar
+          <AppIcon name="camera" :size="15" />
+          Alterar
           <input type="file" accept="image/*" @change="uploadPicture" />
         </label>
       </div>
@@ -41,7 +42,7 @@
             >
               {{ division.divisionVisibleName }}
               <template v-if="division.position"> · {{ division.position }}</template>
-              <template v-if="division.leader"> ★</template>
+              <AppIcon v-if="division.leader" name="shield" :size="12" />
             </span>
             <span v-if="!membership.divisions.length" class="vc-faint">Nenhuma divisão ainda.</span>
             <router-link
@@ -56,7 +57,8 @@
             <span class="vc-chip vc-chip--purple">{{ membership.roleLabel }}</span>
             <span v-if="membership.tenant.systemTenant" class="vc-chip vc-chip--warning">Administração</span>
             <button class="vc-chip vc-chip--button" type="button" @click="showPermissions = membership">
-              ✎ Permissões
+              <AppIcon name="key" :size="13" />
+              Permissões
             </button>
           </div>
         </div>
@@ -91,7 +93,10 @@
           <label class="vc-label" for="email">E-mail de Estudante:</label>
           <div class="vc-input-group">
             <input id="email" class="vc-input" type="email" v-model="form.email" />
-            <button class="vc-btn vc-btn--icon vc-btn--ghost" type="button" @click="copy(form.email)">⧉</button>
+            <button class="vc-btn vc-btn--icon vc-btn--ghost" type="button" title="Copiar"
+                    @click="copy(form.email)">
+              <AppIcon name="copy" :size="16" />
+            </button>
           </div>
         </div>
 
@@ -107,8 +112,14 @@
         </div>
 
         <div class="vc-row">
-          <button class="vc-btn" type="submit" :disabled="saving">Salvar Alterações ✎</button>
-          <button class="vc-btn vc-btn--danger" type="button" @click="auth.clear()">Logout ⏻</button>
+          <button class="vc-btn" type="submit" :disabled="saving">
+            <AppIcon name="edit" :size="16" />
+            Salvar Alterações
+          </button>
+          <button class="vc-btn vc-btn--danger" type="button" @click="auth.clear()">
+            <AppIcon name="power" :size="16" />
+            Logout
+          </button>
         </div>
       </form>
 
@@ -148,6 +159,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { users } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
@@ -279,6 +291,9 @@ async function copy(value) {
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--vc-surface);
   border: 1px solid var(--vc-border-strong);
   border-radius: 6px;
