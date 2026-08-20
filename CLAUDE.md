@@ -28,9 +28,11 @@ src/
   store/auth.js            sessão: memberships, equipe ativa, can() / canPlatform()
   store/notifications.js   sino do header
   views/                   telas: admin/ cloud/ divisions/ recruitment/ public/
+                           ops/ (demandas, riscos)  development/ (perfis, avaliações, caderno)
+                           performance/ (cartão de prontidão, áreas e registros)
   views/SsoConsentView.vue tela do "Entrar com o Vernum" (rota bare, abre antes do login)
   views/ChangePasswordView.vue  troca obrigatória da senha de uso único
-  router/index.ts          rotas + guard por permissão
+  router/index.ts          rotas + guard por permissão e por recurso
 ```
 
 ## Regras
@@ -42,6 +44,11 @@ src/
   **Nunca use emoji em template**: muda de forma por plataforma e não acompanha a cor da equipe.
 - **Permissão nas duas pontas**: esconda a ação com `auth.can('X')` / `auth.canPlatform('X')` **e**
   proteja a rota com `meta.permission` / `meta.platform`.
+- **`auth.featureOn('X')` é só para esconder menu**, nunca para proteger: uma equipe pode desligar
+  partes da plataforma, e as permissões do recurso desligado já não estão em `permissions` — então
+  `auth.can(...)` responde não e o servidor recusa de qualquer forma. Ele serve nas telas cujo portão
+  não é permissão (presença, viagem de convidado) e para dizer "isso está desligado" em vez de "nada
+  por aqui". Na rota, o par dele é `meta.feature`.
 - **Erro para o usuário**: `toast.error(apiMessage(error, 'texto padrão'))` — aproveita a mensagem
   em português que o servidor manda.
 - **Depois de mexer em equipe, divisão ou permissão**: `await auth.loadMe()`, senão a interface
