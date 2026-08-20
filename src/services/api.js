@@ -40,6 +40,92 @@ export const tenants = {
 export const catalogs = {
   permissions: () => http.get('/permissions'),
   membershipRoles: () => http.get('/membershipRoles'),
+  /* The switchable parts of the platform, the ready made sets of them, and the competitions. */
+  features: () => http.get('/features'),
+  featureProfiles: () => http.get('/featureProfiles'),
+  competitionCategories: () => http.get('/competitionCategories'),
+};
+
+/* ----------------------------------------------------------------- features */
+
+/*
+ * Which parts of the platform a team uses.
+ *
+ * Reading needs only membership, so a screen can explain that something is switched
+ * off instead of silently losing a menu item. Writing needs TENANT_MANAGE, because
+ * switching a feature off takes permissions away from everybody in the team.
+ */
+export const features = {
+  state: (tenantId) => http.get(`/tenants/${tenantId}/features`),
+  update: (tenantId, body) => http.put(`/tenants/${tenantId}/features`, body),
+};
+
+/* ------------------------------------------------------- board of the team */
+
+export const tasks = {
+  list: (tenantId, params) => http.get(`/tenants/${tenantId}/tasks`, { params: params || {} }),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/tasks`, body),
+  get: (taskId) => http.get(`/tasks/${taskId}`),
+  update: (taskId, body) => http.put(`/tasks/${taskId}`, body),
+  remove: (taskId) => http.delete(`/tasks/${taskId}`),
+  /* Notifies whoever the demanda is on and answers the text, for e-mail or WhatsApp. */
+  remind: (taskId) => http.post(`/tasks/${taskId}/reminder`),
+};
+
+export const risks = {
+  list: (tenantId, params) => http.get(`/tenants/${tenantId}/risks`, { params: params || {} }),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/risks`, body),
+  update: (riskId, body) => http.put(`/risks/${riskId}`, body),
+  remove: (riskId) => http.delete(`/risks/${riskId}`),
+};
+
+/* -------------------------------------------------------------- development */
+
+/*
+ * How the people of a team are developing. Like the presence register, none of these
+ * answers 403 for lack of permission: `scope` says whether the reader reaches the whole
+ * team, the divisions they lead, or only themselves.
+ */
+export const development = {
+  scope: (tenantId) => http.get(`/tenants/${tenantId}/development/scope`),
+  profiles: (tenantId) => http.get(`/tenants/${tenantId}/development/profiles`),
+  profile: (tenantId, userId) => http.get(`/tenants/${tenantId}/development/profiles/${userId}`),
+  updateProfile: (tenantId, userId, body) =>
+    http.put(`/tenants/${tenantId}/development/profiles/${userId}`, body),
+
+  evaluations: (tenantId, params) =>
+    http.get(`/tenants/${tenantId}/evaluations`, { params: params || {} }),
+  evaluate: (tenantId, body) => http.post(`/tenants/${tenantId}/evaluations`, body),
+  removeEvaluation: (evaluationId) => http.delete(`/evaluations/${evaluationId}`),
+
+  journal: (tenantId) => http.get(`/tenants/${tenantId}/journal`),
+  addJournalEntry: (tenantId, body) => http.post(`/tenants/${tenantId}/journal`, body),
+  updateJournalEntry: (entryId, body) => http.put(`/journal/${entryId}`, body),
+  removeJournalEntry: (entryId) => http.delete(`/journal/${entryId}`),
+};
+
+/* -------------------------------------------------------------- performance */
+
+/* The whole module in one call: the screen paints it together, so it asks for it together. */
+export const performance = {
+  module: (tenantId) => http.get(`/tenants/${tenantId}/performance`),
+  createArea: (tenantId, body) => http.post(`/tenants/${tenantId}/performance/areas`, body),
+  updateArea: (areaId, body) => http.put(`/performance/areas/${areaId}`, body),
+  removeArea: (areaId) => http.delete(`/performance/areas/${areaId}`),
+  createRun: (tenantId, body) => http.post(`/tenants/${tenantId}/performance/runs`, body),
+  removeRun: (runId) => http.delete(`/performance/runs/${runId}`),
+
+  readiness: (tenantId) => http.get(`/tenants/${tenantId}/readiness`),
+  updateReadiness: (tenantId, body) => http.put(`/tenants/${tenantId}/readiness`, body),
+};
+
+/* ---------------------------------------------------------- command center */
+
+export const teamDashboard = {
+  /* Already cut to what the caller may read: a section they cannot see comes back empty. */
+  get: (tenantId) => http.get(`/tenants/${tenantId}/dashboard`),
+  /* JSON backup of everything the team operations screens hold. Needs TENANT_MANAGE. */
+  export: (tenantId) => http.get(`/tenants/${tenantId}/export`),
 };
 
 /* ---------------------------------------------------------------- divisions */
@@ -281,6 +367,12 @@ export default {
   session,
   tenants,
   catalogs,
+  features,
+  tasks,
+  risks,
+  development,
+  performance,
+  teamDashboard,
   divisions,
   users,
   announcements,

@@ -33,6 +33,8 @@
   --vc-warning-bg: #fbf5bb;
   --vc-warning-text: #7a6b0a;
   --vc-warning-border: #ece07a;
+  /* Strong enough to be a dot or a bar on a white surface, where --vc-warning-text vanishes */
+  --vc-warning-strong: #c9a227;
   --vc-danger-bg: #f3e1e1;
   --vc-danger-text: #b3261e;
   --vc-danger-border: #e6c4c4;
@@ -915,4 +917,265 @@ a {
   border-radius: 50%;
   background: var(--vc-purple);
   display: inline-block;
+}
+
+/* Text that has to carry a state: a deadline that passed, a number in attention. */
+.vc-danger-text { color: var(--vc-danger-text); }
+.vc-warning-text { color: var(--vc-warning-strong); }
+
+/* ============================================================ team operations
+ * The board of the team, the development of its people and the season.
+ * Every colour and measurement here still comes from the tokens above; these are
+ * shapes the earlier screens did not need — a kanban, a metric tile, a score ring.
+ */
+
+/* Metric tile: one number that means something, with what it is and where to go. */
+.vc-metrics {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.vc-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  box-shadow: var(--vc-shadow);
+  color: inherit;
+  text-decoration: none;
+}
+a.vc-metric:hover,
+button.vc-metric:hover {
+  border-color: var(--vc-purple-border);
+  box-shadow: var(--vc-shadow-lg);
+}
+.vc-metric__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--vc-text-muted);
+}
+.vc-metric__head .vc-icon {
+  margin-left: auto;
+  color: var(--vc-purple);
+}
+.vc-metric__value {
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--vc-text);
+}
+.vc-metric__value--danger { color: var(--vc-danger-text); }
+.vc-metric__value--warning { color: var(--vc-warning-text); }
+.vc-metric__value--success { color: var(--vc-success-text); }
+.vc-metric__foot {
+  font-size: 0.78rem;
+  color: var(--vc-text-faint);
+}
+
+/* Kanban: one column per situation, scrolling sideways on a narrow screen. */
+.vc-kanban {
+  display: grid;
+  gap: 12px;
+  /* Six columns fit 1240px of .vc-page--wide; below that the strip scrolls sideways */
+  grid-template-columns: repeat(6, minmax(178px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.vc-kanban__col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 178px;
+  padding: 10px;
+  background: var(--vc-surface-muted);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+}
+.vc-kanban__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vc-text-muted);
+}
+.vc-kanban__count {
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border-strong);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+.vc-kanban__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-left: 3px solid var(--vc-border-strong);
+  border-radius: var(--vc-radius);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.vc-kanban__card:hover {
+  border-color: var(--vc-purple-border);
+  box-shadow: var(--vc-shadow);
+}
+.vc-kanban__card--high { border-left-color: var(--vc-danger-text); }
+.vc-kanban__card--medium { border-left-color: var(--vc-warning-border); }
+.vc-kanban__card--low { border-left-color: var(--vc-success-border); }
+.vc-kanban__card strong {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+.vc-kanban__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.76rem;
+  color: var(--vc-text-faint);
+}
+
+/* Score ring: a percentage as a ring, for the readiness of a team. */
+.vc-ring {
+  --vc-ring-value: 0;
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  flex: none;
+  border-radius: 50%;
+  background:
+    conic-gradient(var(--vc-purple) calc(var(--vc-ring-value) * 1%), var(--vc-surface-muted) 0)
+    border-box;
+  position: relative;
+}
+.vc-ring::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--vc-surface);
+}
+.vc-ring__text {
+  /* Above the ::after that punches the hole in the ring, or the number is painted over */
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+.vc-ring__value { font-size: 1.15rem; font-weight: 600; }
+.vc-ring__label { font-size: 0.62rem; text-transform: uppercase; color: var(--vc-text-faint); }
+
+/* Bar for a score on its own scale: a rubric out of 4, a subsystem out of 100. */
+.vc-bar {
+  height: 7px;
+  border-radius: 20px;
+  background: var(--vc-surface-muted);
+  overflow: hidden;
+}
+.vc-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 20px;
+  background: var(--vc-purple);
+}
+.vc-bar--danger > span { background: var(--vc-danger-text); }
+.vc-bar--warning > span { background: var(--vc-warning-strong); }
+.vc-bar--success > span { background: var(--vc-success-text); }
+.vc-scored {
+  display: grid;
+  /* The label sizes to its own text: "Competências" does not wrap and must not run into the bar */
+  grid-template-columns: auto minmax(50px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 0.87rem;
+}
+.vc-scored + .vc-scored { border-top: 1px solid var(--vc-border); }
+.vc-scored strong { font-variant-numeric: tabular-nums; }
+
+/* A row that opens something: the attention list, a person, an entry. */
+.vc-list { display: flex; flex-direction: column; }
+.vc-list__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--vc-border);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.vc-list__item:last-child { border-bottom: 0; }
+.vc-list__item:hover { background: var(--vc-purple-soft); }
+.vc-list__item--plain { cursor: default; }
+.vc-list__item--plain:hover { background: none; }
+.vc-list__text { display: grid; gap: 1px; min-width: 0; }
+.vc-list__text strong { font-size: 0.9rem; }
+.vc-list__text span { font-size: 0.78rem; color: var(--vc-text-muted); }
+.vc-list__aside {
+  margin-left: auto;
+  text-align: right;
+  font-size: 0.78rem;
+  color: var(--vc-text-faint);
+  white-space: nowrap;
+}
+
+/* The switch row of the feature screen. */
+.vc-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--vc-border);
+}
+.vc-switch:last-child { border-bottom: 0; }
+.vc-switch__body { min-width: 0; flex: 1; }
+.vc-switch__body strong { display: block; font-size: 0.92rem; }
+.vc-switch__body p { margin: 2px 0 0; font-size: 0.8rem; color: var(--vc-text-muted); }
+.vc-switch__perms { margin-top: 5px; font-size: 0.74rem; color: var(--vc-text-faint); }
+.vc-switch__toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1px solid var(--vc-border-strong);
+  background: var(--vc-surface);
+  color: var(--vc-text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.vc-switch__toggle.is-on {
+  border-color: var(--vc-success-border);
+  background: var(--vc-success-bg);
+  color: var(--vc-success-text);
+}
+.vc-switch__toggle:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+  .vc-kanban { grid-template-columns: repeat(6, minmax(180px, 180px)); }
+  .vc-scored { grid-template-columns: 1fr auto; }
+  .vc-scored .vc-bar { grid-column: 1 / -1; }
 }

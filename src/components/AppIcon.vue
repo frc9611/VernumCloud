@@ -161,6 +161,31 @@ const ICONS = {
     ],
   },
   refresh: { paths: ['M23 4v6h-6', 'M1 20v-6h6', 'M3.51 9a9 9 0 0 1 14.85-3.36L23 10', 'M1 14l4.64 4.36A9 9 0 0 0 20.49 15'] },
+
+  /* Board of the team, development and the season */
+  kanban: { paths: ['M6 7v10', 'M12 7v6', 'M18 7v13'], rects: [[3, 3, 18, 18, 2]] },
+  target: { circles: [[12, 12, 9], [12, 12, 5], [12, 12, 1]] },
+  gauge: { paths: ['M12 14l4-4', 'M4.5 18a9 9 0 1 1 15 0'], circles: [[12, 14, 1.6]] },
+  notebook: {
+    paths: [
+      'M7 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+      'M5 8h4', 'M5 12h4', 'M5 16h4', 'M12 7h5', 'M12 11h5',
+    ],
+  },
+  sliders: {
+    paths: ['M4 6h6', 'M14 6h6', 'M4 12h10', 'M18 12h2', 'M4 18h3', 'M11 18h9'],
+    circles: [[12, 6, 2], [16, 12, 2], [9, 18, 2]],
+  },
+  star: { paths: ['M12 2.5l2.9 6.1 6.6.9-4.8 4.7 1.2 6.6L12 17.7 6.1 20.8l1.2-6.6L2.5 9.5l6.6-.9z'] },
+  seedling: {
+    paths: [
+      'M12 21v-8',
+      'M12 13C12 9 9 7 5 7c0 4 3 6 7 6z',
+      'M12 13c0-4 3-6 7-6 0 4-3 6-7 6z',
+    ],
+  },
+  toggleOn: { paths: [], rects: [[2, 7, 20, 10, 5]], circles: [[17, 12, 2.6]] },
+  toggleOff: { paths: [], rects: [[2, 7, 20, 10, 5]], circles: [[7, 12, 2.6]] },
 };
 
 const props = defineProps({

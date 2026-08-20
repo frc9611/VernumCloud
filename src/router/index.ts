@@ -8,6 +8,10 @@ import {authStore} from '@/store/auth.js' //Maybe the IDE says there is an error
  *   tenant      the route only makes sense inside a team, so the user is sent to the
  *               chooser or to the waiting screen when there is no team open
  *   permission  permission needed in the team currently open
+ *   feature     part of the platform the team has to have switched on. Mostly redundant with
+ *               `permission` — a switched off feature has no permissions left — and it exists
+ *               for the routes whose gate is not a permission, and so the redirect happens
+ *               before the screen asks the server and gets a 403
  *   platform    permission needed on the "Administracao Vernum" team
  *   bare        no header (login and the public application form)
  *   footer      shows the footer links
@@ -71,6 +75,50 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import(/* webpackChunkName: "attendance" */ '../views/AttendanceView.vue'),
     meta: { auth: true, tenant: true }
   },
+
+  /* -------------------------------------------- board and season of the team */
+  {
+    path: '/demandas',
+    name: 'tasks',
+    component: () => import(/* webpackChunkName: "teamops" */ '../views/ops/TasksView.vue'),
+    meta: { auth: true, tenant: true, permission: 'TASK_VIEW', feature: 'TASKS' }
+  },
+  {
+    path: '/riscos',
+    name: 'risks',
+    component: () => import(/* webpackChunkName: "teamops" */ '../views/ops/RisksView.vue'),
+    meta: { auth: true, tenant: true, permission: 'RISK_VIEW', feature: 'RISKS' }
+  },
+  {
+    path: '/performance',
+    name: 'performance',
+    component: () => import(/* webpackChunkName: "teamops" */ '../views/performance/PerformanceView.vue'),
+    meta: { auth: true, tenant: true, permission: 'PERFORMANCE_VIEW', feature: 'PERFORMANCE' }
+  },
+  {
+    /*
+     * No permission on the route, like /presenca: everybody reads their own development. How far the
+     * screen reaches is decided by the server and answered by /development/scope.
+     */
+    path: '/desenvolvimento',
+    name: 'development',
+    component: () => import(/* webpackChunkName: "development" */ '../views/development/DevelopmentView.vue'),
+    meta: { auth: true, tenant: true, feature: 'MEMBER_DEVELOPMENT' }
+  },
+  {
+    /* Same reason: the person always reads the evaluations that were shared with them. */
+    path: '/avaliacoes',
+    name: 'evaluations',
+    component: () => import(/* webpackChunkName: "development" */ '../views/development/EvaluationsView.vue'),
+    meta: { auth: true, tenant: true, feature: 'EVALUATIONS' }
+  },
+  {
+    path: '/caderno',
+    name: 'journal',
+    component: () => import(/* webpackChunkName: "development" */ '../views/development/JournalView.vue'),
+    meta: { auth: true, tenant: true, feature: 'JOURNAL' }
+  },
+
   {
     path: '/divisoes',
     name: 'divisions',
@@ -129,6 +177,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'createUser',
     component: () => import(/* webpackChunkName: "admin" */ '../views/admin/CreateUserView.vue'),
     meta: { auth: true, tenant: true, permission: 'MEMBER_INVITE' }
+  },
+  {
+    path: '/admin/recursos',
+    name: 'adminFeatures',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/FeaturesAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'TENANT_MANAGE' }
   },
   {
     path: '/admin/apps',
@@ -220,7 +274,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const auth = authStore();
 
-  if (!to.meta?.auth && !to.meta?.tenant && !to.meta?.permission && !to.meta?.platform) {
+  if (!to.meta?.auth && !to.meta?.tenant && !to.meta?.permission
+      && !to.meta?.platform && !to.meta?.feature) {
     return next();
   }
 
@@ -260,6 +315,15 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.meta?.permission && !auth.can(to.meta.permission as string)) {
+    return next({ name: 'home' });
+  }
+
+  /*
+   * A part of the platform the team switched off. Checked here as well as by the permission above
+   * because a couple of screens have no permission of their own — everybody reads their own
+   * development, like everybody reads their own presence.
+   */
+  if (to.meta?.feature && !auth.featureOn(to.meta.feature as string)) {
     return next({ name: 'home' });
   }
 

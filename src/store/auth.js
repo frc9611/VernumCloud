@@ -51,6 +51,10 @@ export const authStore = defineStore('auth', () => {
   const activeRoleLabel = computed(() => activeMembership.value?.roleLabel || '');
   const activePermissions = computed(() => activeMembership.value?.permissions || []);
   const activeDivisions = computed(() => activeMembership.value?.divisions || []);
+  const activeFeatures = computed(() => activeTenant.value?.enabledFeatures || []);
+  const activeCategory = computed(() => activeTenant.value?.competitionCategory || 'NONE');
+  const activeCategoryLabel = computed(() => activeTenant.value?.competitionCategoryLabel || '');
+  const activePerformanceStyle = computed(() => activeTenant.value?.performanceStyle || 'NONE');
 
   const hasNoTenant = computed(() => isAuth.value && memberships.value.length === 0);
   const needsTenantChoice = computed(
@@ -73,6 +77,27 @@ export const authStore = defineStore('auth', () => {
   /** Whether the user has a permission over the platform, granted by the admin tenant. */
   function canPlatform(permission) {
     return platformPermissions.value.includes(permission);
+  }
+
+  /*
+   * Whether the team currently open uses a part of the platform.
+   *
+   * This is for hiding a menu item, never for guarding anything: the permissions of a
+   * switched off feature are not in `permissions` at all, so `can()` already answers no
+   * and the server refuses regardless. It matters on the few screens whose gate is not a
+   * permission — the presence register, a trip somebody was invited to — and to tell
+   * "nada por aqui" apart from "isso está desligado".
+   */
+  function featureOn(feature) {
+    //An older server that does not answer the field yet must not blank the whole interface
+    if (!activeFeatures.value.length) return true;
+    return activeFeatures.value.includes(feature);
+  }
+
+  /** Features of a team that may not be the one open. */
+  function featuresOn(tenantId) {
+    const membership = membershipOn(tenantId);
+    return membership?.tenant?.enabledFeatures || [];
   }
 
   /** Permissions the user has on a specific team, which may not be the one open. */
@@ -186,6 +211,10 @@ export const authStore = defineStore('auth', () => {
     activeRoleLabel,
     activePermissions,
     activeDivisions,
+    activeFeatures,
+    activeCategory,
+    activeCategoryLabel,
+    activePerformanceStyle,
     hasNoTenant,
     needsTenantChoice,
     withoutActiveTenant,
@@ -193,6 +222,8 @@ export const authStore = defineStore('auth', () => {
     can,
     canAny,
     canPlatform,
+    featureOn,
+    featuresOn,
     permissionsOn,
     membershipOn,
 
