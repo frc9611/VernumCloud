@@ -94,6 +94,14 @@ const teamCards = computed(() => {
       to: { name: 'attendance' },
     });
   }
+  if (auth.can('TRIP_VIEW')) {
+    cards.push({
+      label: 'Viagens',
+      icon: 'plane',
+      hint: 'Eventos, documentos pedidos, quem foi convidado e quem já respondeu.',
+      to: { name: 'trips' },
+    });
+  }
   if (auth.can('APP_MANAGE')) {
     cards.push({
       label: 'Apps da equipe',

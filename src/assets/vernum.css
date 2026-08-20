@@ -430,6 +430,120 @@ a {
   border-color: var(--vc-purple-border);
 }
 
+/* ----------------------------------------------------------------- trips */
+
+/*
+ * The carousel of trips above the board. It scrolls sideways with snapping instead of paging with
+ * buttons: with two or three cards there is nothing to page, and a row that scrolls works the same
+ * on a phone and under a finger.
+ */
+.vc-carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  /* Room for the lift on hover, which would otherwise be clipped by the scroll box */
+  padding-top: 2px;
+}
+
+.vc-carousel > * {
+  scroll-snap-align: start;
+  flex: 0 0 300px;
+}
+
+@media (max-width: 520px) {
+  .vc-carousel > * {
+    flex-basis: 85%;
+  }
+}
+
+.vc-trip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--vc-radius-lg);
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  box-shadow: var(--vc-shadow);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.vc-trip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--vc-shadow-lg);
+  border-color: var(--vc-purple-border);
+}
+
+/* The colored edge carries the team the trip belongs to, set inline from the tenant color */
+.vc-trip--edge {
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.vc-trip__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vc-trip__title {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.vc-trip__where {
+  color: var(--vc-text-muted);
+  font-size: 0.9rem;
+}
+
+/* The countdown is the loudest thing on the card: it is why somebody looks at it */
+.vc-trip__countdown {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.vc-trip__foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+/* One document asked for, on the form of whoever was invited */
+.vc-trip-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface);
+}
+
+.vc-trip-doc.is-done {
+  border-color: var(--vc-success-border);
+  background: var(--vc-success-bg);
+}
+
+.vc-trip-doc__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.vc-trip-doc__name {
+  font-weight: 600;
+}
+
 /* ----------------------------------------------------------- announcements */
 
 /*

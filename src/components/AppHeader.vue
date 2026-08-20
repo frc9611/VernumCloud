@@ -182,6 +182,7 @@ function iconFor(type) {
   if (type.startsWith('DIVISION_MEMBER')) return 'divisions';
   if (type === 'ANNOUNCEMENT_PUBLISHED') return 'megaphone';
   if (type === 'ANNOUNCEMENT_COMMENT') return 'comment';
+  if (type.startsWith('TRIP')) return 'plane';
   if (type.startsWith('RECRUITMENT')) return 'clipboard';
   return 'info';
 }

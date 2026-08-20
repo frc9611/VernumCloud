@@ -40,6 +40,8 @@
         </router-link>
       </div>
 
+      <TripCarousel />
+
       <AnnouncementBoard />
 
       <div v-if="pendingAccessRequests.length" class="vc-stack">
@@ -143,6 +145,7 @@ import { useToast } from 'vue-toastification';
 import TabBar from '@/components/TabBar.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import AnnouncementBoard from '@/components/AnnouncementBoard.vue';
+import TripCarousel from '@/components/TripCarousel.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';

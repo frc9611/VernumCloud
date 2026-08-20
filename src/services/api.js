@@ -185,6 +185,46 @@ export const attendance = {
     http.post(`/attendance/${attendanceId}/close`, null, { params: endTime ? { endTime } : {} }),
 };
 
+/* --------------------------------------------------------------------- trips */
+
+export const trips = {
+  /* Organising */
+  list: (tenantId) => http.get(`/tenants/${tenantId}/trips`),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/trips`, body),
+  get: (tripId) => http.get(`/trips/${tripId}`),
+  update: (tripId, body) => http.put(`/trips/${tripId}`, body),
+  cancel: (tripId) => http.post(`/trips/${tripId}/cancel`),
+  remove: (tripId) => http.delete(`/trips/${tripId}`),
+
+  addDocument: (tripId, body) => http.post(`/trips/${tripId}/documents`, body),
+  updateDocument: (tripId, documentId, body) => http.put(`/trips/${tripId}/documents/${documentId}`, body),
+  removeDocument: (tripId, documentId) => http.delete(`/trips/${tripId}/documents/${documentId}`),
+  uploadTemplate: (tripId, documentId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return http.post(`/trips/${tripId}/documents/${documentId}/template`, form);
+  },
+  /* Blob, never a cloud id: the bytes come back through the trip, checked against the invitation. */
+  downloadTemplate: (tripId, documentId) =>
+    http.get(`/trips/${tripId}/documents/${documentId}/template`, { responseType: 'blob' }),
+
+  invite: (tripId, body) => http.post(`/trips/${tripId}/invites`, body),
+  removeInvite: (tripId, inviteId) => http.delete(`/trips/${tripId}/invites/${inviteId}`),
+
+  /* Being invited */
+  mine: () => http.get('/trips/mine'),
+  invitation: (tripId) => http.get(`/trips/${tripId}/invitation`),
+  answer: (tripId, body) => http.post(`/trips/${tripId}/answer`, body),
+  submit: (tripId, documentId, file, onProgress) => {
+    const form = new FormData();
+    form.append('file', file);
+    return http.post(`/trips/${tripId}/documents/${documentId}/file`, form,
+      { onUploadProgress: onProgress });
+  },
+  downloadSubmission: (tripId, submissionId) =>
+    http.get(`/trips/${tripId}/submissions/${submissionId}/file`, { responseType: 'blob' }),
+};
+
 /* ------------------------------------------------------------ notifications */
 
 export const notifications = {
@@ -248,6 +288,7 @@ export default {
   apps,
   sso,
   attendance,
+  trips,
   notifications,
   recruitment,
   publicRecruitment,

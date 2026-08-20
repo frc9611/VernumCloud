@@ -84,6 +84,21 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'DIVISION_VIEW' }
   },
 
+  {
+    /* The trip as the person invited reads it. No permission: the invitation is the grant, and it
+       can reach somebody who is not in the team that organises — or in any team at all. */
+    path: '/viagens/:id',
+    name: 'trip',
+    component: () => import(/* webpackChunkName: "trips" */ '../views/trips/TripView.vue'),
+    meta: { auth: true }
+  },
+  {
+    path: '/viagens',
+    name: 'trips',
+    component: () => import(/* webpackChunkName: "trips" */ '../views/trips/TripsAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'TRIP_VIEW' }
+  },
+
   /* ------------------------------------------------------------ admin panel */
   {
     path: '/admin',
@@ -230,7 +245,13 @@ router.beforeEach(async (to, from, next) => {
   }
 
   //A user with no team waits on the public processes screen
-  if (auth.hasNoTenant && to.name !== 'waiting' && to.name !== 'profile' && to.name !== 'myApplications') {
+  /*
+   * 'trip' is on the list because somebody can be invited to a trip without being in any team of the
+   * platform — a guest from a partner school. Sending them to the waiting screen would make the
+   * invitation they were notified about unreachable.
+   */
+  if (auth.hasNoTenant && to.name !== 'waiting' && to.name !== 'profile'
+      && to.name !== 'myApplications' && to.name !== 'trip') {
     return next({ name: 'waiting' });
   }
 
