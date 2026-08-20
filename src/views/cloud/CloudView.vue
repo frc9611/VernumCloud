@@ -115,6 +115,7 @@
                      :style="folder.divisionColor ? { color: folder.divisionColor } : null" />
             <span class="cloud__name">{{ folder.name }}</span>
             <span v-if="folder.divisionId" class="vc-chip">divisão</span>
+            <span v-else-if="folder.icon === 'plane'" class="vc-chip vc-chip--info">viagem</span>
             <span v-else-if="folder.visibility === 'RESTRICTED'" class="vc-chip vc-chip--warning">restrita</span>
             <span v-else-if="folder.access === 'NONE'" class="vc-chip">sem acesso</span>
           </button>
@@ -766,9 +767,11 @@ async function removeComment(comment) {
 /* -------------------------------------------------------------------- labels */
 
 /** A locked folder shows a padlock; the folder of a division carries the division icon. */
+/* The server names the icon for the folders it keeps for itself — a trip carries the plane. */
 function folderIcon(folder) {
   if (folder.access === 'NONE') return 'lock';
-  return folder.divisionId ? 'divisions' : 'folder';
+  if (folder.divisionId) return 'divisions';
+  return folder.icon || 'folder';
 }
 
 function accessLabel(level) {
