@@ -21,7 +21,6 @@
         {{ auth.getName }}
       </AlertBanner>
 
-      <AnnouncementBoard />
 
       <SectionTitle lead="Atalhos" title="da Equipe" />
       <div class="vc-grid">
@@ -40,6 +39,8 @@
           </div>
         </router-link>
       </div>
+
+      <AnnouncementBoard />
 
       <div v-if="pendingAccessRequests.length" class="vc-stack">
         <SectionTitle lead="Pedidos" title="de Acesso">

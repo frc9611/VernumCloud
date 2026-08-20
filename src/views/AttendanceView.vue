@@ -38,27 +38,26 @@
           </span>
         </div>
 
-        <div v-if="me.tenants && me.tenants.length" class="vc-table-wrap" style="margin-top: 14px">
-          <table class="vc-table">
-            <thead>
-              <tr><th>Equipe</th><th>Tempo total</th><th>Agora</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="line in me.tenants" :key="line.tenantId">
-                <td>
-                  <span class="vc-dot" :style="{ background: line.tenantColor || 'var(--vc-purple)' }"></span>
-                  {{ line.tenantName }}
-                  <span v-if="line.teamNumber" class="vc-faint">#{{ line.teamNumber }}</span>
-                </td>
-                <td>{{ formatDuration(line.totalSeconds) }}</td>
-                <td>
-                  <span :class="['vc-badge', line.inRoom ? 'vc-badge--on' : 'vc-badge--neutral']">
-                    {{ line.inRoom ? 'Na sala' : '—' }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!--
+          One room, one number. The per-team totals the server still answers are the same figure
+          repeated, so the teams are the label of the total and not counters of their own.
+        -->
+        <div class="vc-divider" style="margin: 14px 0"></div>
+        <div class="vc-row vc-row--between" style="align-items: flex-end">
+          <div>
+            <p class="vc-label" style="margin: 0">Tempo total na sala</p>
+            <p style="margin: 2px 0 0; font-size: 1.6rem; font-weight: 600">
+              {{ formatDuration(me.totalSeconds) }}
+            </p>
+          </div>
+          <div v-if="me.tenants && me.tenants.length" style="text-align: right">
+            <p class="vc-label" style="margin: 0 0 6px">Conta para</p>
+            <span v-for="line in me.tenants" :key="line.tenantId" class="vc-chip"
+                  style="margin-left: 6px">
+              <span class="vc-dot" :style="{ background: line.tenantColor || 'var(--vc-purple)' }"></span>
+              {{ line.tenantName }}
+            </span>
+          </div>
         </div>
       </PanelCard>
 
@@ -66,22 +65,37 @@
 
       <!-- ------------------------------------------------------------- in the room -->
       <template v-if="tab === 'sala'">
-        <SectionTitle lead="Quem está" title="na Sala Agora" />
+        <SectionTitle lead="Quem está" title="na Sala Agora">
+          <template #actions>
+            <span v-if="scope.board === 'TEAM'" class="vc-chip">A sala é a mesma para todas as equipes</span>
+          </template>
+        </SectionTitle>
         <div class="vc-table-wrap">
           <table class="vc-table">
             <thead>
               <tr>
-                <th>Pessoa</th><th>Entrou</th><th>Há quanto tempo</th>
+                <th>Pessoa</th><th>Equipes</th><th>Entrou</th><th>Há quanto tempo</th>
                 <th v-if="scope.canManage"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="stay in now" :key="stay.attendanceId">
-                <td>{{ stay.userName }}</td>
-                <td>{{ formatDateTime(stay.startTime) }}</td>
-                <td>{{ formatDuration(stay.seconds) }}</td>
+              <tr v-for="person in now" :key="person.userId">
+                <td>{{ person.userName }}</td>
+                <td>
+                  <!-- The label is what tells apart who is who when the room has more than one team -->
+                  <span v-for="team in person.teams" :key="team.tenantId"
+                        :class="['vc-chip', team.tenantId === auth.activeTenantId ? 'vc-chip--purple' : '']"
+                        style="margin-right: 4px">
+                    <span class="vc-dot" :style="{ background: team.tenantColor || 'var(--vc-purple)' }"></span>
+                    {{ team.tenantName }}
+                  </span>
+                </td>
+                <td>{{ formatDateTime(person.since) }}</td>
+                <td>{{ formatDuration(person.seconds) }}</td>
                 <td v-if="scope.canManage" style="text-align: right">
-                  <button class="vc-btn vc-btn--outline vc-btn--small" type="button" @click="openClose(stay)">
+                  <!-- Only for a stay of this team: reading the room does not mean writing to another register -->
+                  <button v-if="person.closableAttendanceId" class="vc-btn vc-btn--outline vc-btn--small"
+                          type="button" @click="openCloseRoom(person)">
                     Fechar estada
                   </button>
                 </td>
@@ -234,7 +248,7 @@ const tab = ref('sala');
 const loading = ref(false);
 const lastUpdated = ref(null);
 const scope = ref({ board: 'SELF', logs: 'SELF', divisions: [], canRegister: false, canManage: false });
-const me = ref({ inRoom: false, since: null, secondsInRoom: 0, tenants: [] });
+const me = ref({ inRoom: false, since: null, secondsInRoom: 0, totalSeconds: 0, tenants: [] });
 const now = ref([]);
 const ranking = ref([]);
 const entries = ref([]);
@@ -269,14 +283,15 @@ const scopeTitle = computed(() => {
 
 const scopeHint = computed(() => {
   if (scope.value.logs === 'TEAM') {
-    return 'O histórico abaixo cobre todas as pessoas da equipe.';
+    return 'O histórico cobre todas as pessoas da equipe. A sala é compartilhada, então quem está nela'
+      + ' aparece com a etiqueta da equipe de cada um.';
   }
   if (scope.value.logs === 'DIVISIONS') {
     const names = scope.value.divisions.join(', ');
     return `O histórico cobre quem está em ${names} e nas subdivisões dessas divisões, além de você.`;
   }
   if (scope.value.board === 'TEAM') {
-    return 'O ranking e quem está na sala são da equipe toda; o histórico detalhado é só o seu.';
+    return 'A sala e o ranking você vê inteiros; o histórico detalhado é só o seu.';
   }
   return 'Para acompanhar outras pessoas é preciso liderar uma divisão ou ter a permissão de ver o registro.';
 });
@@ -352,6 +367,15 @@ async function load() {
 function openClose(stay) {
   closing.value = stay;
   closeEndTime.value = localInputValue(new Date());
+}
+
+/** A row of the room is a person, and the stay to close is the one of the team being read. */
+function openCloseRoom(person) {
+  openClose({
+    attendanceId: person.closableAttendanceId,
+    userName: person.userName,
+    startTime: person.since,
+  });
 }
 
 async function confirmClose() {
