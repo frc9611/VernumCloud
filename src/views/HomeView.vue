@@ -22,6 +22,114 @@
       </AlertBanner>
 
 
+      <!-- The command center: the few numbers that decide what somebody does next. -->
+      <template v-if="dashboard">
+        <SectionTitle lead="Central de" title="Comando">
+          <template #actions>
+            <span v-if="dashboard.competitionCategory !== 'NONE'" class="vc-chip vc-chip--purple">
+              {{ dashboard.competitionCategoryLabel }}
+            </span>
+            <router-link v-if="auth.can('PERFORMANCE_VIEW') && auth.featureOn('PERFORMANCE')"
+                         class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'performance' }">
+              Performance
+            </router-link>
+          </template>
+        </SectionTitle>
+
+        <div class="vc-metrics">
+          <div v-if="dashboard.readiness" class="vc-metric">
+            <div class="vc-metric__head"><span>Prontidão da equipe</span><AppIcon name="gauge" :size="16" /></div>
+            <div class="vc-metric__value">{{ dashboard.readiness.readinessScore ?? '—' }}</div>
+            <div class="vc-metric__foot">
+              {{ dashboard.readiness.nextMilestone || 'próximo marco a definir' }}
+            </div>
+          </div>
+          <router-link v-if="auth.featureOn('TASKS') && auth.can('TASK_VIEW')" class="vc-metric"
+                       :to="{ name: 'tasks' }">
+            <div class="vc-metric__head"><span>Demandas abertas</span><AppIcon name="kanban" :size="16" /></div>
+            <div :class="['vc-metric__value', dashboard.metrics.blockedTasks ? 'vc-metric__value--danger' : '']">
+              {{ dashboard.metrics.openTasks }}
+            </div>
+            <div class="vc-metric__foot">
+              {{ dashboard.metrics.blockedTasks }} bloqueada(s) · {{ dashboard.metrics.overdueTasks }} atrasada(s)
+            </div>
+          </router-link>
+          <router-link v-if="auth.featureOn('RISKS') && auth.can('RISK_VIEW')" class="vc-metric"
+                       :to="{ name: 'risks' }">
+            <div class="vc-metric__head"><span>Riscos críticos</span><AppIcon name="alert" :size="16" /></div>
+            <div :class="['vc-metric__value', dashboard.metrics.criticalRisks ? 'vc-metric__value--danger' : '']">
+              {{ dashboard.metrics.criticalRisks }}
+            </div>
+            <div class="vc-metric__foot">{{ dashboard.metrics.openRisks }} risco(s) em aberto</div>
+          </router-link>
+          <router-link v-if="dashboard.metrics.frequencyAlerts !== null" class="vc-metric"
+                       :to="{ name: 'development' }">
+            <div class="vc-metric__head"><span>Frequência em atenção</span><AppIcon name="users" :size="16" /></div>
+            <div :class="['vc-metric__value', dashboard.metrics.frequencyAlerts ? 'vc-metric__value--warning' : '']">
+              {{ dashboard.metrics.frequencyAlerts }}
+            </div>
+            <div class="vc-metric__foot">
+              abaixo de {{ dashboard.metrics.attendanceThreshold }}% ·
+              {{ dashboard.metrics.frequencyUnknown }} a validar
+            </div>
+          </router-link>
+          <div v-if="dashboard.metrics.reliability !== null" class="vc-metric">
+            <div class="vc-metric__head"><span>Confiabilidade</span><AppIcon name="target" :size="16" /></div>
+            <div class="vc-metric__value">{{ dashboard.metrics.reliability }}%</div>
+            <div class="vc-metric__foot">{{ dashboard.metrics.runCount }} registro(s) medido(s)</div>
+          </div>
+        </div>
+
+        <div class="vc-split">
+          <PanelCard title="Atenção necessária" icon="alert" muted>
+            <div v-if="dashboard.attention.length" class="vc-list">
+              <router-link v-for="(item, index) in dashboard.attention" :key="index"
+                           class="vc-list__item" :to="item.link">
+                <span class="vc-dot" :style="{ background: item.severity === 'DANGER'
+                  ? 'var(--vc-danger-text)' : 'var(--vc-warning-strong)' }"></span>
+                <span class="vc-list__text">
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ item.detail }}</span>
+                </span>
+                <span class="vc-list__aside">abrir ›</span>
+              </router-link>
+            </div>
+            <p v-else class="vc-faint" style="margin: 0">Nada pedindo decisão agora.</p>
+          </PanelCard>
+
+          <PanelCard title="Suas demandas" icon="kanban" muted>
+            <div v-if="dashboard.myTasks.length" class="vc-list">
+              <router-link v-for="task in dashboard.myTasks.slice(0, 6)" :key="task.taskId"
+                           class="vc-list__item" :to="{ name: 'tasks' }">
+                <span class="vc-list__text">
+                  <strong>{{ task.title }}</strong>
+                  <span>{{ task.statusLabel }} · {{ task.dueLabel }}</span>
+                </span>
+              </router-link>
+            </div>
+            <p v-else class="vc-faint" style="margin: 0">Nenhuma demanda vinculada a você.</p>
+          </PanelCard>
+        </div>
+
+        <PanelCard v-if="dashboard.reminders.length" title="Vencendo agora" icon="clock" muted>
+          <p class="vc-faint" style="margin-top: 0">
+            Demandas que vencem em até {{ dashboard.metrics.reminderDays }} dia(s), mais as atrasadas.
+            O lembrete diário alcança quem está vinculado a elas.
+          </p>
+          <div class="vc-list">
+            <router-link v-for="task in dashboard.reminders.slice(0, 6)" :key="task.taskId"
+                         class="vc-list__item" :to="{ name: 'tasks' }">
+              <span class="vc-dot" :style="{ background: task.overdue
+                ? 'var(--vc-danger-text)' : 'var(--vc-warning-strong)' }"></span>
+              <span class="vc-list__text">
+                <strong>{{ task.title }}</strong>
+                <span>{{ task.ownerLabel || 'sem responsável' }} · {{ task.dueLabel }}</span>
+              </span>
+            </router-link>
+          </div>
+        </PanelCard>
+      </template>
+
       <SectionTitle lead="Atalhos" title="da Equipe" />
       <div class="vc-grid">
         <router-link
@@ -151,7 +259,7 @@ import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
-import { apps as appsApi, cloud } from '@/services/api.js';
+import { apps as appsApi, cloud, teamDashboard } from '@/services/api.js';
 
 const auth = authStore();
 const toast = useToast();
@@ -159,31 +267,59 @@ const toast = useToast();
 const tab = ref('home');
 const pendingAccessRequests = ref([]);
 const apps = ref([]);
+const dashboard = ref(null);
 
-const tabs = [
-  { key: 'home', label: 'Home' },
-  { key: 'apps', label: 'Apps' },
-  { key: 'scouting', label: 'Scouting', hint: 'Ainda não implementado' },
-];
+const tabs = computed(() => {
+  const items = [{ key: 'home', label: 'Home' }];
+  if (auth.featureOn('APPS')) items.push({ key: 'apps', label: 'Apps' });
+  items.push({ key: 'scouting', label: 'Scouting', hint: 'Ainda não implementado' });
+  return items;
+});
 
 const today = computed(() => new Date().toLocaleDateString('pt-BR'));
 
 /* Only the shortcuts the user is actually allowed to open. */
 const shortcuts = computed(() => {
-  const items = [
-    { label: 'Arquivos', icon: 'folder', hint: 'Pastas e arquivos da equipe, com compartilhamento.', to: { name: 'cloud' } },
-  ];
+  const items = [];
+  if (auth.featureOn('CLOUD')) {
+    items.push({ label: 'Arquivos', icon: 'folder', hint: 'Pastas e arquivos da equipe, com compartilhamento.', to: { name: 'cloud' } });
+  }
   if (auth.can('MEMBER_VIEW')) {
     items.push({ label: 'Equipe', icon: 'users', hint: 'Todos os membros e seus cargos.', to: { name: 'teamMembers' } });
   }
   if (auth.can('DIVISION_VIEW')) {
     items.push({ label: 'Divisões', icon: 'divisions', hint: 'Divisões, subdivisões e quem está em cada uma.', to: { name: 'divisions' } });
   }
-  if (auth.can('RECRUITMENT_VIEW')) {
+  if (auth.featureOn('TASKS') && auth.can('TASK_VIEW')) {
+    items.push({ label: 'Demandas', icon: 'kanban', hint: 'O quadro da equipe: prazo, responsáveis e critério de conclusão.', to: { name: 'tasks' } });
+  }
+  if (auth.featureOn('RISKS') && auth.can('RISK_VIEW')) {
+    items.push({ label: 'Riscos', icon: 'alert', hint: 'Probabilidade, impacto, responsável e mitigação.', to: { name: 'risks' } });
+  }
+  if (auth.featureOn('PERFORMANCE') && auth.can('PERFORMANCE_VIEW')) {
+    items.push({ label: 'Performance', icon: 'target', hint: 'Runs, testes, readiness por área e a prontidão da equipe.', to: { name: 'performance' } });
+  }
+  if (auth.featureOn('MEMBER_DEVELOPMENT')) {
+    items.push({ label: 'Desenvolvimento', icon: 'seedling', hint: 'Autonomia, competências e frequência de cada pessoa.', to: { name: 'development' } });
+  }
+  if (auth.featureOn('EVALUATIONS')) {
+    items.push({ label: 'Avaliações', icon: 'star', hint: 'Ciclos de avaliação individual e a próxima competência.', to: { name: 'evaluations' } });
+  }
+  if (auth.featureOn('JOURNAL') && auth.can('JOURNAL_VIEW')) {
+    items.push({ label: 'Caderno do Técnico', icon: 'notebook', hint: 'Decisões, erros, aprendizados e feedbacks.', to: { name: 'journal' } });
+  }
+  if (auth.featureOn('RECRUITMENT') && auth.can('RECRUITMENT_VIEW')) {
     items.push({ label: 'Processos Seletivos', icon: 'clipboard', hint: 'Inscrições, etapas e candidatos.', to: { name: 'adminRecruitment' } });
   }
-  items.push({ label: 'Presença', icon: 'clock', hint: 'Quem está na sala, o ranking e o seu histórico de presença.', to: { name: 'attendance' } });
-  items.push({ label: 'Compartilhados comigo', icon: 'share', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
+  if (auth.featureOn('TRIPS') && auth.can('TRIP_VIEW')) {
+    items.push({ label: 'Viagens', icon: 'plane', hint: 'Eventos, documentos pedidos e quem já respondeu.', to: { name: 'trips' } });
+  }
+  if (auth.featureOn('ATTENDANCE')) {
+    items.push({ label: 'Presença', icon: 'clock', hint: 'Quem está na sala, o ranking e o seu histórico de presença.', to: { name: 'attendance' } });
+  }
+  if (auth.featureOn('CLOUD')) {
+    items.push({ label: 'Compartilhados comigo', icon: 'share', hint: 'O que outras equipes compartilharam com você.', to: { name: 'sharedWithMe' } });
+  }
   return items;
 });
 
@@ -192,6 +328,16 @@ watch(() => auth.activeTenantId, load);
 
 async function load() {
   if (!auth.activeTenantId) return;
+  /*
+   * One call for the whole command center, already cut to what this person may read: a section they
+   * cannot see comes back empty instead of as a 403 that would replace the first screen after login.
+   */
+  try {
+    const { data } = await teamDashboard.get(auth.activeTenantId);
+    dashboard.value = data;
+  } catch (error) {
+    dashboard.value = null;
+  }
   try {
     const { data } = await cloud.accessRequests();
     pendingAccessRequests.value = data;

@@ -62,6 +62,14 @@ const platformCards = computed(() => {
 
 const teamCards = computed(() => {
   const cards = [];
+  if (auth.can('TENANT_MANAGE')) {
+    cards.push({
+      label: 'Recursos da equipe',
+      icon: 'sliders',
+      hint: 'Categoria de competição, quais partes da plataforma a equipe usa e os perfis padrão.',
+      to: { name: 'adminFeatures' },
+    });
+  }
   if (auth.can('MEMBER_VIEW')) {
     cards.push({
       label: 'Membros e permissões',
@@ -78,7 +86,7 @@ const teamCards = computed(() => {
       to: { name: 'adminDivisions' },
     });
   }
-  if (auth.can('RECRUITMENT_VIEW')) {
+  if (auth.featureOn('RECRUITMENT') && auth.can('RECRUITMENT_VIEW')) {
     cards.push({
       label: 'Processos seletivos',
       icon: 'clipboard',
@@ -86,7 +94,7 @@ const teamCards = computed(() => {
       to: { name: 'adminRecruitment' },
     });
   }
-  if (auth.canAny('ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE')) {
+  if (auth.featureOn('ATTENDANCE') && auth.canAny('ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE')) {
     cards.push({
       label: 'Presença',
       icon: 'clock',
@@ -94,7 +102,7 @@ const teamCards = computed(() => {
       to: { name: 'attendance' },
     });
   }
-  if (auth.can('TRIP_VIEW')) {
+  if (auth.featureOn('TRIPS') && auth.can('TRIP_VIEW')) {
     cards.push({
       label: 'Viagens',
       icon: 'plane',
@@ -102,7 +110,47 @@ const teamCards = computed(() => {
       to: { name: 'trips' },
     });
   }
-  if (auth.can('APP_MANAGE')) {
+  if (auth.featureOn('TASKS') && auth.can('TASK_MANAGE')) {
+    cards.push({
+      label: 'Demandas',
+      icon: 'kanban',
+      hint: 'O quadro da equipe: prazo, responsáveis, prioridade e critério de conclusão.',
+      to: { name: 'tasks' },
+    });
+  }
+  if (auth.featureOn('RISKS') && auth.can('RISK_MANAGE')) {
+    cards.push({
+      label: 'Riscos',
+      icon: 'alert',
+      hint: 'Probabilidade, impacto, responsável e mitigação — com o crítico marcado sozinho.',
+      to: { name: 'risks' },
+    });
+  }
+  if (auth.featureOn('PERFORMANCE') && auth.can('PERFORMANCE_MANAGE')) {
+    cards.push({
+      label: 'Performance',
+      icon: 'target',
+      hint: 'Runs, testes, readiness por área e o cartão de prontidão da equipe.',
+      to: { name: 'performance' },
+    });
+  }
+  if (auth.featureOn('MEMBER_DEVELOPMENT') && auth.can('DEVELOPMENT_VIEW')) {
+    cards.push({
+      label: 'Desenvolvimento das pessoas',
+      icon: 'seedling',
+      hint: 'Autonomia, competências e frequência — lançada e a que o registro de presença mostra.',
+      to: { name: 'development' },
+    });
+  }
+  if (auth.featureOn('JOURNAL') && auth.can('JOURNAL_VIEW')) {
+    cards.push({
+      label: 'Caderno do técnico',
+      icon: 'notebook',
+      hint: 'Decisões, erros, aprendizados e feedbacks de quem conduz a equipe.',
+      to: { name: 'journal' },
+    });
+  }
+  if (auth.featureOn('APPS') && auth.can('APP_MANAGE')) {
     cards.push({
       label: 'Apps da equipe',
       icon: 'link',
@@ -110,7 +158,7 @@ const teamCards = computed(() => {
       to: { name: 'adminApps' },
     });
   }
-  if (auth.can('API_KEY_MANAGE')) {
+  if (auth.featureOn('APPS') && auth.can('API_KEY_MANAGE')) {
     cards.push({
       label: 'Chaves de API',
       icon: 'key',
@@ -126,12 +174,14 @@ const teamCards = computed(() => {
       to: { name: 'createUser' },
     });
   }
-  cards.push({
-    label: 'Pedidos de acesso',
-    icon: 'key',
-    hint: 'Responder quem pediu acesso a uma pasta ou arquivo.',
-    to: { name: 'accessRequests' },
-  });
+  if (auth.featureOn('CLOUD')) {
+    cards.push({
+      label: 'Pedidos de acesso',
+      icon: 'key',
+      hint: 'Responder quem pediu acesso a uma pasta ou arquivo.',
+      to: { name: 'accessRequests' },
+    });
+  }
   return cards;
 });
 </script>

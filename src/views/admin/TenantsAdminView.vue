@@ -17,8 +17,8 @@
         <table class="vc-table">
           <thead>
             <tr>
-              <th>Equipe</th><th>Nome de sistema</th><th>Número</th><th>Membros</th>
-              <th>Divisões</th><th>Situação</th><th></th>
+              <th>Equipe</th><th>Nome de sistema</th><th>Categoria</th><th>Recursos</th>
+              <th>Membros</th><th>Divisões</th><th>Situação</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -29,7 +29,18 @@
                 <span v-if="tenant.systemTenant" class="vc-badge vc-badge--purple">sistema</span>
               </td>
               <td class="vc-mono">{{ tenant.slug }}</td>
-              <td>{{ tenant.teamNumber || '—' }}</td>
+              <td>
+                {{ tenant.competitionCategory === 'NONE' ? '—' : tenant.competitionCategoryLabel }}
+                <div v-if="tenant.teamNumber" class="vc-faint" style="font-size: 0.74rem">
+                  nº {{ tenant.teamNumber }}
+                </div>
+              </td>
+              <td>
+                <span class="vc-chip" :title="(tenant.enabledFeatures || []).join(', ')">
+                  {{ (tenant.enabledFeatures || []).length }} ligados
+                </span>
+                <div class="vc-faint" style="font-size: 0.74rem">{{ tenant.featureProfileLabel }}</div>
+              </td>
               <td>{{ tenant.memberCount ?? '—' }}</td>
               <td>{{ tenant.divisionCount ?? '—' }}</td>
               <td>
@@ -73,6 +84,29 @@
         <input id="color" class="vc-input" type="color" v-model="form.color" />
       </div>
       <div class="vc-field">
+        <label class="vc-label" for="competition">Categoria de competição</label>
+        <select id="competition" class="vc-select" v-model="form.competitionCategory">
+          <option v-for="option in categories" :key="option.name" :value="option.name">
+            {{ option.label }} — {{ option.performanceStyleLabel }}
+          </option>
+        </select>
+        <span class="vc-faint">
+          Decide a forma do módulo de performance. "Nenhuma" para uma equipe que não compete.
+        </span>
+      </div>
+      <div class="vc-field" v-if="!form.tenantId">
+        <label class="vc-label" for="profile">Perfil de recursos</label>
+        <select id="profile" class="vc-select" v-model="form.featureProfile">
+          <option v-for="option in profiles" :key="option.name" :value="option.name">
+            {{ option.label }} — {{ option.features.length }} recursos
+          </option>
+        </select>
+        <span class="vc-faint">
+          {{ profiles.find((p) => p.name === form.featureProfile)?.description }}
+          A equipe muda isso depois em Recursos da equipe.
+        </span>
+      </div>
+      <div class="vc-field">
         <label class="vc-label" for="description">Descrição</label>
         <textarea id="description" class="vc-textarea" v-model="form.description"></textarea>
       </div>
@@ -100,17 +134,20 @@ import AlertBanner from '@/components/AlertBanner.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';
-import { tenants } from '@/services/api.js';
+import { catalogs, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 /* Platform level screen: the tenants themselves. */
 const auth = authStore();
 const toast = useToast();
 const list = ref([]);
+const categories = ref([]);
+const profiles = ref([]);
 const editing = ref(false);
 const form = reactive({
   tenantId: null, slug: '', visibleName: '', teamNumber: '', color: '#8864AE',
   description: '', ownerUsername: '', active: true,
+  competitionCategory: 'NONE', featureProfile: 'COMPLETE',
 });
 
 onMounted(load);
@@ -122,12 +159,24 @@ async function load() {
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar equipes'));
   }
+  try {
+    const [categoryList, profileList] = await Promise.all([
+      catalogs.competitionCategories(),
+      catalogs.featureProfiles(),
+    ]);
+    categories.value = categoryList.data;
+    profiles.value = profileList.data.filter((profile) => profile.applicable);
+  } catch (error) {
+    categories.value = [];
+    profiles.value = [];
+  }
 }
 
 function openCreate() {
   Object.assign(form, {
     tenantId: null, slug: '', visibleName: '', teamNumber: '', color: '#8864AE',
     description: '', ownerUsername: '', active: true,
+    competitionCategory: 'NONE', featureProfile: 'COMPLETE',
   });
   editing.value = true;
 }
@@ -142,6 +191,8 @@ function openEdit(tenant) {
     description: tenant.description || '',
     ownerUsername: '',
     active: tenant.active !== false,
+    competitionCategory: tenant.competitionCategory || 'NONE',
+    featureProfile: 'COMPLETE',
   });
   editing.value = true;
 }
@@ -155,6 +206,7 @@ async function save() {
         color: form.color,
         description: form.description,
         active: form.active,
+        competitionCategory: form.competitionCategory,
       });
     } else {
       await tenants.create({
@@ -164,6 +216,8 @@ async function save() {
         color: form.color,
         description: form.description,
         ownerUsername: form.ownerUsername || null,
+        competitionCategory: form.competitionCategory,
+        featureProfile: form.featureProfile,
       });
     }
     editing.value = false;

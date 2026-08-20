@@ -43,7 +43,8 @@
 
         <router-link v-if="showAdminPanel" :to="{ name: 'admin' }" class="vc-header__link">Admin Panel</router-link>
         <router-link :to="{ name: 'home' }" class="vc-header__link">Dashboard</router-link>
-        <router-link v-if="auth.activeTenantId" :to="{ name: 'cloud' }" class="vc-header__link">Arquivos</router-link>
+        <router-link v-if="auth.activeTenantId && auth.featureOn('CLOUD')" :to="{ name: 'cloud' }"
+                     class="vc-header__link">Arquivos</router-link>
         <router-link :to="{ name: 'profile' }" class="vc-header__link">Profile</router-link>
 
         <!-- Notification bell -->
@@ -133,6 +134,12 @@ const showAdminPanel = computed(
       'DIVISION_CREATE',
       'DIVISION_UPDATE',
       'RECRUITMENT_MANAGE',
+      'TASK_MANAGE',
+      'RISK_MANAGE',
+      'PERFORMANCE_MANAGE',
+      'DEVELOPMENT_MANAGE',
+      'EVALUATION_MANAGE',
+      'JOURNAL_MANAGE',
     ),
 );
 
