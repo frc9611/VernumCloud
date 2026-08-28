@@ -99,7 +99,7 @@
       </div>
       <div class="vc-field">
         <label class="vc-label" for="createdExample">Exemplo de uso</label>
-        <textarea id="createdExample" class="vc-textarea keys__example" readonly rows="3"
+        <textarea id="createdExample" class="vc-textarea keys__example" readonly rows="4"
                   :value="example(created.key)"></textarea>
       </div>
       <template #footer>
@@ -205,10 +205,24 @@ async function revoke(key) {
   }
 }
 
+/*
+ * The example is the only place the team number is written down, and whoever is setting up a
+ * reader needs it — so a key that can authenticate cards gets the reader's call instead of the
+ * generic one, and the number to put in include/config.h is right there.
+ */
 function example(key) {
-  return 'curl -H "X-API-Key: ' + key + '" \\\n  '
-    + (process.env.VUE_APP_API_URL || 'http://localhost:8080')
-    + '/tenants/' + auth.activeTenantId + '/attendance/now';
+  const base = process.env.VUE_APP_API_URL || 'http://localhost:8080';
+  const tenant = auth.activeTenantId;
+  const scopes = created.value?.apiKey?.scopes || [];
+  if (scopes.includes('RFID_AUTH')) {
+    return '# equipe #' + tenant + ' — este e o VERNUM_TENANT_ID do include/config.h\n'
+      + 'curl -X POST -H "X-API-Key: ' + key + '" \\\n'
+      + '  -H "Content-Type: application/json" -d \'{"uid":"04A2B3C4"}\' \\\n  '
+      + base + '/tenants/' + tenant + '/rfid/attendance';
+  }
+  return '# equipe #' + tenant + '\n'
+    + 'curl -H "X-API-Key: ' + key + '" \\\n  '
+    + base + '/tenants/' + tenant + '/attendance/now';
 }
 
 function formatWhen(value) {
