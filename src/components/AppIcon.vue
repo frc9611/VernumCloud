@@ -132,6 +132,16 @@ const ICONS = {
   key: { paths: ['M12.5 11.5 21 3', 'M18 6l3 3', 'M15 9l3 3'], circles: [[7.5, 16.5, 5.5]] },
   shield: { paths: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'] },
 
+  /* An RFID card: the plastic, the chip on it, and the waves it answers a reader with. */
+  card: {
+    paths: [
+      'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z',
+      'M6 10h3v3H6z',
+      'M14.5 9.5a4 4 0 0 1 0 5',
+      'M17 7.5a7 7 0 0 1 0 9',
+    ],
+  },
+
   users: {
     paths: [
       'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2',

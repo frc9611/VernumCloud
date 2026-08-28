@@ -123,6 +123,31 @@
         </div>
       </form>
 
+      <!-- ---------------------------------------------------------- rfid tags -->
+      <SectionTitle lead="Meu" title="Cartão" />
+
+      <AlertBanner variant="info" icon="card" title="O mesmo cartão vale em todas as suas equipes">
+        Um cartão é seu, e não de uma equipe: encostá-lo no leitor da sala marca a sua presença em
+        todas as equipes de que você participa. Para cadastrar um cartão novo, encoste-o no leitor de
+        cadastro — o número não se digita aqui de propósito, para ninguém registrar um cartão alheio.
+      </AlertBanner>
+
+      <div v-if="tags.length" class="profile__cards">
+        <div v-for="tag in tags" :key="tag.rfidTagId" class="profile__card">
+          <div>
+            <strong>{{ tag.visibleName }}</strong>
+            <span class="vc-chip">final {{ tag.uidSuffix }}</span>
+            <span class="vc-faint" style="display: block">
+              Último uso: {{ tag.lastUsedAt ? formatWhen(tag.lastUsedAt) : 'nunca' }}
+            </span>
+          </div>
+          <button class="vc-btn vc-btn--danger vc-btn--small" type="button" @click="removeTag(tag)">
+            Remover
+          </button>
+        </div>
+      </div>
+      <p v-else class="vc-faint">Você ainda não tem nenhum cartão cadastrado.</p>
+
       <SectionTitle lead="Alterar" title="Senha" />
       <form class="profile__form" @submit.prevent="changePassword">
         <div class="profile__fields">
@@ -160,8 +185,9 @@ import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import AppIcon from '@/components/AppIcon.vue';
+import AlertBanner from '@/components/AlertBanner.vue';
 import { authStore } from '@/store/auth.js';
-import { users } from '@/services/api.js';
+import { rfid, users } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 /*
@@ -174,6 +200,7 @@ const toast = useToast();
 const pictureUrl = ref(null);
 const saving = ref(false);
 const showPermissions = ref(null);
+const tags = ref([]);
 
 const form = reactive({ username: '', email: '', birthDate: '', schoolClass: '', course: '' });
 const passwords = reactive({ oldPassword: '', password: '' });
@@ -181,6 +208,7 @@ const passwords = reactive({ oldPassword: '', password: '' });
 onMounted(async () => {
   await loadProfile();
   await loadPicture();
+  await loadTags();
 });
 
 async function loadProfile() {
@@ -203,6 +231,38 @@ async function loadPicture() {
   } catch (error) {
     pictureUrl.value = null;
   }
+}
+
+/*
+ * The cards are not gated by a permission or by a feature: a card belongs to the person,
+ * it reaches whatever team of theirs has a reader, and somebody who is in no team at all
+ * still gets to see and remove the ones they carry.
+ */
+async function loadTags() {
+  try {
+    const { data } = await rfid.myTags();
+    tags.value = data;
+  } catch (error) {
+    tags.value = [];
+  }
+}
+
+async function removeTag(tag) {
+  if (!window.confirm(`Remover o cartão "${tag.visibleName}"? Ele para de funcionar em todas as suas equipes.`)) {
+    return;
+  }
+  try {
+    await rfid.removeTag(tag.rfidTagId);
+    //Only the list changes: no team, division or permission was touched
+    await loadTags();
+    toast.success('Cartão removido.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao remover o cartão'));
+  }
+}
+
+function formatWhen(value) {
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 async function save() {
@@ -262,6 +322,28 @@ async function copy(value) {
 </script>
 
 <style scoped>
+.profile__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.profile__card .vc-chip {
+  margin-left: 8px;
+}
+
+.profile__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+}
+
 .profile {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);

@@ -271,6 +271,23 @@ export const attendance = {
     http.post(`/attendance/${attendanceId}/close`, null, { params: endTime ? { endTime } : {} }),
 };
 
+/* ---------------------------------------------------------------------- rfid */
+
+/*
+ * The card somebody carries. It belongs to the person and not to the team — the same
+ * card opens any room they walk into — so the person reads and writes their own here,
+ * and a team only ever reads and revokes the ones of its members.
+ *
+ * There is no route that registers a card for somebody else, and that is deliberate:
+ * a card is claimed by putting it on a reader, never by typing a number somebody read
+ * off a screen.
+ */
+export const rfid = {
+  myTags: () => http.get('/rfidTags/me'),
+  removeTag: (tagId) => http.delete(`/rfidTags/${tagId}`),
+  teamTags: (tenantId) => http.get(`/tenants/${tenantId}/rfidTags`),
+};
+
 /* --------------------------------------------------------------------- trips */
 
 export const trips = {
@@ -380,6 +397,7 @@ export default {
   apps,
   sso,
   attendance,
+  rfid,
   trips,
   notifications,
   recruitment,
