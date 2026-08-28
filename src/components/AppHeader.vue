@@ -140,6 +140,7 @@ const showAdminPanel = computed(
       'DEVELOPMENT_MANAGE',
       'EVALUATION_MANAGE',
       'JOURNAL_MANAGE',
+      'RFID_MANAGE',
     ),
 );
 

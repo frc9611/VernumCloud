@@ -102,6 +102,14 @@ const teamCards = computed(() => {
       to: { name: 'attendance' },
     });
   }
+  if (auth.featureOn('ATTENDANCE') && auth.can('RFID_MANAGE')) {
+    cards.push({
+      label: 'Cartões RFID',
+      icon: 'card',
+      hint: 'Os cartões que a equipe usa nos leitores da sala, e a revogação de um que se perdeu.',
+      to: { name: 'adminRfid' },
+    });
+  }
   if (auth.featureOn('TRIPS') && auth.can('TRIP_VIEW')) {
     cards.push({
       label: 'Viagens',

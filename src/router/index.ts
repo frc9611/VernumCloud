@@ -197,6 +197,16 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'API_KEY_MANAGE' }
   },
   {
+    /*
+     * The cards live under the Presença feature, not under a switch of their own: a reader
+     * is the same presence answered by a card instead of by somebody typing a password.
+     */
+    path: '/admin/cartoes',
+    name: 'adminRfid',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/RfidAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'RFID_MANAGE', feature: 'ATTENDANCE' }
+  },
+  {
     path: '/admin/processos',
     name: 'adminRecruitment',
     component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessesAdminView.vue'),
