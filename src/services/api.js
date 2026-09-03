@@ -240,7 +240,11 @@ export const apps = {
 
   apiKeys: (tenantId) => http.get(`/tenants/${tenantId}/apiKeys`),
   createApiKey: (tenantId, body) => http.post(`/tenants/${tenantId}/apiKeys`, body),
+  /* Desliga a chave em todas as equipes. Só a equipe que a criou pode. */
   revokeApiKey: (apiKeyId) => http.delete(`/apiKeys/${apiKeyId}`),
+  /* Tira só esta equipe de uma chave que outra criou; ela continua valendo lá. */
+  removeApiKeyFromTenant: (tenantId, apiKeyId) =>
+    http.delete(`/tenants/${tenantId}/apiKeys/${apiKeyId}`),
 };
 
 /*

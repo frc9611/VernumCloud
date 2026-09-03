@@ -11,14 +11,16 @@
     </SectionTitle>
 
     <AlertBanner variant="info" icon="key" title="Uma chave age como você, e nunca além de você">
-      A chave vale só nesta equipe e só faz o que estiver marcado nela. Se você perder uma permissão,
-      as suas chaves perdem também. Ela vai no cabeçalho <code>X-API-Key</code>.
+      Uma chave faz só o que estiver marcado nela, e vale nas equipes que você escolher — e só nas
+      que você mesmo pode administrar. Se você perder uma permissão, as suas chaves perdem também.
+      Ela vai no cabeçalho <code>X-API-Key</code>. Esta lista mostra também as chaves que
+      <strong>outra equipe criou e que agem sobre esta</strong>.
     </AlertBanner>
 
     <div class="vc-table-wrap" v-if="keys.length">
       <table class="vc-table">
         <thead>
-          <tr><th>Nome</th><th>Prefixo</th><th>Pode</th><th>Criada</th><th>Último uso</th><th></th></tr>
+          <tr><th>Nome</th><th>Prefixo</th><th>Vale em</th><th>Pode</th><th>Criada</th><th>Último uso</th><th></th></tr>
         </thead>
         <tbody>
           <tr v-for="key in keys" :key="key.apiKeyId">
@@ -31,15 +33,28 @@
             </td>
             <td><code class="keys__code">vk_{{ key.prefix }}_…</code></td>
             <td>
+              <span v-for="team in key.tenants" :key="team.tenantId"
+                    class="vc-chip" :class="{ 'vc-chip--purple': team.owner }"
+                    :title="team.owner ? 'Equipe que criou a chave' : 'Equipe alcançada pela chave'">
+                {{ team.tenantName }}
+              </span>
+            </td>
+            <td>
               <span v-for="label in key.scopeLabels" :key="label" class="vc-chip">{{ label }}</span>
             </td>
             <td class="vc-faint">{{ formatWhen(key.createdAt) }}</td>
             <td class="vc-faint">{{ key.lastUsedAt ? formatWhen(key.lastUsedAt) : 'nunca' }}</td>
             <td style="text-align: right">
-              <button v-if="!key.revoked" class="vc-btn vc-btn--danger vc-btn--small" type="button"
-                      @click="revoke(key)">
-                Revogar
-              </button>
+              <template v-if="!key.revoked">
+                <button v-if="key.tenantId === auth.activeTenantId"
+                        class="vc-btn vc-btn--danger vc-btn--small" type="button" @click="revoke(key)">
+                  Revogar
+                </button>
+                <button v-else class="vc-btn vc-btn--danger vc-btn--small" type="button"
+                        @click="removeFromTeam(key)">
+                  Tirar desta equipe
+                </button>
+              </template>
             </td>
           </tr>
         </tbody>
@@ -67,6 +82,23 @@
       <div class="vc-field">
         <label class="vc-label" for="keyExpires">Expira em (opcional)</label>
         <input id="keyExpires" class="vc-input" type="date" v-model="form.expiresOn" />
+      </div>
+      <div class="vc-field" v-if="otherTenants.length">
+        <label class="vc-label">Em quais equipes ela vale</label>
+        <div class="keys__scopes">
+          <label class="vc-checkbox">
+            <input type="checkbox" checked disabled />
+            <span>{{ auth.activeTenantName }} <span class="vc-faint">(esta, sempre)</span></span>
+          </label>
+          <label v-for="team in otherTenants" :key="team.tenantId" class="vc-checkbox">
+            <input type="checkbox" :value="team.tenantId" v-model="form.tenantIds" />
+            <span>{{ team.visibleName }}</span>
+          </label>
+        </div>
+        <span class="vc-faint">
+          Só aparecem as equipes onde você também pode criar chaves. O servidor confere cada
+          permissão marcada em cada equipe escolhida, e recusa dizendo qual falta onde.
+        </span>
       </div>
       <div class="vc-field">
         <label class="vc-label">O que a chave pode fazer</label>
@@ -138,6 +170,18 @@ const form = ref(null);
 const created = ref(null);
 const busy = ref(false);
 
+/*
+ * As outras equipes da pessoa onde ela tambem pode criar chave. O servidor confere de novo, uma a
+ * uma — isto aqui e so para nao oferecer o que ele vai recusar.
+ */
+const otherTenants = computed(() =>
+  auth.memberships
+    .filter((membership) => membership.tenant?.tenantId !== auth.activeTenantId)
+    .filter((membership) => (membership.permissions || []).includes('API_KEY_MANAGE'))
+    .map((membership) => membership.tenant)
+    .sort((first, second) => first.visibleName.localeCompare(second.visibleName)),
+);
+
 const grantablePermissions = computed(() =>
   permissions.value
     .filter((permission) => permission.scope === 'TENANT' && auth.can(permission.name))
@@ -171,7 +215,7 @@ async function load() {
 }
 
 function openForm() {
-  form.value = { visibleName: '', appId: null, expiresOn: '', scopes: [] };
+  form.value = { visibleName: '', appId: null, expiresOn: '', scopes: [], tenantIds: [] };
 }
 
 async function save() {
@@ -181,6 +225,7 @@ async function save() {
       visibleName: form.value.visibleName,
       appId: form.value.appId,
       scopes: form.value.scopes,
+      tenantIds: form.value.tenantIds,
       //The server takes a date and time; the field only asks for the day
       expiresAt: form.value.expiresOn ? form.value.expiresOn + 'T23:59:59' : null,
     });
@@ -191,6 +236,22 @@ async function save() {
     toast.error(apiMessage(error, 'Erro ao criar a chave'));
   } finally {
     busy.value = false;
+  }
+}
+
+async function removeFromTeam(key) {
+  const here = auth.activeTenantName;
+  if (!window.confirm(
+    `Tirar a chave "${key.visibleName}" de ${here}? Ela para de funcionar aqui e continua valendo `
+    + `em ${key.tenantName}, que foi quem a criou.`)) {
+    return;
+  }
+  try {
+    await appsApi.removeApiKeyFromTenant(auth.activeTenantId, key.apiKeyId);
+    await load();
+    toast.info('Chave desligada nesta equipe.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao tirar a chave desta equipe'));
   }
 }
 
