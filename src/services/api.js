@@ -489,6 +489,18 @@ export const people = {
   search: (search) => http.get('/people', { params: { search } }),
   updateMyProfile: (body) => http.put('/people/me/profile', body),
   highlightBadge: (badgeId, highlighted) => http.put(`/people/me/badges/${badgeId}/highlight`, { highlighted }),
+  hideMembership: (tenantId, hidden) => http.put(`/people/me/memberships/${tenantId}/hidden`, { hidden }),
+  hideBadge: (badgeId, hidden) => http.put(`/people/me/badges/${badgeId}/hidden`, { hidden }),
+  /* A mentor or the platform featuring somebody else's profile — same reach as granting a badge. */
+  addSpotlight: (userId, body) => http.post(`/people/${userId}/spotlights`, body),
+  reorderSpotlights: (userId, spotlightIds) => http.put(`/people/${userId}/spotlights/order`, { spotlightIds }),
+  removeSpotlight: (spotlightId) => http.delete(`/spotlights/${spotlightId}`),
+  /* Batched: one round trip for the primary spotlight color of every id in `userIds`. */
+  spotlightColors: (userIds) => http.get('/people/spotlight-colors', { params: { ids: userIds.join(',') } }),
+  badgeCatalog: () => http.get('/badges/catalog'),
+  addTrajectory: (tenantId, body) => http.post(`/people/me/memberships/${tenantId}/trajectory`, body),
+  reviewTrajectory: (entryId, approve) => http.put(`/trajectory/${entryId}/review`, { approve }),
+  removeTrajectory: (entryId) => http.delete(`/trajectory/${entryId}`),
   follow: (userId) => http.post(`/people/${userId}/follow`),
   unfollow: (userId) => http.delete(`/people/${userId}/follow`),
   followers: (userId) => http.get(`/people/${userId}/followers`),

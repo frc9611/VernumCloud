@@ -13,6 +13,15 @@
           <AppIcon name="badge" :size="14" />
           Conceder badge
         </button>
+        <button
+          v-if="profile.canSpotlight"
+          class="vc-btn vc-btn--small padmin__spotlight-btn"
+          type="button"
+          @click="openSpotlight"
+        >
+          <AppIcon name="award" :size="14" />
+          Destacar perfil
+        </button>
         <button v-if="profile.canAddAffiliation" class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="openAffiliation(null)">
           <AppIcon name="history" :size="14" />
           Adicionar afiliação passada
@@ -35,6 +44,7 @@
           <span class="padmin__team">
             {{ membership.tenantName }}
             <span v-if="membership.teamNumber" class="vc-faint">#{{ membership.teamNumber }}</span>
+            <span v-if="membership.hidden" class="vc-chip" title="A pessoa ocultou esta equipe do próprio perfil público">oculta do perfil</span>
           </span>
           <select
             class="vc-select padmin__role"
@@ -56,7 +66,26 @@
     </div>
 
     <!-- ---------------------------------------------------------- grant badge -->
-    <ModalDialog v-if="badgeOpen" :title="'Conceder badge a ' + profile.name" @close="badgeOpen = false">
+    <ModalDialog v-if="badgeOpen" wide :title="'Conceder badge a ' + profile.name" @close="badgeOpen = false">
+      <div v-if="catalog.length" class="vc-stack padmin__catalog">
+        <strong class="vc-small">Reaproveitar um badge já usado</strong>
+        <p class="vc-faint" style="margin: 0">
+          Escolher um preenche o formulário; cria um badge novo, independente, com a mesma aparência —
+          útil para não nascer um "Dean's List Award" ligeiramente diferente a cada vez.
+        </p>
+        <div class="padmin__catalog-grid">
+          <button
+            v-for="template in catalog"
+            :key="template.title"
+            type="button"
+            class="padmin__catalog-item"
+            @click="useTemplate(template)"
+          >
+            <BadgeChip :badge="template" :color="template.color || 'var(--vc-purple)'" />
+            <span class="vc-faint">{{ template.usageCount }}×</span>
+          </button>
+        </div>
+      </div>
       <div class="vc-field">
         <label class="vc-label" for="badge-kind">Tipo</label>
         <select id="badge-kind" class="vc-select" v-model="badgeForm.kind">
@@ -83,7 +112,16 @@
           </select>
         </div>
         <div class="vc-field">
-          <label class="vc-label" for="badge-color">Cor</label>
+          <label class="vc-label" for="badge-frame">Moldura</label>
+          <select id="badge-frame" class="vc-select" v-model="badgeForm.frame">
+            <option v-for="choice in frameChoices" :key="choice.value" :value="choice.value">{{ choice.label }}</option>
+          </select>
+          <span class="vc-faint">Um adereço ao redor do ícone, para o que merece mais destaque.</span>
+        </div>
+      </div>
+      <div class="padmin__fields">
+        <div class="vc-field">
+          <label class="vc-label" for="badge-color">Cor do ícone</label>
           <div class="vc-input-group">
             <input id="badge-color" class="vc-input" type="color" v-model="badgeForm.color" :disabled="!badgeForm.useColor" />
             <label class="vc-checkbox" style="white-space: nowrap">
@@ -92,6 +130,28 @@
             </label>
           </div>
           <span class="vc-faint">Sem cor própria, o badge usa a cor da equipe que emite.</span>
+        </div>
+        <div class="vc-field">
+          <label class="vc-label" for="badge-text-color">Cor do título</label>
+          <div class="vc-input-group">
+            <input id="badge-text-color" class="vc-input" type="color" v-model="badgeForm.textColor" :disabled="!badgeForm.useTextColor" />
+            <label class="vc-checkbox" style="white-space: nowrap">
+              <input type="checkbox" v-model="badgeForm.useTextColor" />
+              cor própria
+            </label>
+          </div>
+          <span class="vc-faint">Sem cor própria, o título usa a cor do texto comum.</span>
+        </div>
+        <div class="vc-field">
+          <label class="vc-label" for="badge-bg-color">Cor de fundo</label>
+          <div class="vc-input-group">
+            <input id="badge-bg-color" class="vc-input" type="color" v-model="badgeForm.backgroundColor" :disabled="!badgeForm.useBackgroundColor" />
+            <label class="vc-checkbox" style="white-space: nowrap">
+              <input type="checkbox" v-model="badgeForm.useBackgroundColor" />
+              fundo próprio
+            </label>
+          </div>
+          <span class="vc-faint">Sem fundo próprio, o cartão usa um brilho suave da cor do ícone.</span>
         </div>
       </div>
       <div class="vc-field">
@@ -105,11 +165,91 @@
       </div>
       <div class="vc-row" style="align-items: center; gap: 10px">
         <span class="vc-faint">Prévia:</span>
-        <BadgeChip :badge="badgePreview" :color="badgePreviewColor" />
+        <BadgeChip :badge="badgePreview" :color="badgePreviewColor" large />
       </div>
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="badgeOpen = false">Cancelar</button>
         <button class="vc-btn" type="button" :disabled="busy || !badgeForm.title.trim()" @click="grantBadge">Conceder</button>
+      </template>
+    </ModalDialog>
+
+    <!-- --------------------------------------------------------- spotlight -->
+    <ModalDialog v-if="spotlightOpen" wide :title="'Destacar o perfil de ' + profile.name" @close="spotlightOpen = false">
+      <p class="vc-faint" style="margin-top: 0">
+        Um reconhecimento seu — ou da plataforma — aparece acima dos papéis da pessoa, colorido,
+        diferente do que ela mesma escreve. Pode haver mais de um; o primeiro da lista é o principal,
+        e é a cor dele que passa a colorir o nome da pessoa em toda a plataforma.
+      </p>
+
+      <div v-if="profile.spotlights.length" class="vc-stack padmin__spotlight-list">
+        <div v-for="(spot, index) in profile.spotlights" :key="spot.spotlightId" class="padmin__spotlight-row">
+          <span class="padmin__spotlight-chip" :style="spotlightChipStyle(spot)">
+            <AppIcon name="award" :size="13" />
+            {{ spot.text }}
+          </span>
+          <span class="vc-faint padmin__spotlight-scope">{{ spot.tenantName }}</span>
+          <span v-if="spot.primary" class="vc-chip vc-chip--purple">principal</span>
+          <span class="vc-spacer"></span>
+          <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" title="Mover para cima"
+                  :disabled="index === 0 || busy" @click="moveSpotlight(index, -1)">
+            <AppIcon name="chevronUp" :size="14" />
+          </button>
+          <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" title="Mover para baixo"
+                  :disabled="index === profile.spotlights.length - 1 || busy" @click="moveSpotlight(index, 1)">
+            <AppIcon name="chevronDown" :size="14" />
+          </button>
+          <button v-if="spot.canManage" class="vc-btn vc-btn--ghost vc-btn--small" type="button" title="Remover"
+                  :disabled="busy" @click="removeSpotlightItem(spot)">
+            <AppIcon name="trash" :size="14" />
+          </button>
+        </div>
+      </div>
+      <p v-else class="vc-faint" style="margin: 0">Nenhum destaque ainda.</p>
+
+      <div class="padmin__fields" style="margin-top: 12px">
+        <div class="vc-field">
+          <label class="vc-label" for="spotlight-scope">Vincular a</label>
+          <select id="spotlight-scope" class="vc-select" v-model="spotlightForm.tenantId">
+            <option v-if="profile.viewerPlatformAdmin" value="">Geral (a plataforma toda)</option>
+            <option v-for="team in profile.grantableTenants" :key="team.tenantId" :value="String(team.tenantId)">
+              {{ team.name }}<template v-if="team.teamNumber"> #{{ team.teamNumber }}</template>
+            </option>
+          </select>
+        </div>
+        <div class="vc-field">
+          <label class="vc-label" for="spotlight-text">Texto</label>
+          <input id="spotlight-text" class="vc-input" type="text" v-model="spotlightForm.text" maxlength="120"
+                 placeholder="Dean's List Award 2025, Referência em programação..." />
+        </div>
+      </div>
+      <div class="padmin__fields">
+        <div class="vc-field">
+          <label class="vc-label" for="spotlight-color">Cor</label>
+          <input id="spotlight-color" class="vc-input" type="color" v-model="spotlightForm.color" />
+        </div>
+        <div class="vc-field">
+          <label class="vc-label" for="spotlight-color-end">Segunda cor</label>
+          <div class="vc-input-group">
+            <input id="spotlight-color-end" class="vc-input" type="color" v-model="spotlightForm.colorEnd" :disabled="!spotlightForm.useGradient" />
+            <label class="vc-checkbox" style="white-space: nowrap">
+              <input type="checkbox" v-model="spotlightForm.useGradient" />
+              gradiente
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="vc-row" style="align-items: center; gap: 10px">
+        <span class="vc-faint">Prévia:</span>
+        <span class="padmin__spotlight-preview" :style="spotlightPreviewStyle">
+          <AppIcon name="award" :size="15" />
+          {{ spotlightForm.text.trim() || profile.name }}
+        </span>
+      </div>
+      <template #footer>
+        <button class="vc-btn vc-btn--ghost" type="button" @click="spotlightOpen = false">Fechar</button>
+        <button class="vc-btn" type="button" :disabled="busy || !spotlightForm.text.trim()" @click="addSpotlightSubmit">
+          Adicionar destaque
+        </button>
       </template>
     </ModalDialog>
 
@@ -248,7 +388,7 @@ import { authStore } from '@/store/auth.js';
 import { catalogs, events as eventsApi, people, platform, tenants as tenantsApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 import BadgeChip from './BadgeChip.vue';
-import { BADGE_ICON_CHOICES, formatDate, teamLabel } from './profileText.js';
+import { BADGE_FRAME_CHOICES, BADGE_ICON_CHOICES, formatDate, teamLabel } from './profileText.js';
 
 /*
  * What an administrator does to a person from their profile: badges by hand, past affiliations,
@@ -272,6 +412,7 @@ const busy = ref(false);
 const roles = ref([]);
 const allTenants = ref([]);
 const iconChoices = BADGE_ICON_CHOICES;
+const frameChoices = BADGE_FRAME_CHOICES;
 
 /* ------------------------------------------------------------- reach */
 
@@ -341,7 +482,13 @@ onMounted(async () => {
 /* ------------------------------------------------------------ badges */
 
 const badgeOpen = ref(false);
-const badgeForm = reactive({ kind: 'CUSTOM', title: '', description: '', icon: 'badge', color: '#8864ae', useColor: false, tenantId: '' });
+const badgeForm = reactive({
+  kind: 'CUSTOM', title: '', description: '', icon: 'badge',
+  color: '#8864ae', useColor: false, textColor: '#8864ae', useTextColor: false, frame: 'NONE',
+  backgroundColor: '#2a1f3d', useBackgroundColor: false,
+  tenantId: '',
+});
+const catalog = ref([]);
 
 const badgePreview = computed(() => ({
   kind: badgeForm.kind,
@@ -349,6 +496,9 @@ const badgePreview = computed(() => ({
   title: badgeForm.title.trim() || 'Título do badge',
   description: badgeForm.description,
   icon: badgeForm.icon,
+  frame: badgeForm.frame,
+  textColor: badgeForm.useTextColor ? badgeForm.textColor : null,
+  backgroundColor: badgeForm.useBackgroundColor ? badgeForm.backgroundColor : null,
 }));
 const badgePreviewColor = computed(() => {
   if (badgeForm.useColor) return badgeForm.color;
@@ -362,11 +512,43 @@ function openBadge() {
   badgeForm.description = '';
   badgeForm.icon = 'badge';
   badgeForm.useColor = false;
+  badgeForm.color = '#8864ae';
+  badgeForm.useTextColor = false;
+  badgeForm.textColor = '#8864ae';
+  badgeForm.useBackgroundColor = false;
+  badgeForm.backgroundColor = '#2a1f3d';
+  badgeForm.frame = 'NONE';
   //Platform first when the viewer has it; else the first team that may issue
   badgeForm.tenantId = props.profile.viewerPlatformAdmin || !props.profile.grantableTenants.length
     ? ''
     : String(props.profile.grantableTenants[0].tenantId);
   badgeOpen.value = true;
+  loadCatalog();
+}
+
+/** Every distinct hand-granted badge appearance in use, so this one does not become a slightly different twin. */
+async function loadCatalog() {
+  try {
+    const { data } = await people.badgeCatalog();
+    catalog.value = data;
+  } catch (error) {
+    catalog.value = [];
+  }
+}
+
+/** Fills the form from an existing appearance. Still creates an independent badge when saved. */
+function useTemplate(template) {
+  badgeForm.kind = template.kind === 'ALUMNI' ? 'ALUMNI' : 'CUSTOM';
+  badgeForm.title = template.title;
+  badgeForm.description = template.description || '';
+  badgeForm.icon = template.icon || 'badge';
+  badgeForm.useColor = !!template.color;
+  badgeForm.color = template.color || '#8864ae';
+  badgeForm.useTextColor = !!template.textColor;
+  badgeForm.textColor = template.textColor || '#8864ae';
+  badgeForm.useBackgroundColor = !!template.backgroundColor;
+  badgeForm.backgroundColor = template.backgroundColor || '#2a1f3d';
+  badgeForm.frame = template.frame || 'NONE';
 }
 
 async function grantBadge() {
@@ -377,6 +559,9 @@ async function grantBadge() {
       title: badgeForm.title.trim(),
       description: badgeForm.description.trim() || null,
       color: badgeForm.useColor ? badgeForm.color : null,
+      textColor: badgeForm.useTextColor ? badgeForm.textColor : null,
+      backgroundColor: badgeForm.useBackgroundColor ? badgeForm.backgroundColor : null,
+      frame: badgeForm.frame !== 'NONE' ? badgeForm.frame : null,
       icon: badgeForm.icon || null,
       tenantId: badgeForm.tenantId ? Number(badgeForm.tenantId) : null,
     });
@@ -385,6 +570,84 @@ async function grantBadge() {
     emit('changed', {});
   } catch (error) {
     toast.error(apiMessage(error, 'Não foi possível conceder o badge.'));
+  } finally {
+    busy.value = false;
+  }
+}
+
+/* ---------------------------------------------------------------- spotlight */
+
+const spotlightOpen = ref(false);
+const spotlightForm = reactive({ text: '', color: '#f5a623', colorEnd: '#8864ae', useGradient: false, tenantId: '' });
+
+const spotlightPreviewStyle = computed(() => spotlightGradientStyle(
+  spotlightForm.color,
+  spotlightForm.useGradient ? spotlightForm.colorEnd : null,
+));
+
+function spotlightGradientStyle(color, colorEnd) {
+  return { background: colorEnd ? `linear-gradient(120deg, ${color}, ${colorEnd})` : color };
+}
+
+function spotlightChipStyle(spot) {
+  return spotlightGradientStyle(spot.color, spot.colorEnd);
+}
+
+function openSpotlight() {
+  spotlightForm.text = '';
+  spotlightForm.color = '#f5a623';
+  spotlightForm.colorEnd = '#8864ae';
+  spotlightForm.useGradient = false;
+  spotlightForm.tenantId = props.profile.viewerPlatformAdmin || !props.profile.grantableTenants.length
+    ? ''
+    : String(props.profile.grantableTenants[0].tenantId);
+  spotlightOpen.value = true;
+}
+
+async function addSpotlightSubmit() {
+  busy.value = true;
+  try {
+    await people.addSpotlight(props.profile.userId, {
+      text: spotlightForm.text.trim(),
+      color: spotlightForm.color,
+      colorEnd: spotlightForm.useGradient ? spotlightForm.colorEnd : null,
+      tenantId: spotlightForm.tenantId ? Number(spotlightForm.tenantId) : null,
+    });
+    spotlightForm.text = '';
+    toast.success('Perfil destacado!');
+    emit('changed', {});
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível destacar o perfil.'));
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function removeSpotlightItem(spot) {
+  if (!window.confirm(`Remover o destaque "${spot.text}"?`)) return;
+  busy.value = true;
+  try {
+    await people.removeSpotlight(spot.spotlightId);
+    toast.info('Destaque removido.');
+    emit('changed', {});
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível remover o destaque.'));
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function moveSpotlight(index, direction) {
+  const order = props.profile.spotlights.map((spot) => spot.spotlightId);
+  const target = index + direction;
+  if (target < 0 || target >= order.length) return;
+  [order[index], order[target]] = [order[target], order[index]];
+  busy.value = true;
+  try {
+    await people.reorderSpotlights(props.profile.userId, order);
+    emit('changed', {});
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível reordenar os destaques.'));
   } finally {
     busy.value = false;
   }
@@ -619,6 +882,81 @@ defineExpose({ openAffiliation, removeAffiliation });
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+/* The same warm gradient as the spotlight pill on the header, so the button already says what it does. */
+.padmin__spotlight-btn {
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--vc-warning-strong) 85%, var(--vc-purple)),
+    color-mix(in srgb, var(--vc-purple) 80%, var(--vc-warning-strong))
+  );
+  color: var(--vc-on-accent);
+  border-color: transparent;
+}
+
+.padmin__spotlight-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--vc-on-accent);
+}
+
+.padmin__spotlight-list {
+  gap: 6px;
+}
+
+.padmin__spotlight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+.padmin__spotlight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--vc-on-accent);
+}
+
+.padmin__spotlight-scope {
+  font-size: 0.78rem;
+}
+
+.padmin__catalog {
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--vc-border-strong);
+}
+
+.padmin__catalog-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.padmin__catalog-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--vc-border);
+  border-radius: 20px;
+  background: var(--vc-surface);
+  cursor: pointer;
+}
+
+.padmin__catalog-item:hover {
+  border-color: var(--vc-purple-border);
+  background: var(--vc-purple-soft);
 }
 
 @media (max-width: 700px) {

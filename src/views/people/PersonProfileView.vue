@@ -14,31 +14,81 @@
         :profile="profile"
         :team-color-of="teamColorOf"
         :busy="busy"
+        :customizing="customizing"
         @follow="follow"
         @unfollow="unfollow"
         @save="saveProfile"
+        @toggle-customize="customizing = !customizing"
       />
 
       <ProfileAdminPanel v-if="showAdmin" ref="adminPanel" :profile="profile" @changed="afterChange" />
 
-      <ProfileTeams :memberships="profile.memberships" :has-history="profile.affiliations.length > 0" />
+      <div v-if="customizing" class="vc-row pprofile__customize-bar">
+        <AlertBanner variant="info" icon="edit" title="Personalizando seu perfil" style="flex: 1">
+          Use as setas para reordenar as seções e o olho, em cada equipe ou badge, para escolher o
+          que aparece no seu perfil público. "Concluir", no topo, só fecha este aviso — tudo já foi
+          salvo.
+        </AlertBanner>
+        <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="restoreOrder">
+          Restaurar ordem padrão
+        </button>
+      </div>
 
-      <ProfileHistory
-        :affiliations="profile.affiliations"
-        :events="profile.events"
-        @edit-affiliation="editAffiliation"
-        @remove-affiliation="removeAffiliation"
-      />
+      <template v-for="(key, index) in sectionOrder" :key="key">
+        <div class="pprofile__section">
+          <div v-if="customizing" class="pprofile__reorder">
+            <button
+              class="vc-btn vc-btn--ghost vc-btn--small"
+              type="button"
+              :disabled="index === 0"
+              title="Mover para cima"
+              @click="moveSection(index, -1)"
+            >
+              <AppIcon name="chevronUp" :size="14" />
+            </button>
+            <button
+              class="vc-btn vc-btn--ghost vc-btn--small"
+              type="button"
+              :disabled="index === sectionOrder.length - 1"
+              title="Mover para baixo"
+              @click="moveSection(index, 1)"
+            >
+              <AppIcon name="chevronDown" :size="14" />
+            </button>
+            <span class="vc-faint">{{ SECTION_LABELS[key] }}</span>
+          </div>
 
-      <ProfileBadges
-        :badges="profile.badges"
-        :owner="profile.canEditProfile"
-        :team-color-of="teamColorOf"
-        @toggle-highlight="toggleHighlight"
-        @remove="removeBadge"
-      />
-
-      <ProfileEvents :events="profile.events" />
+          <ProfileBadges
+            v-if="key === 'badges'"
+            :badges="profile.badges"
+            :owner="profile.canEditProfile"
+            :customizing="customizing"
+            :team-color-of="teamColorOf"
+            @toggle-highlight="toggleHighlight"
+            @toggle-hidden="hideBadge"
+            @remove="removeBadge"
+          />
+          <ProfileTeams
+            v-else-if="key === 'teams'"
+            :memberships="profile.memberships"
+            :has-history="profile.affiliations.length > 0"
+            :customizing="customizing"
+            :can-edit-profile="profile.canEditProfile"
+            @toggle-hidden="hideMembership"
+            @add-trajectory="addTrajectory"
+            @review-trajectory="reviewTrajectory"
+            @remove-trajectory="removeTrajectory"
+          />
+          <ProfileHistory
+            v-else-if="key === 'history'"
+            :affiliations="profile.affiliations"
+            :events="profile.events"
+            @edit-affiliation="editAffiliation"
+            @remove-affiliation="removeAffiliation"
+          />
+          <ProfileEvents v-else-if="key === 'events'" :events="profile.events" />
+        </div>
+      </template>
     </div>
   </main>
 </template>
@@ -47,6 +97,8 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
+import AlertBanner from '@/components/AlertBanner.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ProfileAdminPanel from '@/components/people/ProfileAdminPanel.vue';
 import ProfileBadges from '@/components/people/ProfileBadges.vue';
@@ -57,6 +109,7 @@ import ProfileTeams from '@/components/people/ProfileTeams.vue';
 import { authStore } from '@/store/auth.js';
 import { people } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { SECTION_LABELS, resolveSectionOrder } from '@/components/people/profileText.js';
 
 /*
  * The profile of a person, at /pessoas/:id.
@@ -65,6 +118,11 @@ import { apiMessage } from '@/services/http.js';
  * one thing across teams and after them. What changes is the emphasis, and the server's `kind` is
  * only a hint for it. The sections read from a single PersonProfileDto; every action (follow, edit,
  * badges, administration) reloads it, so what is on screen is always what the server holds.
+ *
+ * The owner has full say over the page: `customizing` reveals the order arrows and the per-item eye
+ * toggles that the sections below already carry (hidden by default so a normal visit — even the
+ * owner's own — looks exactly like what everybody else sees). Every change inside it saves the
+ * instant it is made; the mode itself is nothing but a local reveal switch.
  */
 const route = useRoute();
 const auth = authStore();
@@ -73,6 +131,7 @@ const toast = useToast();
 const profile = ref(null);
 const loading = ref(false);
 const busy = ref(false);
+const customizing = ref(false);
 const adminPanel = ref(null);
 
 const showAdmin = computed(() => {
@@ -82,6 +141,8 @@ const showAdmin = computed(() => {
     || dto.affiliations.some((affiliation) => affiliation.canEdit);
 });
 
+const sectionOrder = computed(() => resolveSectionOrder(profile.value?.sectionOrder));
+
 onMounted(load);
 watch(() => route.params.id, load);
 
@@ -89,6 +150,7 @@ async function load() {
   const userId = route.params.id;
   if (!userId) return;
   loading.value = true;
+  customizing.value = false;
   try {
     const { data } = await people.profile(userId);
     profile.value = data;
@@ -162,6 +224,86 @@ async function toggleHighlight(badge) {
   }
 }
 
+/* --------------------------------------------------- customize: hide */
+
+async function hideMembership(membership) {
+  try {
+    const { data } = await people.hideMembership(membership.tenantId, !membership.hidden);
+    profile.value = data;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível alterar a visibilidade da equipe.'));
+  }
+}
+
+async function hideBadge(badge) {
+  try {
+    const { data } = await people.hideBadge(badge.badgeId, !badge.hidden);
+    profile.value = {
+      ...profile.value,
+      badges: profile.value.badges.map((item) => (item.badgeId === data.badgeId ? data : item)),
+    };
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível alterar a visibilidade do badge.'));
+  }
+}
+
+/* ----------------------------------------------- customize: reorder */
+
+async function moveSection(index, direction) {
+  const order = [...sectionOrder.value];
+  const target = index + direction;
+  if (target < 0 || target >= order.length) return;
+  [order[index], order[target]] = [order[target], order[index]];
+  profile.value = { ...profile.value, sectionOrder: order };
+  try {
+    await people.updateMyProfile({ sectionOrder: order });
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível reordenar as seções.'));
+    await load();
+  }
+}
+
+async function restoreOrder() {
+  try {
+    const { data } = await people.updateMyProfile({ sectionOrder: [] });
+    profile.value = data;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível restaurar a ordem.'));
+  }
+}
+
+/* -------------------------------------------------------- trajectory */
+
+async function addTrajectory({ tenantId, body }) {
+  try {
+    const { data } = await people.addTrajectory(tenantId, body);
+    profile.value = data;
+    toast.success('Enviado para revisão de um mentor ou administrador da equipe.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível registrar essa função.'));
+  }
+}
+
+async function reviewTrajectory({ entry, approve }) {
+  try {
+    await people.reviewTrajectory(entry.entryId, approve);
+    toast.success(approve ? 'Trajetória aprovada.' : 'Trajetória recusada.');
+    await load();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível revisar esse registro.'));
+  }
+}
+
+async function removeTrajectory(entry) {
+  if (!window.confirm(`Remover "${entry.roleLabel}" da trajetória?`)) return;
+  try {
+    await people.removeTrajectory(entry.entryId);
+    await load();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível remover esse registro.'));
+  }
+}
+
 /* ----------------------------------------------------- administration */
 
 async function removeBadge(badge) {
@@ -195,5 +337,26 @@ async function afterChange(change) {
 <style scoped>
 .pprofile__stack {
   gap: 26px;
+}
+
+.pprofile__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pprofile__customize-bar {
+  align-items: stretch;
+}
+
+.pprofile__reorder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface-muted);
+  border: 1px dashed var(--vc-border-strong);
+  align-self: flex-start;
 }
 </style>

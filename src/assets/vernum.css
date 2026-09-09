@@ -972,6 +972,41 @@ a {
   color: var(--vc-purple-strong);
 }
 
+/*
+ * A decorative treatment for a badge's icon circle, applied directly on the circle element — which
+ * must already carry `--badge-color` as its background (BadgeChip, the Badges section cards). Purely
+ * cosmetic: `BadgeFrame` on the server is just the name, these four classes are the only look each
+ * one means, and a new one only ever needs a class here.
+ */
+.vc-badge-frame--ring {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--badge-color) 55%, transparent), 0 0 0 5px var(--vc-surface);
+}
+
+.vc-badge-frame--glow {
+  box-shadow: 0 0 12px 3px color-mix(in srgb, var(--badge-color) 65%, transparent);
+}
+
+.vc-badge-frame--starburst {
+  background: radial-gradient(circle, var(--badge-color) 50%, color-mix(in srgb, var(--badge-color) 25%, transparent) 100%);
+  box-shadow: 0 0 0 2px var(--vc-surface), 0 0 0 4px color-mix(in srgb, var(--badge-color) 45%, transparent);
+}
+
+.vc-badge-frame--ribbon {
+  position: relative;
+}
+
+.vc-badge-frame--ribbon::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 40%;
+  height: 40%;
+  background: var(--vc-warning-strong);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 65%, 0 100%);
+  border-radius: 2px;
+}
+
 /* --------------------------------------------------------------- misc */
 
 .vc-divider {

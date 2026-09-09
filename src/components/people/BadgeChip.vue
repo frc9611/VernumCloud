@@ -3,10 +3,10 @@
     :is="clickable ? 'button' : 'span'"
     :type="clickable ? 'button' : null"
     :class="['badge-chip', large ? 'badge-chip--large' : '', clickable ? 'badge-chip--button' : '']"
-    :style="{ '--badge-color': color }"
+    :style="{ '--badge-color': color, '--badge-text-color': badge.textColor || 'inherit', '--badge-bg': badge.backgroundColor || 'var(--vc-surface)' }"
     :title="badge.description || badge.kindLabel"
   >
-    <span class="badge-chip__icon" aria-hidden="true">
+    <span :class="['badge-chip__icon', frameClass]" aria-hidden="true">
       <AppIcon :name="icon" :size="large ? 18 : 13" />
     </span>
     <span class="badge-chip__text">
@@ -19,7 +19,7 @@
 <script setup>
 import { computed } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
-import { badgeIcon } from './profileText.js';
+import { badgeFrameClass, badgeIcon } from './profileText.js';
 
 /*
  * One badge as a chip: the icon in the colour of the badge, the title next to it. `color` is
@@ -35,6 +35,7 @@ const props = defineProps({
 });
 
 const icon = computed(() => badgeIcon(props.badge));
+const frameClass = computed(() => badgeFrameClass(props.badge));
 const subtitle = computed(() => {
   const issuer = props.badge.issuerName || 'plataforma';
   return props.badge.kind === 'CUSTOM' ? issuer : `${props.badge.kindLabel} · ${issuer}`;
@@ -49,7 +50,7 @@ const subtitle = computed(() => {
   padding: 3px 10px 3px 4px;
   border-radius: 20px;
   border: 1px solid var(--vc-border-strong);
-  background: var(--vc-surface);
+  background: var(--badge-bg);
   color: var(--vc-text);
   font: inherit;
   font-size: 0.8rem;
@@ -67,6 +68,7 @@ const subtitle = computed(() => {
 }
 
 .badge-chip__icon {
+  position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -96,6 +98,7 @@ const subtitle = computed(() => {
 
 .badge-chip__title {
   font-weight: 600;
+  color: var(--badge-text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

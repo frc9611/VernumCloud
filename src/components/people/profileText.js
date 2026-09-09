@@ -36,6 +36,35 @@ export const BADGE_ICON_CHOICES = [
   { value: 'globe', label: 'Globo' },
 ];
 
+/** The decorative treatments a hand-granted badge may wear, for the ones meant to stand out more. */
+export const BADGE_FRAME_CHOICES = [
+  { value: 'NONE', label: 'Sem moldura' },
+  { value: 'RING', label: 'Anel' },
+  { value: 'RIBBON', label: 'Fita' },
+  { value: 'GLOW', label: 'Brilho' },
+  { value: 'STARBURST', label: 'Estrela' },
+];
+
+/** The sections of a profile, in the default order — badges first, so what somebody achieved leads. */
+export const SECTION_DEFAULT_ORDER = ['badges', 'teams', 'history', 'events'];
+
+export const SECTION_LABELS = {
+  badges: 'Badges',
+  teams: 'Equipes',
+  history: 'História',
+  events: 'Eventos',
+};
+
+/**
+ * Resolves whatever the server sent for `sectionOrder` into the four known keys, in order — a stale
+ * cache or an older server that omits the field falls back to the default instead of showing nothing.
+ */
+export function resolveSectionOrder(order) {
+  const known = (order || []).filter((key) => SECTION_LABELS[key]);
+  const missing = SECTION_DEFAULT_ORDER.filter((key) => !known.includes(key));
+  return [...known, ...missing];
+}
+
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 /** Parses "YYYY-MM-DD" or an ISO datetime without letting the timezone move the day. */
@@ -91,6 +120,12 @@ export function badgeIcon(badge) {
   return badge.icon || BADGE_ICON_BY_KIND[badge.kind] || 'badge';
 }
 
+/** The `vc-badge-frame--*` class for a badge's decoration, or '' for the plain circle ("NONE"). */
+export function badgeFrameClass(badge) {
+  const frame = badge.frame;
+  return frame && frame !== 'NONE' ? `vc-badge-frame--${frame.toLowerCase()}` : '';
+}
+
 /**
  * The colour a badge is painted with: its own, else the colour of the team that issued it, else the
  * accent of the page. `teamColorOf(tenantId)` is given by the caller because only the profile knows
@@ -102,62 +137,66 @@ export function badgeColor(badge, teamColorOf) {
   return teamColor || 'var(--vc-purple)';
 }
 
+/** The card's background: the badge's own choice, else a soft glow mixed from its color. */
+export function badgeBackground(badge, resolvedColor) {
+  if (badge.backgroundColor) return badge.backgroundColor;
+  return `color-mix(in srgb, ${resolvedColor} 14%, var(--vc-surface))`;
+}
+
+/** The colour the header banner is tinted with: the first team's, or the default accent with nobody. */
+export function profileAccent(profile) {
+  const first = (profile.memberships || [])[0];
+  return (first && first.color) || 'var(--vc-purple)';
+}
+
 /** Short team label: "CyberRain #9611" or just the name. */
 export function teamLabel(name, teamNumber) {
   return teamNumber ? `${name} #${teamNumber}` : name || '';
 }
 
-function sortedYears(affiliations) {
-  const years = [];
-  for (const item of affiliations) {
-    const start = yearOf(item.startDate);
-    const end = yearOf(item.endDate);
-    if (start) years.push(start);
-    if (end) years.push(end);
-  }
-  return years.sort((a, b) => a - b);
+/**
+ * The one word (or two) that says what somebody is *in* a team: the division they lead if they lead
+ * one, else the position they hold in a division if they have one ("Projetista"), else the plain
+ * cargo of the membership ("Membro", "Proprietário", "Técnico(a)" for a COACH).
+ */
+export function membershipLabel(membership) {
+  const divisions = membership.divisions || [];
+  const leading = divisions.find((division) => division.leader);
+  if (leading) return `Líder de ${leading.divisionVisibleName}`;
+  const withPosition = divisions.find((division) => division.position);
+  if (withPosition) return withPosition.position;
+  return membership.role === 'COACH' ? 'Técnico(a)' : membership.roleLabel;
 }
 
 /**
- * The chips under the name. The first one is the headline; the rest add context (divisions, the
- * platform role). Returns [{ text, icon?, accent? }].
+ * The chips under the name: one per team the person is in, plus one per Alumni badge, plus the
+ * platform administrator flag — every one of them its own item, in the team's own colour, and they
+ * accumulate freely. Nothing here is ever collapsed into a "(+N)": somebody in six teams gets six
+ * chips, wrapping onto as many lines as it takes, because that is exactly the six things the person
+ * wants seen. Returns [{ text, color?, icon?, accent? }].
+ *
+ * `memberships` is only what THIS viewer may be told — a person who hid every team leaves it empty
+ * for a stranger even though `kind` still correctly says MENTOR or STUDENT — so with nothing to show
+ * at all the line falls back to the bare `kindLabel`.
  */
 export function headlineChips(profile) {
   const chips = [];
-  const memberships = profile.memberships || [];
-  const first = memberships[0];
-  const more = memberships.length > 1 ? ` (+${memberships.length - 1})` : '';
-
-  switch (profile.kind) {
-    case 'MENTOR': {
-      const role = first.role === 'COACH' ? 'Técnico(a)' : first.roleLabel;
-      chips.push({ text: `${role} · ${first.tenantName}${more}`, accent: true });
-      break;
-    }
-    case 'STUDENT': {
-      chips.push({ text: `${first.roleLabel} · ${first.tenantName}${more}`, accent: true });
-      for (const division of first.divisions || []) {
-        chips.push({
-          text: division.position ? `${division.divisionVisibleName} · ${division.position}` : division.divisionVisibleName,
-          icon: division.leader ? 'shield' : '',
-        });
-      }
-      break;
-    }
-    case 'ALUMNI': {
-      const years = sortedYears(profile.affiliations || []);
-      const range = years.length ? (years[0] === years[years.length - 1] ? String(years[0]) : `${years[0]} – ${years[years.length - 1]}`) : '';
-      chips.push({ text: range ? `Alumni · ${range}` : 'Alumni', accent: true, icon: 'history' });
-      const last = (profile.affiliations || [])[0];
-      if (last) chips.push({ text: teamLabel(last.teamName, last.teamNumber) });
-      break;
-    }
-    default:
-      if (!profile.platformAdmin) chips.push({ text: profile.kindLabel || 'Recém-chegado', accent: true });
+  for (const membership of profile.memberships || []) {
+    chips.push({ text: `${membershipLabel(membership)} • ${membership.tenantName}`, color: membership.color, accent: true });
   }
-
+  for (const badge of profile.badges || []) {
+    if (badge.kind !== 'ALUMNI') continue;
+    chips.push({
+      text: badge.issuerName ? `Alumni • ${badge.issuerName}` : 'Alumni',
+      color: badge.color,
+      icon: 'history',
+    });
+  }
   if (profile.platformAdmin) {
-    chips.push({ text: 'Administrador da plataforma', icon: 'shield', accent: profile.kind === 'NEWCOMER' });
+    chips.push({ text: 'Administrador da plataforma', icon: 'shield', accent: true });
+  }
+  if (!chips.length) {
+    chips.push({ text: profile.kindLabel || 'Recém-chegado', accent: true });
   }
   return chips;
 }
