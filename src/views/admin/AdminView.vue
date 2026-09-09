@@ -135,6 +135,14 @@ const platformCards = computed(() => {
       to: { name: 'adminUsers' },
     });
   }
+  if (auth.canPlatform('TENANT_UPDATE')) {
+    cards.push({
+      label: 'Salas',
+      icon: 'mapPin',
+      hint: 'Agrupe equipes que dividem o mesmo espaço físico — a presença usa isso para saber que uma pessoa não está em duas salas ao mesmo tempo.',
+      to: { name: 'adminRooms' },
+    });
+  }
   return cards;
 });
 

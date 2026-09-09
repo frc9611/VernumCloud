@@ -18,24 +18,29 @@
         Assim que uma equipe abrir inscrições, o processo aparece aqui.
       </EmptyState>
 
-      <div v-else class="vc-grid">
-        <article v-for="process in processes" :key="process.publicToken" class="vc-card">
-          <div class="vc-card__header" :style="{ background: process.tenantColor || 'var(--vc-purple)' }">
-            <span>{{ process.tenantName }}</span>
-            <span v-if="process.tenantTeamNumber" class="vc-card__icon">#{{ process.tenantTeamNumber }}</span>
+      <template v-else>
+        <template v-for="group in groupedProcesses" :key="group.roomName">
+          <SectionTitle v-if="groupedProcesses.length > 1" lead="Sala" :title="group.roomName" />
+          <div class="vc-grid">
+            <article v-for="process in group.items" :key="process.publicToken" class="vc-card">
+              <div class="vc-card__header" :style="{ background: process.tenantColor || 'var(--vc-purple)' }">
+                <span>{{ process.tenantName }}</span>
+                <span v-if="process.tenantTeamNumber" class="vc-card__icon">#{{ process.tenantTeamNumber }}</span>
+              </div>
+              <div class="vc-card__body">
+                <strong>{{ process.name }}</strong>
+                <p v-if="process.description">{{ process.description }}</p>
+                <p v-if="process.endDate" class="vc-faint" style="margin: 0">
+                  Inscrições até {{ formatDate(process.endDate) }}
+                </p>
+                <router-link class="vc-btn" :to="{ name: 'apply', params: { token: process.publicToken } }">
+                  Candidatar-se
+                </router-link>
+              </div>
+            </article>
           </div>
-          <div class="vc-card__body">
-            <strong>{{ process.name }}</strong>
-            <p v-if="process.description">{{ process.description }}</p>
-            <p v-if="process.endDate" class="vc-faint" style="margin: 0">
-              Inscrições até {{ formatDate(process.endDate) }}
-            </p>
-            <router-link class="vc-btn" :to="{ name: 'apply', params: { token: process.publicToken } }">
-              Candidatar-se
-            </router-link>
-          </div>
-        </article>
-      </div>
+        </template>
+      </template>
 
       <hr class="vc-divider" />
 
@@ -75,6 +80,24 @@ const loading = ref(true);
 
 const hasTeams = computed(() => auth.memberships.length > 0);
 const dashboardTarget = computed(() => ({ name: auth.activeTenantId ? 'home' : 'chooseTenant' }));
+
+/**
+ * One group per room — "Sala São Paulo", "Sala Rio de Janeiro" — named rooms first in alphabetical
+ * order, with whatever team never joined one grouped last. A single group skips the heading: most
+ * deployments never set up rooms at all, and a lone "Sem sala definida" label would say nothing.
+ */
+const groupedProcesses = computed(() => {
+  const NO_ROOM = 'Sem sala definida';
+  const groups = new Map();
+  for (const process of processes.value) {
+    const key = process.roomName || NO_ROOM;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(process);
+  }
+  const named = [...groups.keys()].filter((name) => name !== NO_ROOM).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const order = groups.has(NO_ROOM) ? [...named, NO_ROOM] : named;
+  return order.map((roomName) => ({ roomName, items: groups.get(roomName) }));
+});
 
 onMounted(load);
 

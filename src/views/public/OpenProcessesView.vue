@@ -26,24 +26,29 @@
         </template>
       </EmptyState>
 
-      <div v-else class="vc-grid">
-        <article v-for="process in processes" :key="process.publicToken" class="vc-card">
-          <header class="vc-card__header" :style="{ background: process.tenantColor || 'var(--vc-purple)' }">
-            <span>{{ process.tenantName }}</span>
-            <span v-if="process.tenantTeamNumber" class="vc-card__icon">#{{ process.tenantTeamNumber }}</span>
-          </header>
-          <div class="vc-card__body">
-            <strong>{{ process.name }}</strong>
-            <p v-if="process.description">{{ process.description }}</p>
-            <p v-if="process.endDate" class="vc-faint" style="margin: 0">
-              Inscrições até {{ formatDate(process.endDate) }}
-            </p>
-            <router-link class="vc-btn" :to="{ name: 'apply', params: { token: process.publicToken } }">
-              Candidatar-se
-            </router-link>
+      <template v-else>
+        <template v-for="group in groupedProcesses" :key="group.roomName">
+          <SectionTitle v-if="groupedProcesses.length > 1" lead="Sala" :title="group.roomName" />
+          <div class="vc-grid">
+            <article v-for="process in group.items" :key="process.publicToken" class="vc-card">
+              <header class="vc-card__header" :style="{ background: process.tenantColor || 'var(--vc-purple)' }">
+                <span>{{ process.tenantName }}</span>
+                <span v-if="process.tenantTeamNumber" class="vc-card__icon">#{{ process.tenantTeamNumber }}</span>
+              </header>
+              <div class="vc-card__body">
+                <strong>{{ process.name }}</strong>
+                <p v-if="process.description">{{ process.description }}</p>
+                <p v-if="process.endDate" class="vc-faint" style="margin: 0">
+                  Inscrições até {{ formatDate(process.endDate) }}
+                </p>
+                <router-link class="vc-btn" :to="{ name: 'apply', params: { token: process.publicToken } }">
+                  Candidatar-se
+                </router-link>
+              </div>
+            </article>
           </div>
-        </article>
-      </div>
+        </template>
+      </template>
 
       <hr class="vc-divider" />
       <div class="vc-row">
@@ -61,6 +66,7 @@
 import { computed, onMounted, ref } from 'vue';
 import VernumLogo from '@/components/VernumLogo.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import SectionTitle from '@/components/SectionTitle.vue';
 import { publicRecruitment } from '@/services/api.js';
 import { authStore } from '@/store/auth.js';
 
@@ -74,6 +80,20 @@ const loading = ref(true);
 
 /** Where "voltar" goes for somebody logged in: the home, or the waiting room when they have no team. */
 const dashboardTarget = computed(() => ({ name: auth.hasNoTenant ? 'waiting' : 'home' }));
+
+/** One group per room, named rooms first — see WaitingRoomView.vue for the same grouping. */
+const groupedProcesses = computed(() => {
+  const NO_ROOM = 'Sem sala definida';
+  const groups = new Map();
+  for (const process of processes.value) {
+    const key = process.roomName || NO_ROOM;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(process);
+  }
+  const named = [...groups.keys()].filter((name) => name !== NO_ROOM).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const order = groups.has(NO_ROOM) ? [...named, NO_ROOM] : named;
+  return order.map((roomName) => ({ roomName, items: groups.get(roomName) }));
+});
 
 onMounted(async () => {
   try {

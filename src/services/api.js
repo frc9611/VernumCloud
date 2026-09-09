@@ -49,6 +49,21 @@ export const tenants = {
     http.get(`/tenants/${tenantId}/candidates`, { params: search ? { search } : {} }),
 };
 
+/* --------------------------------------------------------------------- rooms */
+
+/*
+ * Rooms group teams that share a physical space, so presence knows a person is never in two of
+ * them at once. Reading is open to any logged person (the recruitment screen groups by room
+ * before anybody has a team of their own); writing is platform business, same reach as creating
+ * a team. Putting one team into a room goes through `tenants.update` instead, with `roomId`.
+ */
+export const rooms = {
+  list: () => http.get('/rooms'),
+  create: (body) => http.post('/rooms', body),
+  rename: (roomId, body) => http.put(`/rooms/${roomId}`, body),
+  remove: (roomId) => http.delete(`/rooms/${roomId}`),
+};
+
 /* ---------------------------------------------------- platform administration */
 
 /*
@@ -305,8 +320,11 @@ export const sso = {
 
 export const attendance = {
   me: () => http.get('/attendance/me'),
-  enter: () => http.post('/attendance/enter'),
-  leave: () => http.post('/attendance/leave'),
+  /* The rooms the caller's teams touch. More than one means the screen has to ask before entering. */
+  rooms: () => http.get('/attendance/rooms'),
+  /* roomId: omit to let a single room resolve itself, 0 for "Sem sala", or a room's id. */
+  enter: (roomId) => http.post('/attendance/enter', null, { params: roomId != null ? { roomId } : {} }),
+  leave: (roomId) => http.post('/attendance/leave', null, { params: roomId != null ? { roomId } : {} }),
   /* How far the register of the team reaches for whoever is asking: team, divisions or self. */
   scope: (tenantId) => http.get(`/tenants/${tenantId}/attendance/scope`),
   now: (tenantId) => http.get(`/tenants/${tenantId}/attendance/now`),
@@ -538,6 +556,7 @@ export default {
   people,
   events,
   tenants,
+  rooms,
   platform,
   catalogs,
   features,

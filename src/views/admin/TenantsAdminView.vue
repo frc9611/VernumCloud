@@ -135,6 +135,17 @@
           Os interruptores mudam depois em "Recursos", na linha da equipe.
         </span>
       </div>
+      <div v-if="form.tenantId" class="vc-field">
+        <label class="vc-label" for="room">Sala</label>
+        <select id="room" class="vc-select" v-model="form.roomId">
+          <option :value="0">Nenhuma</option>
+          <option v-for="room in rooms" :key="room.roomId" :value="room.roomId">{{ room.name }}</option>
+        </select>
+        <span class="vc-faint">
+          Equipes da mesma sala nunca deixam alguém marcar presença em duas ao mesmo tempo.
+          <router-link :to="{ name: 'adminRooms' }">Gerenciar salas</router-link>
+        </span>
+      </div>
       <div v-if="form.tenantId" class="vc-grid">
         <div class="vc-field">
           <label class="vc-label" for="threshold">Alerta de frequência abaixo de (%)</label>
@@ -333,7 +344,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';
-import { catalogs, features as featuresApi, platform, tenants } from '@/services/api.js';
+import { catalogs, features as featuresApi, platform, rooms as roomsApi, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 /*
@@ -349,6 +360,7 @@ const list = ref([]);
 const categories = ref([]);
 const profiles = ref([]);
 const roles = ref([]);
+const rooms = ref([]);
 const busy = ref(false);
 
 const canManage = computed(() => auth.canPlatform('TENANT_UPDATE'));
@@ -364,7 +376,7 @@ function blankForm() {
     tenantId: null, slug: '', visibleName: '', teamNumber: '', color: '#8864AE',
     description: '', ownerUsername: '', active: true,
     competitionCategory: 'NONE', featureProfile: 'COMPLETE',
-    attendanceThreshold: 75, reminderDays: 2,
+    attendanceThreshold: 75, reminderDays: 2, roomId: 0,
   };
 }
 
@@ -422,6 +434,12 @@ async function load() {
     profiles.value = [];
     roles.value = [];
   }
+  try {
+    const { data } = await roomsApi.list();
+    rooms.value = data;
+  } catch (error) {
+    rooms.value = [];
+  }
 }
 
 /* --------------------------------------------------------------- helpers */
@@ -475,6 +493,7 @@ function openEdit(tenant) {
     competitionCategory: tenant.competitionCategory || 'NONE',
     attendanceThreshold: tenant.attendanceThreshold ?? 75,
     reminderDays: tenant.reminderDays ?? 2,
+    roomId: tenant.roomId || 0,
   });
   editing.value = true;
 }
@@ -492,6 +511,7 @@ async function save() {
         competitionCategory: form.competitionCategory,
         attendanceThreshold: form.attendanceThreshold,
         reminderDays: form.reminderDays,
+        roomId: form.roomId,
       });
     } else {
       await tenants.create({

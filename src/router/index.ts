@@ -178,6 +178,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
   },
   {
+    /* Rooms cross teams that may have different owners, so managing the list is platform business. */
+    path: '/admin/salas',
+    name: 'adminRooms',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/RoomsAdminView.vue'),
+    meta: { auth: true, platform: 'TENANT_UPDATE' }
+  },
+  {
     path: '/admin/membros',
     name: 'adminMembers',
     component: () => import(/* webpackChunkName: "admin" */ '../views/admin/MembersAdminView.vue'),
