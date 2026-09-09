@@ -64,6 +64,18 @@
       Crie uma chave quando um programa precisar falar com a API sem abrir o dashboard.
     </EmptyState>
 
+    <!-- --------------------------------------------------------------- guide -->
+    <section class="vc-stack keys__guide">
+      <SectionTitle lead="Como usar" title="uma chave" />
+      <p class="vc-faint keys__guide-lead">
+        A chave vai no cabeçalho <code class="keys__code">X-API-Key</code> de qualquer rota da API, e
+        não há equipe para configurar no programa: ela já diz em quais vale. Troque
+        <code class="keys__code">{{ placeholderKey }}</code> pela chave que aparece ao criar.
+      </p>
+      <CodeExamples :examples="guideExamples" remember="apiKeyExampleLanguage" @copy="copy" />
+      <p class="vc-faint keys__guide-lead">{{ answers }}</p>
+    </section>
+
     <!-- ---------------------------------------------------------------- form -->
     <ModalDialog v-if="form" wide title="Criar chave de API" @close="form = null">
       <div class="vc-field">
@@ -116,7 +128,7 @@
     </ModalDialog>
 
     <!-- ----------------------------------------------------------- new secret -->
-    <ModalDialog v-if="created" title="Chave criada" @close="created = null">
+    <ModalDialog v-if="created" wide title="Chave criada" @close="created = null">
       <AlertBanner variant="warning" icon="key" title="Copie agora">
         Esta é a única vez que a chave inteira existe fora daqui. O servidor guarda só um hash dela.
       </AlertBanner>
@@ -130,9 +142,9 @@
         </div>
       </div>
       <div class="vc-field">
-        <label class="vc-label" for="createdExample">Exemplo de uso</label>
-        <textarea id="createdExample" class="vc-textarea keys__example" readonly rows="4"
-                  :value="example(created.key)"></textarea>
+        <span class="vc-label">Exemplo de uso</span>
+        <CodeExamples :examples="createdExamples" remember="apiKeyExampleLanguage" @copy="copy" />
+        <span class="vc-faint">{{ answers }}</span>
       </div>
       <template #footer>
         <button class="vc-btn" type="button" @click="created = null">Fechar</button>
@@ -149,9 +161,11 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
+import CodeExamples from '@/components/CodeExamples.vue';
 import { authStore } from '@/store/auth.js';
 import { apps as appsApi, catalogs } from '@/services/api.js';
-import { apiMessage } from '@/services/http.js';
+import http, { apiMessage } from '@/services/http.js';
+import { API_KEY_ANSWERS, API_KEY_PLACEHOLDER, apiKeyExamples } from '@/services/integrationExamples.js';
 
 /*
  * API keys of the team.
@@ -187,6 +201,29 @@ const grantablePermissions = computed(() =>
     .filter((permission) => permission.scope === 'TENANT' && auth.can(permission.name))
     .sort((first, second) => first.label.localeCompare(second.label)),
 );
+
+/*
+ * The samples talk to the same API this dashboard does, so a production build never prints
+ * localhost. There is no team to write down anywhere: the key carries the teams it serves, which is
+ * why the reader's call has no tenant in the path — what changes with the scopes is only whether
+ * the sample is the reader's tap (RFID_AUTH) or a plain read of who is in the room.
+ */
+const placeholderKey = API_KEY_PLACEHOLDER;
+const answers = API_KEY_ANSWERS;
+
+const guideExamples = computed(() => apiKeyExamples({
+  key: API_KEY_PLACEHOLDER,
+  api: http.defaults.baseURL,
+  tenantId: auth.activeTenantId,
+  scopes: null,
+}));
+
+const createdExamples = computed(() => apiKeyExamples({
+  key: created.value?.key,
+  api: http.defaults.baseURL,
+  tenantId: auth.activeTenantId,
+  scopes: created.value?.apiKey?.scopes || [],
+}));
 
 onMounted(load);
 watch(() => auth.activeTenantId, load);
@@ -266,26 +303,6 @@ async function revoke(key) {
   }
 }
 
-/*
- * The example is the only place the team number is written down, and whoever is setting up a
- * reader needs it — so a key that can authenticate cards gets the reader's call instead of the
- * generic one, and the number to put in include/config.h is right there.
- */
-function example(key) {
-  const base = process.env.VUE_APP_API_URL || 'http://localhost:8080';
-  const tenant = auth.activeTenantId;
-  const scopes = created.value?.apiKey?.scopes || [];
-  if (scopes.includes('RFID_AUTH')) {
-    return '# equipe #' + tenant + ' — este e o VERNUM_TENANT_ID do include/config.h\n'
-      + 'curl -X POST -H "X-API-Key: ' + key + '" \\\n'
-      + '  -H "Content-Type: application/json" -d \'{"uid":"04A2B3C4"}\' \\\n  '
-      + base + '/tenants/' + tenant + '/rfid/attendance';
-  }
-  return '# equipe #' + tenant + '\n'
-    + 'curl -H "X-API-Key: ' + key + '" \\\n  '
-    + base + '/tenants/' + tenant + '/attendance/now';
-}
-
 function formatWhen(value) {
   return value ? new Date(value).toLocaleString('pt-BR') : '';
 }
@@ -320,9 +337,11 @@ async function copy(value) {
   gap: 4px;
 }
 
-.keys__example {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.78rem;
-  min-height: 70px;
+.keys__guide {
+  margin-top: 12px;
+}
+
+.keys__guide-lead {
+  margin: 0;
 }
 </style>

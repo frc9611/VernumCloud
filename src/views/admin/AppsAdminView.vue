@@ -52,6 +52,10 @@
               <span v-if="app.shared" class="vc-chip">compartilhado</span>
             </td>
             <td style="text-align: right">
+              <button v-if="app.ssoEnabled" class="vc-btn vc-btn--ghost vc-btn--small" type="button"
+                      @click="examplesFor = app">
+                Ver exemplos
+              </button>
               <button v-if="app.ownedByThisTenant" class="vc-btn vc-btn--ghost vc-btn--small" type="button"
                       @click="openForm(app)">
                 Editar
@@ -186,7 +190,7 @@
     </ModalDialog>
 
     <!-- -------------------------------------------------------------- secret -->
-    <ModalDialog v-if="secret" title="Credenciais do app" @close="secret = null">
+    <ModalDialog v-if="secret" wide title="Credenciais do app" @close="secret = null">
       <AlertBanner variant="warning" icon="key" title="Copie agora">
         O segredo aparece uma única vez. O servidor guarda só um hash dele, do mesmo jeito que guarda
         uma senha.
@@ -215,15 +219,71 @@
       <div class="vc-field">
         <label class="vc-label" for="secretConsent">Endereço para mandar a pessoa</label>
         <div class="vc-input-group">
-          <input id="secretConsent" class="vc-input" readonly :value="consentUrl(secret.clientId)" />
+          <input id="secretConsent" class="vc-input" readonly :value="consentUrl(secret.app, secret.clientId)" />
           <button class="vc-btn vc-btn--icon" type="button" title="Copiar"
-                  @click="copy(consentUrl(secret.clientId))">
+                  @click="copy(consentUrl(secret.app, secret.clientId))">
+            <AppIcon name="copy" :size="16" />
+          </button>
+        </div>
+        <span class="vc-faint">{{ consentHint(secret.app) }}</span>
+      </div>
+      <div class="vc-field">
+        <span class="vc-label">Exemplos de código</span>
+        <CodeExamples :examples="examplesOf(secret.app, secret.clientId, secret.clientSecret)"
+                      remember="ssoExampleLanguage" @copy="copy" />
+        <span class="vc-faint">
+          O código que volta no endereço de retorno vale uma vez, por 5 minutos, e só com o mesmo
+          <code class="apps__code">redirectUri</code>. A troca em
+          <code class="apps__code">/public/sso/token</code> vai sem cabeçalho Authorization.
+        </span>
+      </div>
+      <template #footer>
+        <button class="vc-btn" type="button" @click="secret = null">Fechar</button>
+      </template>
+    </ModalDialog>
+
+    <!-- ------------------------------------------------------------ examples -->
+    <ModalDialog v-if="examplesFor" wide :title="'Exemplos: ' + examplesFor.visibleName" @close="examplesFor = null">
+      <p class="vc-faint" style="margin: 0">
+        <template v-if="examplesFor.confidential">
+          Este app tem servidor próprio e troca o código com o <code class="apps__code">client_secret</code>,
+          que só aparece ao cadastrar ou em "Novo segredo" — aqui ele fica como
+          <code class="apps__code">{{ secretPlaceholder }}</code>.
+        </template>
+        <template v-else>
+          Este app roda só no navegador e se identifica por PKCE: não há segredo para guardar.
+        </template>
+      </p>
+      <div class="vc-field">
+        <label class="vc-label" for="examplesClientId">client_id</label>
+        <div class="vc-input-group">
+          <input id="examplesClientId" class="vc-input" readonly :value="examplesFor.clientId" />
+          <button class="vc-btn vc-btn--icon" type="button" title="Copiar" @click="copy(examplesFor.clientId)">
             <AppIcon name="copy" :size="16" />
           </button>
         </div>
       </div>
+      <div class="vc-field">
+        <label class="vc-label" for="examplesConsent">Endereço para mandar a pessoa</label>
+        <div class="vc-input-group">
+          <input id="examplesConsent" class="vc-input" readonly
+                 :value="consentUrl(examplesFor, examplesFor.clientId)" />
+          <button class="vc-btn vc-btn--icon" type="button" title="Copiar"
+                  @click="copy(consentUrl(examplesFor, examplesFor.clientId))">
+            <AppIcon name="copy" :size="16" />
+          </button>
+        </div>
+        <span class="vc-faint">{{ consentHint(examplesFor) }}</span>
+      </div>
+      <CodeExamples :examples="examplesOf(examplesFor, examplesFor.clientId, null)"
+                    remember="ssoExampleLanguage" @copy="copy" />
+      <span class="vc-faint">
+        O código que volta no endereço de retorno vale uma vez, por 5 minutos, e só com o mesmo
+        <code class="apps__code">redirectUri</code>. A troca em
+        <code class="apps__code">/public/sso/token</code> vai sem cabeçalho Authorization.
+      </span>
       <template #footer>
-        <button class="vc-btn" type="button" @click="secret = null">Fechar</button>
+        <button class="vc-btn" type="button" @click="examplesFor = null">Fechar</button>
       </template>
     </ModalDialog>
   </main>
@@ -238,9 +298,11 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
+import CodeExamples from '@/components/CodeExamples.vue';
 import { authStore } from '@/store/auth.js';
 import { apps as appsApi, catalogs } from '@/services/api.js';
-import { apiMessage } from '@/services/http.js';
+import http, { apiMessage } from '@/services/http.js';
+import { SECRET_PLACEHOLDER, consentUrl as buildConsentUrl, ssoExamples } from '@/services/integrationExamples.js';
 
 /*
  * Registering the apps of a team.
@@ -258,7 +320,11 @@ const available = ref([]);
 const permissions = ref([]);
 const form = ref(null);
 const secret = ref(null);
+/** The app whose integration examples are open — clientId only, never a secret. */
+const examplesFor = ref(null);
 const busy = ref(false);
+
+const secretPlaceholder = SECRET_PLACEHOLDER;
 
 /* Icons that make sense on an app card. AppIcon has the drawings. */
 const iconNames = ['link', 'comment', 'clock', 'cloud', 'chart', 'clipboard', 'users', 'shield', 'key', 'flag'];
@@ -411,10 +477,36 @@ async function remove(app) {
   }
 }
 
-/** Where the app has to send the person to start the login. */
-function consentUrl(clientId) {
-  return window.location.origin + '/entrar-com-vernum?client_id=' + encodeURIComponent(clientId)
-    + '&redirect_uri=SEU_ENDERECO_DE_RETORNO';
+/*
+ * Where the app has to send the person to start the login. A PKCE app has to bring a challenge or
+ * the consent screen refuses it, so its URL carries the parameters the app must generate, in
+ * upper case; the redirect is the first one registered, which is the one an app usually has.
+ */
+function consentUrl(app, clientId) {
+  return buildConsentUrl({
+    clientId,
+    redirectUri: app?.redirectUris?.[0] || null,
+    confidential: !!app?.confidential,
+    dashboard: window.location.origin,
+  });
+}
+
+function consentHint(app) {
+  return app?.confidential
+    ? 'Gere um state aleatório por login e confira na volta.'
+    : 'Gere o state e o code_challenge (SHA-256 do verifier, em base64url) a cada login — o exemplo do navegador faz isso.';
+}
+
+/** The snippets of an app. The secret is only known right after create or rotate; null shows a placeholder. */
+function examplesOf(app, clientId, clientSecret) {
+  return ssoExamples({
+    clientId,
+    clientSecret,
+    redirectUri: app?.redirectUris?.[0] || null,
+    confidential: !!app?.confidential,
+    dashboard: window.location.origin,
+    api: http.defaults.baseURL,
+  });
 }
 
 async function copy(value) {
