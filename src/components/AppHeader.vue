@@ -4,6 +4,10 @@
       <router-link :to="homeTarget" class="vc-header__brand">
         <VernumLogo />
       </router-link>
+      <!-- Only on the administrator palette: the person must know they are acting on the platform -->
+      <span v-if="prefs.isAdminMode" class="vc-header__admin" title="Você está na administração da plataforma">
+        Administração
+      </span>
 
       <button class="vc-header__toggle" type="button" aria-label="Menu" @click.stop="menuOpen = !menuOpen">
         <AppIcon name="menu" :size="22" />
@@ -41,11 +45,23 @@
           </div>
         </div>
 
-        <router-link v-if="showAdminPanel" :to="{ name: 'admin' }" class="vc-header__link">Admin Panel</router-link>
+        <router-link v-if="showAdminPanel" :to="{ name: 'admin' }" class="vc-header__link">Admin</router-link>
         <router-link :to="{ name: 'home' }" class="vc-header__link">Dashboard</router-link>
         <router-link v-if="auth.activeTenantId && auth.featureOn('CLOUD')" :to="{ name: 'cloud' }"
                      class="vc-header__link">Arquivos</router-link>
-        <router-link :to="{ name: 'profile' }" class="vc-header__link">Profile</router-link>
+        <router-link :to="{ name: 'profile' }" class="vc-header__link">Perfil</router-link>
+
+        <!-- Light or dark. Hidden on the administrator palette, which is always black. -->
+        <button
+          v-if="!prefs.isAdminMode"
+          class="vc-header__icon-btn"
+          type="button"
+          :aria-label="themeLabel"
+          :title="themeLabel"
+          @click="toggleTheme"
+        >
+          <AppIcon :name="prefs.resolvedTheme === 'dark' ? 'sun' : 'moon'" :size="18" />
+        </button>
 
         <!-- Notification bell -->
         <div class="vc-header__bell">
@@ -111,9 +127,11 @@ import VernumLogo from './VernumLogo.vue';
 import AppIcon from './AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { notificationStore } from '@/store/notifications.js';
+import { preferencesStore } from '@/store/preferences.js';
 
 const auth = authStore();
 const notifications = notificationStore();
+const prefs = preferencesStore();
 const router = useRouter();
 const toast = useToast();
 
@@ -145,6 +163,12 @@ const showAdminPanel = computed(
 );
 
 const homeTarget = computed(() => (auth.isAuth ? { name: 'home' } : { name: 'login' }));
+const themeLabel = computed(() => (prefs.resolvedTheme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'));
+
+/* The header flips between light and dark; following the OS is chosen on the profile screen. */
+function toggleTheme() {
+  prefs.setTheme(prefs.resolvedTheme === 'dark' ? 'light' : 'dark');
+}
 const badge = computed(() => (notifications.unread > 9 ? '9+' : notifications.unread));
 const visibleNotifications = computed(() => notifications.forTenant(auth.activeTenantId));
 
@@ -297,7 +321,20 @@ watch(
 }
 
 .vc-header__logout:hover {
-  background: #efd3d3;
+  background: var(--vc-danger-hover);
+}
+
+/* Only ever shown on the administrator palette, where the accent is the red: a solid red tag */
+.vc-header__admin {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--vc-purple);
+  color: var(--vc-on-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .vc-header__tenant,
@@ -325,9 +362,10 @@ watch(
   border-color: var(--vc-purple);
 }
 
-/* ---------------------------------------------------------------- bell */
+/* ---------------------------------------------------- bell and theme toggle */
 
-.vc-header__bell-btn {
+.vc-header__bell-btn,
+.vc-header__icon-btn {
   position: relative;
   display: flex;
   align-items: center;
@@ -343,7 +381,8 @@ watch(
 }
 
 .vc-header__bell-btn:hover,
-.vc-header__bell-btn.is-open {
+.vc-header__bell-btn.is-open,
+.vc-header__icon-btn:hover {
   background: var(--vc-purple-soft);
   border-color: var(--vc-purple-border);
   color: var(--vc-purple-strong);
@@ -357,9 +396,9 @@ watch(
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #e03131;
+  background: var(--vc-danger-strong);
   border: 2px solid var(--vc-surface);
-  color: #fff;
+  color: var(--vc-on-accent);
   font-size: 0.62rem;
   font-weight: 700;
   line-height: 12px;

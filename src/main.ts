@@ -3,6 +3,8 @@ import { createApp, markRaw } from 'vue';
 import App from './App.vue';
 import router from './router';
 import { authStore } from '@/store/auth.js';
+import { preferencesStore } from '@/store/preferences.js';
+import { applyTheme, resolveTheme } from '@/services/theme.js';
 import { createPinia } from 'pinia';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
@@ -20,6 +22,14 @@ app.use(Toast, {
 app.use(router);
 
 const auth = authStore();
+const prefs = preferencesStore();
+
+/*
+ * The palette is painted from the localStorage mirror before anything else happens, so a person
+ * who chose dark does not get a white page while /me loads. The administrator palette has to
+ * wait for the session, because it depends on which team is open; App.vue takes over from here.
+ */
+applyTheme(resolveTheme(prefs.theme));
 
 /*
  * The session is loaded before the app mounts, so the router guard already knows the

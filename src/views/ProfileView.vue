@@ -13,7 +13,11 @@
     </div>
 
     <div class="profile__right">
-      <h1 class="vc-title vc-title--underlined">{{ auth.getName }}</h1>
+      <div class="vc-row vc-row--between">
+        <h1 class="vc-title vc-title--underlined">{{ auth.getName }}</h1>
+        <!-- The profile everybody else sees: teams, history, badges -->
+        <router-link class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'person', params: { id: auth.getId } }">Ver meu perfil público</router-link>
+      </div>
 
       <!-- ------------------------------------------------ teams and divisions -->
       <SectionTitle lead="Cyber" title="Dados" />
@@ -148,6 +152,28 @@
       </div>
       <p v-else class="vc-faint">Você ainda não tem nenhum cartão cadastrado.</p>
 
+      <!-- ---------------------------------------------------------- appearance -->
+      <SectionTitle title="Aparência" />
+
+      <p class="vc-muted vc-small" style="margin: 0">
+        O tema é seu e acompanha o seu login em qualquer navegador. Na equipe administradora a tela é
+        sempre escura, para ninguém confundir onde está.
+      </p>
+      <div class="vc-row" role="radiogroup" aria-label="Tema">
+        <button
+          v-for="option in themeOptions"
+          :key="option.value"
+          type="button"
+          role="radio"
+          :class="['vc-chip', 'vc-chip--button', prefs.theme === option.value ? 'vc-chip--purple' : '']"
+          :aria-checked="prefs.theme === option.value"
+          @click="prefs.setTheme(option.value)"
+        >
+          <AppIcon :name="option.icon" :size="13" />
+          {{ option.label }}
+        </button>
+      </div>
+
       <SectionTitle lead="Alterar" title="Senha" />
       <form class="profile__form" @submit.prevent="changePassword">
         <div class="profile__fields">
@@ -187,6 +213,7 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import { authStore } from '@/store/auth.js';
+import { preferencesStore } from '@/store/preferences.js';
 import { rfid, users } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
@@ -195,7 +222,15 @@ import { apiMessage } from '@/services/http.js';
  * of the user with the divisions and cargo of each one, then the personal data.
  */
 const auth = authStore();
+const prefs = preferencesStore();
 const toast = useToast();
+
+/* The three themes a person may choose; 'system' follows the operating system. */
+const themeOptions = [
+  { value: 'light', label: 'Claro', icon: 'sun' },
+  { value: 'dark', label: 'Escuro', icon: 'moon' },
+  { value: 'system', label: 'Sistema', icon: 'monitor' },
+];
 
 const pictureUrl = ref(null);
 const saving = ref(false);
@@ -357,7 +392,7 @@ async function copy(value) {
   aspect-ratio: 1;
   border-radius: 18px;
   overflow: hidden;
-  background: #e2e2e6;
+  background: var(--vc-border);
 }
 
 .profile__picture img,

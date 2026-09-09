@@ -46,6 +46,8 @@ export const authStore = defineStore('auth', () => {
     memberships.value.find((membership) => membership.tenant?.tenantId === activeTenantId.value) || null,
   );
   const activeTenant = computed(() => activeMembership.value?.tenant || null);
+  /** Whether the team open is the administrator team: the dashboard paints it in its own palette. */
+  const activeTenantIsSystem = computed(() => !!activeTenant.value?.systemTenant);
   const activeTenantName = computed(() => activeTenant.value?.visibleName || '');
   const activeTenantColor = computed(() => activeTenant.value?.color || '#8864AE');
   const activeRoleLabel = computed(() => activeMembership.value?.roleLabel || '');
@@ -206,6 +208,7 @@ export const authStore = defineStore('auth', () => {
     getUsername,
     activeMembership,
     activeTenant,
+    activeTenantIsSystem,
     activeTenantName,
     activeTenantColor,
     activeRoleLabel,

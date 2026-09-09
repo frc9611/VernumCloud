@@ -5,6 +5,11 @@
  * page, a white surface, the purple #8864AE for anything interactive and the four
  * soft banner colors. Views should compose these classes instead of writing their
  * own colors, so a new screen looks like the rest of the dashboard by default.
+ *
+ * The same classes paint three palettes. `:root` is the light one; the blocks under
+ * `[data-theme="dark"]` and `[data-theme="admin"]` redefine only tokens, never classes,
+ * so a class that reads well here reads well there as long as it never writes a color
+ * of its own. services/theme.js sets the attribute and computes the accent tones.
  */
 
 :root {
@@ -41,6 +46,16 @@
   --vc-info-bg: #e3ecf7;
   --vc-info-text: #2b527f;
   --vc-info-border: #c3d6ec;
+  /* Red loud enough to be a badge or a callout edge on any surface, like --vc-warning-strong */
+  --vc-danger-strong: #e03131;
+  --vc-danger-hover: #efd3d3;
+  --vc-callout-border: var(--vc-danger-strong);
+  --vc-callout-text: #c92a2a;
+
+  /* Text on an accent background. The accent stays saturated in every palette, so this stays white */
+  --vc-on-accent: #ffffff;
+  /* Behind a modal */
+  --vc-backdrop: rgba(24, 24, 32, 0.42);
 
   /* Shape */
   /* Overwritten at runtime by services/theme.js with the color of the team currently open */
@@ -52,6 +67,66 @@
   --vc-shadow-lg: 0 8px 24px rgba(20, 20, 30, 0.08);
 
   --vc-content-width: 980px;
+}
+
+/*
+ * The two dark palettes. services/theme.js sets data-theme on <html>: "dark" when the person chose
+ * it (or the OS did, for "system"), "admin" whenever the administrator team is open or a platform
+ * screen is — black with a red accent, so nobody mistakes it for a team. The accent tokens are not
+ * here on purpose: theme.js writes them inline, mixed toward the surface of the palette in force,
+ * and an inline style would beat anything written here anyway.
+ */
+:root[data-theme="dark"],
+:root[data-theme="admin"] {
+  color-scheme: dark;
+
+  /* Feedback: darker fields, lighter text, so a banner still reads as a banner */
+  --vc-success-bg: #1d3320;
+  --vc-success-text: #8fd095;
+  --vc-success-border: #2f5a34;
+  --vc-warning-bg: #3a3212;
+  --vc-warning-text: #e6cc5c;
+  --vc-warning-border: #6a5a1c;
+  --vc-warning-strong: #d9b23a;
+  --vc-danger-bg: #3d1e1e;
+  --vc-danger-text: #f08a84;
+  --vc-danger-border: #6a2f2f;
+  --vc-danger-strong: #f04b4b;
+  --vc-danger-hover: #4d2424;
+  --vc-callout-text: #f08a84;
+  --vc-info-bg: #1c2a3d;
+  --vc-info-text: #8fb6e6;
+  --vc-info-border: #2f4a6e;
+
+  /* A shadow on a dark page needs far more ink to be seen at all */
+  --vc-backdrop: rgba(0, 0, 0, 0.62);
+  --vc-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --vc-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="dark"] {
+  --vc-bg: #121216;
+  /* Keep in step with SURFACES.dark in services/theme.js */
+  --vc-surface: #1b1b20;
+  --vc-surface-muted: #24242a;
+  --vc-border: #2f2f36;
+  --vc-border-strong: #3d3d46;
+  --vc-text: #ececf0;
+  --vc-text-muted: #a4a4ae;
+  --vc-text-faint: #7a7a85;
+}
+
+/* Administrator access: black, not grey, so it never passes for the dark mode of a team */
+:root[data-theme="admin"] {
+  --vc-bg: #0b0b0d;
+  /* Keep in step with SURFACES.admin in services/theme.js */
+  --vc-surface: #141417;
+  --vc-surface-muted: #1c1c21;
+  --vc-border: #2a2a31;
+  --vc-border-strong: #3a3a44;
+  --vc-text: #f2f2f4;
+  --vc-text-muted: #a9a9b3;
+  --vc-text-faint: #74747f;
 }
 
 * {
@@ -209,7 +284,7 @@ a {
 
 .vc-tab.is-active {
   background: var(--vc-purple);
-  color: #fff;
+  color: var(--vc-on-accent);
   font-weight: 600;
 }
 
@@ -335,14 +410,14 @@ a {
 
 /* The red bordered callout of the profile screen */
 .vc-callout {
-  border-left: 3px solid #e03131;
+  border-left: 3px solid var(--vc-callout-border);
   padding: 2px 0 2px 12px;
   font-size: 0.9rem;
   color: var(--vc-text-muted);
 }
 
 .vc-callout strong {
-  color: #c92a2a;
+  color: var(--vc-callout-text);
 }
 
 /* ----------------------------------------------------------------- cards */
@@ -361,7 +436,7 @@ a {
   gap: 8px;
   padding: 10px 14px;
   background: var(--vc-purple);
-  color: #fff;
+  color: var(--vc-on-accent);
   font-weight: 600;
 }
 
@@ -627,7 +702,7 @@ a {
   border-radius: var(--vc-radius);
   border: 1px solid transparent;
   background: var(--vc-purple);
-  color: #fff;
+  color: var(--vc-on-accent);
   font: inherit;
   font-size: 0.92rem;
   font-weight: 500;
@@ -675,7 +750,7 @@ a {
 }
 
 .vc-btn--danger:hover {
-  background: #efd3d3;
+  background: var(--vc-danger-hover);
 }
 
 .vc-btn--small {
@@ -818,7 +893,7 @@ a {
 .vc-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(24, 24, 32, 0.42);
+  background: var(--vc-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;

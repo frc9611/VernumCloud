@@ -196,6 +196,40 @@ const ICONS = {
   },
   toggleOn: { paths: [], rects: [[2, 7, 20, 10, 5]], circles: [[17, 12, 2.6]] },
   toggleOff: { paths: [], rects: [[2, 7, 20, 10, 5]], circles: [[7, 12, 2.6]] },
+
+  /* Appearance: the three choices of theme */
+  sun: {
+    paths: [
+      'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41',
+      'M2 12h2', 'M20 12h2', 'M6.34 17.66l-1.41 1.41', 'M19.07 4.93l-1.41 1.41',
+    ],
+    circles: [[12, 12, 4]],
+  },
+  moon: { paths: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'] },
+  monitor: { paths: ['M8 21h8', 'M12 17v4'], rects: [[2, 3, 20, 14, 2]] },
+
+  /* Organising the home: the other two chevrons and the grip a section is dragged by */
+  chevronUp: { paths: ['m18 15-6-6-6 6'] },
+  chevronLeft: { paths: ['m15 6-6 6 6 6'] },
+  grip: {
+    paths: [],
+    circles: [[9, 6, 1.2], [15, 6, 1.2], [9, 12, 1.2], [15, 12, 1.2], [9, 18, 1.2], [15, 18, 1.2]],
+  },
+  /* The team's public page: where it lives, how to reach the team, what it looks like */
+  globe: { paths: ['M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'], circles: [[12, 12, 10]] },
+  mail: { paths: ['m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'], rects: [[2, 4, 20, 16, 2]] },
+  phone: { paths: ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z'] },
+  instagram: { paths: ['M17.5 6.5h.01'], rects: [[2, 2, 20, 20, 5]], circles: [[12, 12, 4]] },
+  youtube: { paths: ['M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17', 'm10 15 5-3-5-3z'] },
+  externalLink: { paths: ['M15 3h6v6', 'M10 14 21 3', 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'] },
+  image: { paths: ['m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21'], rects: [[3, 3, 18, 18, 2]], circles: [[9, 9, 2]] },
+
+  /* People: badges, awards and the history of a person */
+  award: { paths: ['m15.48 15.4 1.52 6.6-5-3-5 3 1.52-6.6'], circles: [[12, 9, 6]] },
+  badge: { paths: ['M12 2l2.4 2.1 3.1-.4 1 3 3 1-.4 3.1L23 13l-2.1 2.4.4 3.1-3 1-1 3-3.1-.4L12 24l-2.4-2.1-3.1.4-1-3-3-1 .4-3.1L1 13l2.1-2.4-.4-3.1 3-1 1-3 3.1.4z', 'm9 13 2 2 4-4'] },
+  history: { paths: ['M3 12a9 9 0 1 0 3-6.7L3 8', 'M3 3v5h5', 'M12 7v5l4 2'] },
+  heart: { paths: ['M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'] },
+  userCheck: { paths: ['M16 11l2 2 4-4', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'], circles: [[9, 7, 4]] },
 };
 
 const props = defineProps({

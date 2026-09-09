@@ -17,22 +17,46 @@ import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppHeader from './components/AppHeader.vue';
 import { authStore } from '@/store/auth.js';
-import { applyAccent } from '@/services/theme.js';
+import { preferencesStore } from '@/store/preferences.js';
+import { ADMIN_ACCENT, applyTheme } from '@/services/theme.js';
 
 const route = useRoute();
 const auth = authStore();
+const prefs = preferencesStore();
 
 /* The login and the public application form have no header, like in the mockups. */
 const showHeader = computed(() => auth.isAuth && !route.meta?.bare);
 const showFooter = computed(() => !!route.meta?.footer);
 
 /*
- * The accent of the whole application is the color of the team currently open. Outside a team,
- * and on the public screens, it falls back to the default purple.
+ * One decision paints the whole application: palette and accent, together, because the accent
+ * tones depend on the surface they sit on.
+ *
+ * The administrator team and the platform screens are always the black palette with the red
+ * accent — the person has to see at a glance that what they touch there reaches every team.
+ * Anywhere else the palette is what the person chose (light, dark, or whatever the OS says) and
+ * the accent is the color of the team open, falling back to the default purple outside a team
+ * and on the public screens.
  */
 watch(
-  () => (route.meta?.bare ? null : auth.activeTenant?.color),
-  (color) => applyAccent(color),
+  () => {
+    const admin = !!route.meta?.platform || auth.activeTenantIsSystem;
+    return {
+      mode: admin ? 'admin' : prefs.resolvedTheme,
+      accent: admin ? ADMIN_ACCENT : route.meta?.bare ? null : auth.activeTenant?.color,
+    };
+  },
+  ({ mode, accent }) => {
+    applyTheme(mode, accent);
+    prefs.setActiveMode(mode);
+  },
+  { immediate: true },
+);
+
+/* The preferences follow the session: fetched when it opens, forgotten when it closes. */
+watch(
+  () => auth.isAuth,
+  (value) => (value ? prefs.load() : prefs.reset()),
   { immediate: true },
 );
 </script>

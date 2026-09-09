@@ -17,6 +17,20 @@ export const session = {
   serverInfo: () => http.get('/serverInfo'),
 };
 
+/* --------------------------------------------------------------- preferences */
+
+/*
+ * Settings of the person, kept on the server so the theme and the dashboard layout follow them to
+ * any browser. The answer is `{ theme, settings }`: `theme` is light | dark | system, `settings` is a
+ * JSON object the screens own (dashboard layout per team, and so on). PUT merges what it receives —
+ * `settings` keys are merged one level deep and a key set to null is removed — and answers the
+ * whole thing back.
+ */
+export const preferences = {
+  all: () => http.get('/me/preferences'),
+  save: (body) => http.put('/me/preferences', body),
+};
+
 /* ------------------------------------------------------------------- tenants */
 
 export const tenants = {
@@ -33,6 +47,29 @@ export const tenants = {
   removeMember: (tenantId, userId) => http.delete(`/tenants/${tenantId}/members/${userId}`),
   candidates: (tenantId, search) =>
     http.get(`/tenants/${tenantId}/candidates`, { params: search ? { search } : {} }),
+};
+
+/* ---------------------------------------------------- platform administration */
+
+/*
+ * The whole platform from the administrator team: every account, every membership, and the members
+ * of a team the caller is not in. Reads need TENANT_VIEW_ALL and writes TENANT_UPDATE, both held in
+ * the administrator tenant — there is no bypass inside the /tenants routes, so a platform admin who
+ * is not a member of a team manages its people through here. `resetPassword` answers the new
+ * one-time password in plain text, once; `deleteUser` removes the person from every team first and
+ * refuses when they are the only owner somewhere (the message names the team).
+ */
+export const platform = {
+  overview: () => http.get('/platform/overview'),
+  users: (search) => http.get('/platform/users', { params: search ? { search } : {} }),
+  resetPassword: (userId) => http.post(`/platform/users/${userId}/resetPassword`),
+  setActive: (userId, active) => http.put(`/platform/users/${userId}/active`, { active }),
+  deleteUser: (userId) => http.delete(`/platform/users/${userId}`),
+
+  members: (tenantId) => http.get(`/platform/tenants/${tenantId}/members`),
+  addMember: (tenantId, body) => http.post(`/platform/tenants/${tenantId}/members`, body),
+  updateMember: (tenantId, userId, body) => http.put(`/platform/tenants/${tenantId}/members/${userId}`, body),
+  removeMember: (tenantId, userId) => http.delete(`/platform/tenants/${tenantId}/members/${userId}`),
 };
 
 /* ----------------------------------------------------------------- catalogs */
@@ -70,6 +107,12 @@ export const tasks = {
   remove: (taskId) => http.delete(`/tasks/${taskId}`),
   /* Notifies whoever the demanda is on and answers the text, for e-mail or WhatsApp. */
   remind: (taskId) => http.post(`/tasks/${taskId}/reminder`),
+  /*
+   * The board of every team the person is in, in one call, each task carrying the team it belongs
+   * to (tenantName, tenantColor, teamNumber) and the flags assignedToMe / inMyDivisions, so the
+   * screen filters without asking again. Params: status, open (booleans as strings).
+   */
+  mine: (params) => http.get('/tasks/mine', { params: params || {} }),
 };
 
 export const risks = {
@@ -384,9 +427,106 @@ export const publicRecruitment = {
   prefill: () => http.get('/public/recruitment/prefill'),
 };
 
+/* ---------------------------------------------------------------- team page */
+
+/** PNG, JPEG, WebP or GIF up to 5 MB, in the multipart field the server expects. */
+function putImage(path, file) {
+  const form = new FormData();
+  form.append('file', file);
+  return http.put(path, form);
+}
+
+/*
+ * The public page of a team, from the editor's side. Reading needs only membership (and the
+ * LANDING_PAGE feature on), so a member can see how the page stands; writing needs PAGE_MANAGE.
+ * The page write is partial: a field left out keeps its value, an empty string clears it, and
+ * `{ published: true }` alone publishes. These image routes need the token, so the editor loads
+ * them as blobs (like the profile picture) — the public ones below go straight into <img src>.
+ */
+export const page = {
+  get: (tenantId) => http.get(`/tenants/${tenantId}/page`),
+  update: (tenantId, body) => http.put(`/tenants/${tenantId}/page`, body),
+
+  logoBlob: (tenantId) => http.get(`/tenants/${tenantId}/page/logo`, { responseType: 'blob' }),
+  uploadLogo: (tenantId, file) => putImage(`/tenants/${tenantId}/page/logo`, file),
+  removeLogo: (tenantId) => http.delete(`/tenants/${tenantId}/page/logo`),
+  coverBlob: (tenantId) => http.get(`/tenants/${tenantId}/page/cover`, { responseType: 'blob' }),
+  uploadCover: (tenantId, file) => putImage(`/tenants/${tenantId}/page/cover`, file),
+  removeCover: (tenantId) => http.delete(`/tenants/${tenantId}/page/cover`),
+
+  /* Every post, drafts included, newest first. */
+  posts: (tenantId) => http.get(`/tenants/${tenantId}/page/posts`),
+  createPost: (tenantId, body) => http.post(`/tenants/${tenantId}/page/posts`, body),
+  /* `status: 'PUBLISHED'` stamps publishedAt the first time only; back to DRAFT keeps it. */
+  updatePost: (postId, body) => http.put(`/page/posts/${postId}`, body),
+  removePost: (postId) => http.delete(`/page/posts/${postId}`),
+  postCoverBlob: (postId) => http.get(`/page/posts/${postId}/cover`, { responseType: 'blob' }),
+  uploadPostCover: (postId, file) => putImage(`/page/posts/${postId}/cover`, file),
+  removePostCover: (postId) => http.delete(`/page/posts/${postId}/cover`),
+};
+
+/*
+ * The same page as the internet reads it: no token, published content only, and one 404 for
+ * everything the server will not tell a visitor. The image paths in the answer are relative to
+ * the API, so `imageUrl` is what an <img src> takes.
+ */
+export const publicPage = {
+  team: (slug) => http.get(`/public/teams/${encodeURIComponent(slug)}`),
+  post: (slug, postId) => http.get(`/public/teams/${encodeURIComponent(slug)}/posts/${postId}`),
+  imageUrl: (path) => `${http.defaults.baseURL}${path}`,
+};
+
+/* -------------------------------------------------------------------- people */
+
+/*
+ * A person beyond the team: the profile anybody logged in may read, what the person writes about
+ * themselves, the badges, the past affiliations and the people who follow them. Editing somebody's
+ * teams from the profile page goes through `tenants.*Member` (team admin) or `platform.*` (platform
+ * admin) — there is no separate route for that on purpose.
+ */
+export const people = {
+  profile: (userId) => http.get(`/people/${userId}`),
+  search: (search) => http.get('/people', { params: { search } }),
+  updateMyProfile: (body) => http.put('/people/me/profile', body),
+  highlightBadge: (badgeId, highlighted) => http.put(`/people/me/badges/${badgeId}/highlight`, { highlighted }),
+  follow: (userId) => http.post(`/people/${userId}/follow`),
+  unfollow: (userId) => http.delete(`/people/${userId}/follow`),
+  followers: (userId) => http.get(`/people/${userId}/followers`),
+  following: (userId) => http.get(`/people/${userId}/following`),
+  grantBadge: (userId, body) => http.post(`/people/${userId}/badges`, body),
+  removeBadge: (badgeId) => http.delete(`/badges/${badgeId}`),
+  addAffiliation: (userId, body) => http.post(`/people/${userId}/affiliations`, body),
+  updateAffiliation: (affiliationId, body) => http.put(`/affiliations/${affiliationId}`, body),
+  removeAffiliation: (affiliationId) => http.delete(`/affiliations/${affiliationId}`),
+};
+
+/* -------------------------------------------------------------------- events */
+
+/*
+ * The events a team went to, who went, and what came back — each participation and each award
+ * leaves a badge on the person's profile, generated by the server and removed with the row.
+ */
+export const events = {
+  list: (tenantId) => http.get(`/tenants/${tenantId}/events`),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/events`, body),
+  get: (eventId) => http.get(`/events/${eventId}`),
+  update: (eventId, body) => http.put(`/events/${eventId}`, body),
+  remove: (eventId) => http.delete(`/events/${eventId}`),
+  addParticipants: (eventId, body) => http.post(`/events/${eventId}/participants`, body),
+  updateParticipant: (eventId, userId, body) => http.put(`/events/${eventId}/participants/${userId}`, body),
+  removeParticipant: (eventId, userId) => http.delete(`/events/${eventId}/participants/${userId}`),
+  createAward: (eventId, body) => http.post(`/events/${eventId}/awards`, body),
+  updateAward: (awardId, body) => http.put(`/events/awards/${awardId}`, body),
+  removeAward: (awardId) => http.delete(`/events/awards/${awardId}`),
+};
+
 export default {
   session,
+  preferences,
+  people,
+  events,
   tenants,
+  platform,
   catalogs,
   features,
   tasks,
@@ -406,4 +546,6 @@ export default {
   notifications,
   recruitment,
   publicRecruitment,
+  page,
+  publicPage,
 };
