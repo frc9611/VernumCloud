@@ -19,15 +19,22 @@ tela como está hoje).
 
 ```
 src/
-  assets/vernum.css        tokens e classes .vc-* — única fonte de cor, espaçamento e forma
+  assets/vernum.css        tokens e classes .vc-* — única fonte de cor, espaçamento e forma;
+                           `:root` é o tema claro, `[data-theme="dark"]` e `[data-theme="admin"]`
+                           redefinem só tokens
   components/              AppHeader, AppIcon, TabBar, AlertBanner, PanelCard, ModalDialog,
-                           SectionTitle, EmptyState, VernumLogo
+                           SectionTitle, EmptyState, VernumLogo, CodeExamples
+  components/home/         a tela inicial em partes: seções, atalhos, organizador, central de comando
+                           (dashboardLayout.js e shortcuts.js são a regra e a lista)
+  components/page/         a página pública da equipe (os três modelos) e a prévia do editor
   services/api.js          todos os endpoints, agrupados por assunto
   services/http.js         axios + token + 401 → login + apiMessage(error, fallback)
-  services/theme.js        cor de destaque por equipe
+  services/theme.js        paleta (light / dark / admin) + cor de destaque por equipe
+  services/integrationExamples.js  os trechos de código de chave de API e de SSO que as telas mostram
   store/auth.js            sessão: memberships, equipe ativa, can() / canPlatform()
+  store/preferences.js     tema e configurações da pessoa (guardadas no servidor, espelho em localStorage)
   store/notifications.js   sino do header
-  views/                   telas: admin/ cloud/ divisions/ recruitment/ public/
+  views/                   telas: admin/ cloud/ divisions/ recruitment/ public/ page/
                            ops/ (demandas, riscos)  development/ (perfis, avaliações, caderno)
                            performance/ (cartão de prontidão, áreas e registros)
   views/SsoConsentView.vue tela do "Entrar com o Vernum" (rota bare, abre antes do login)
@@ -39,7 +46,15 @@ src/
 
 - **Endpoint novo entra em `services/api.js`.** Nunca `http.get('/rota')` dentro de uma view.
 - **Cor e espaçamento vêm de `assets/vernum.css`.** Nada de hex solto: a cor de destaque é a da
-  equipe aberta, injetada em `--vc-purple` por `services/theme.js`. Se faltar um token, adicione lá.
+  equipe aberta, injetada em `--vc-purple` por `services/theme.js`. Se faltar um token, adicione lá —
+  em `:root` **e** no bloco `[data-theme="dark"], [data-theme="admin"]`.
+- **Tela nova tem que ler bem nos três temas** (claro, escuro e a paleta preta e vermelha da
+  administração). Só `var(--vc-*)` em estilo; texto sobre a cor de destaque é `--vc-on-accent`. A cor
+  de uma equipe vinda de dado pode ir inline (é dado, não tema). Quem decide a paleta é só o `App.vue`:
+  equipe administradora ou rota com `meta.platform` → `admin`; senão, a escolha da pessoa.
+- **Coisa da pessoa vai em `preferencesStore`** (`getSetting` / `setSetting`, uma chave por tela,
+  com o id da equipe dentro da chave quando for por equipe), nunca em `localStorage` direto — assim
+  segue a pessoa para qualquer navegador.
 - **Ícone novo entra em `components/AppIcon.vue`** (traço, grid 24x24, `currentColor`).
   **Nunca use emoji em template**: muda de forma por plataforma e não acompanha a cor da equipe.
 - **Permissão nas duas pontas**: esconda a ação com `auth.can('X')` / `auth.canPlatform('X')` **e**
