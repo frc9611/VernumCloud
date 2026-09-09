@@ -80,7 +80,7 @@
             </thead>
             <tbody>
               <tr v-for="person in now" :key="person.userId">
-                <td>{{ person.userName }}</td>
+                <td><PersonLink :user-id="person.userId" :name="person.userName" /></td>
                 <td>
                   <!-- The label is what tells apart who is who when the room has more than one team -->
                   <span v-for="team in person.teams" :key="team.tenantId"
@@ -112,6 +112,11 @@
       <template v-if="tab === 'ranking'">
         <SectionTitle lead="Ranking por" title="Tempo na Sala">
           <template #actions>
+            <!-- Off by default: a mentor's afternoons in the room are not a student's frequency -->
+            <label class="vc-checkbox" style="align-items: center; font-size: 0.85rem">
+              <input type="checkbox" v-model="includeStaff" style="margin-top: 0" />
+              Incluir técnicos e administradores
+            </label>
             <span class="vc-chip">{{ periodLabel }}</span>
           </template>
         </SectionTitle>
@@ -123,7 +128,11 @@
             <tbody>
               <tr v-for="line in ranking" :key="line.userId">
                 <td>{{ line.position }}</td>
-                <td>{{ line.userName }}</td>
+                <td>
+                  <PersonLink :user-id="line.userId" :name="line.userName" />
+                  <!-- Only ever present when the box above is ticked: the server hides the staff otherwise -->
+                  <span v-if="line.staff" class="vc-chip" style="margin-left: 6px">conduz a equipe</span>
+                </td>
                 <td>{{ formatDuration(line.totalSeconds) }}</td>
                 <td>
                   <span :class="['vc-badge', line.inRoom ? 'vc-badge--on' : 'vc-badge--neutral']">
@@ -136,8 +145,13 @@
           <EmptyState v-if="!ranking.length" title="Nada no período">
             Ninguém que você acompanha registrou presença entre {{ formatDate(period.from) }} e
             {{ formatDate(period.to) }}.
+            <template v-if="!includeStaff"> Técnicos e administradores ficam de fora do ranking.</template>
           </EmptyState>
         </div>
+        <p class="vc-faint" style="margin: 0">
+          Quem conduz a equipe fica fora do ranking por padrão: as horas de um técnico na sala não são a
+          frequência de um estudante. A sala e o histórico continuam mostrando todo mundo.
+        </p>
       </template>
 
       <!-- -------------------------------------------------------------- history -->
@@ -174,7 +188,7 @@
             </thead>
             <tbody>
               <tr v-for="stay in visibleEntries" :key="stay.attendanceId">
-                <td>{{ stay.userName }}</td>
+                <td><PersonLink :user-id="stay.userId" :name="stay.userName" /></td>
                 <td>{{ formatDateTime(stay.startTime) }}</td>
                 <td>
                   <span v-if="stay.endTime">{{ formatDateTime(stay.endTime) }}</span>
@@ -221,6 +235,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
@@ -252,6 +267,12 @@ const me = ref({ inRoom: false, since: null, secondsInRoom: 0, totalSeconds: 0, 
 const now = ref([]);
 const ranking = ref([]);
 const entries = ref([]);
+/*
+ * Whether the ranking shows whoever conducts the team. Off by default and remembered per browser: the
+ * server hides the staff unless asked, and the 60 s refresh has to keep asking the same thing.
+ */
+const INCLUDE_STAFF_KEY = 'attendance.includeStaff';
+const includeStaff = ref(localStorage.getItem(INCLUDE_STAFF_KEY) === 'true');
 const personFilter = ref('');
 const closing = ref(null);
 const closeEndTime = ref('');
@@ -335,6 +356,11 @@ watch(tabs, (list) => {
   }
 });
 
+watch(includeStaff, (value) => {
+  localStorage.setItem(INCLUDE_STAFF_KEY, value ? 'true' : 'false');
+  load();
+});
+
 async function load() {
   if (!auth.activeTenantId) return;
   loading.value = true;
@@ -350,7 +376,8 @@ async function load() {
 
     const [nowResponse, rankingResponse, entriesResponse] = await Promise.all([
       attendanceApi.now(tenantId),
-      attendanceApi.ranking(tenantId, params),
+      /* Only the ranking is a frequency analysis; the history keeps showing everybody's stays */
+      attendanceApi.ranking(tenantId, { ...params, includeStaff: includeStaff.value }),
       attendanceApi.entries(tenantId, params),
     ]);
     now.value = nowResponse.data;

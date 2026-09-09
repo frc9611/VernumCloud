@@ -14,7 +14,8 @@
           Liderar uma divisão alcança ela e as subdivisões dela: {{ (scope.divisions || []).join(', ') }}.
         </template>
         <template v-else>
-          Autonomia de 1 a 4, competências de 0 a 4 e a frequência de cada pessoa.
+          Autonomia de 1 a 4, competências de 0 a 4 e a frequência de cada pessoa. Quem conduz a equipe
+          — técnicos e administradores — fica fora da análise de frequência.
         </template>
       </AlertBanner>
 
@@ -48,8 +49,11 @@
         <PanelCard v-for="profile in profiles" :key="profile.user.userId"
                    :title="profile.user.name" muted>
           <template #header-actions>
-            <span v-if="profile.baseline" class="vc-badge vc-badge--neutral" style="margin-left: auto">
-              a validar
+            <span style="margin-left: auto; display: inline-flex; gap: 6px; align-items: center">
+              <PersonLink :user-id="profile.user.userId" muted>perfil</PersonLink>
+              <span v-if="profile.baseline" class="vc-badge vc-badge--neutral">a validar</span>
+              <!-- The card stays — a técnico develops too — but its empty bar must not read as an alert -->
+              <span v-if="profile.staff" class="vc-badge vc-badge--neutral">conduz a equipe</span>
             </span>
           </template>
           <p class="vc-faint" style="margin-top: 0">{{ profile.roleLabel || 'Função a definir' }}</p>
@@ -66,14 +70,20 @@
           </div>
           <div class="vc-scored">
             <span>Frequência</span>
-            <div :class="['vc-bar', profile.belowThreshold ? 'vc-bar--danger' : 'vc-bar--success']">
+            <div :class="['vc-bar', frequencyBarClass(profile)]">
               <span :style="{ width: (profile.effectiveAttendanceRate || 0) + '%' }"></span>
             </div>
             <strong>{{ profile.effectiveAttendanceRate ?? '—' }}%</strong>
           </div>
 
           <p class="vc-faint" style="font-size: 0.76rem">
-            <template v-if="profile.attendanceRate !== null && profile.registeredAttendanceRate !== null">
+            <template v-if="profile.staff">
+              fora da análise de frequência: quem conduz a equipe não entra no alerta nem no ranking
+              <template v-if="profile.registeredAttendanceRate !== null">
+                · registrada {{ profile.registeredAttendanceRate }}% (últimos {{ profile.daysMeasured }} dias)
+              </template>
+            </template>
+            <template v-else-if="profile.attendanceRate !== null && profile.registeredAttendanceRate !== null">
               lançada {{ profile.attendanceRate }}% · registrada {{ profile.registeredAttendanceRate }}%
               (últimos {{ profile.daysMeasured }} dias)
             </template>
@@ -203,6 +213,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
@@ -246,6 +257,12 @@ watch(() => auth.activeTenantId, load);
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+/* A staff bar is neither good nor bad, so it keeps the team colour instead of turning red or green. */
+function frequencyBarClass(profile) {
+  if (profile.staff) return '';
+  return profile.belowThreshold ? 'vc-bar--danger' : 'vc-bar--success';
 }
 
 async function load() {
