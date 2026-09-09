@@ -20,7 +20,7 @@
           <tbody>
             <tr v-for="member in filtered" :key="member.membershipId">
               <td><img class="vc-avatar" width="34" height="34" :src="pictureOf(member.user.userId)" alt="" /></td>
-              <td>{{ member.user.name }}</td>
+              <td><PersonLink :user-id="member.user.userId" :name="member.user.name" /></td>
               <td class="vc-faint">{{ member.user.username }}</td>
               <td class="vc-faint">{{ member.user.email }}</td>
               <td><span class="vc-badge vc-badge--purple">{{ member.roleLabel }}</span></td>
@@ -45,6 +45,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import EmptyState from '@/components/EmptyState.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import { authStore } from '@/store/auth.js';
 import { tenants, users } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';

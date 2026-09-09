@@ -34,7 +34,7 @@
           </template>
           <p class="vc-faint" style="margin-top: 0">
             {{ formatDate(evaluation.evaluationDate) }}
-            <template v-if="evaluation.author"> · por {{ evaluation.author.name }}</template>
+            <template v-if="evaluation.author"> · por <PersonLink :user-id="evaluation.author.userId" :name="evaluation.author.name" muted /></template>
           </p>
           <div class="vc-row" style="flex-wrap: wrap">
             <span v-if="evaluation.autonomy" class="vc-chip">autonomia {{ evaluation.autonomy }}/4</span>
@@ -65,6 +65,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';

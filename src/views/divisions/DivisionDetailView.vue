@@ -31,7 +31,7 @@
           </thead>
           <tbody>
             <tr v-for="member in members" :key="member.divisionMembershipId">
-              <td>{{ member.name }}</td>
+              <td><PersonLink :user-id="member.userId" :name="member.name" /></td>
               <td class="vc-faint">{{ member.email }}</td>
               <td>
                 <span v-if="!canManage">{{ member.position || '—' }}</span>
@@ -94,6 +94,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';

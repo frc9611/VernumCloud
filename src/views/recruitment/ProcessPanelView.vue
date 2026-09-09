@@ -43,7 +43,7 @@
           <tbody>
             <tr v-for="entry in entries" :key="entry.recruitmentEntryId" class="is-clickable" @click="open(entry)">
               <td>
-                {{ entry.socialName || entry.name }}
+                <PersonLink :user-id="entry.userId" :name="entry.socialName || entry.name" />
                 <span v-if="entry.userId" class="vc-chip vc-chip--info" title="Tem conta no Vernum">conta</span>
                 <span v-else-if="entry.createdUsername" class="vc-chip vc-chip--info"
                       :title="'Conta criada: ' + entry.createdUsername">virou membro</span>
@@ -234,6 +234,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import TabBar from '@/components/TabBar.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import EmptyState from '@/components/EmptyState.vue';

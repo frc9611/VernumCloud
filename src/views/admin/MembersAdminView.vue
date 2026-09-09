@@ -25,7 +25,7 @@
           </thead>
           <tbody>
             <tr v-for="member in filtered" :key="member.membershipId">
-              <td>{{ member.user.name }}</td>
+              <td><PersonLink :user-id="member.user.userId" :name="member.user.name" /></td>
               <td class="vc-faint">{{ member.user.username }}</td>
               <td>
                 <select
@@ -151,6 +151,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import ModalDialog from '@/components/ModalDialog.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';
 import { catalogs, tenants } from '@/services/api.js';

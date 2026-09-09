@@ -59,7 +59,7 @@
         </span>
         <strong class="vc-announcement__title">{{ item.title }}</strong>
         <span class="vc-spacer"></span>
-        <span class="vc-faint">{{ item.senderName }} · {{ formatWhen(item.createdAt) }}</span>
+        <span class="vc-faint"><PersonLink :user-id="item.senderId" :name="item.senderName" muted /> · {{ formatWhen(item.createdAt) }}</span>
         <button
           v-if="item.canDelete"
           class="vc-btn vc-btn--ghost vc-btn--small vc-btn--icon"
@@ -90,7 +90,7 @@
           :key="comment.commentId"
           class="vc-announcement__comment"
         >
-          <span class="vc-announcement__author">{{ comment.authorName }}</span>
+          <span class="vc-announcement__author"><PersonLink :user-id="comment.authorId" :name="comment.authorName" /></span>
           <span class="vc-faint">{{ formatWhen(comment.createdAt) }}</span>
           <button
             v-if="comment.canDelete"
@@ -128,6 +128,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AppIcon from './AppIcon.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import EmptyState from './EmptyState.vue';
 import PanelCard from './PanelCard.vue';
 import SectionTitle from './SectionTitle.vue';
