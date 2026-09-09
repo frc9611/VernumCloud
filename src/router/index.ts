@@ -76,6 +76,16 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true }
   },
 
+  {
+    /*
+     * The profile of a person, readable by anybody logged in: names across the dashboard link here.
+     * No `tenant` meta — the page is about the person, in every team of theirs and after them.
+     */
+    path: '/pessoas/:id',
+    name: 'person',
+    component: () => import(/* webpackChunkName: "people" */ '../views/people/PersonProfileView.vue'),
+    meta: { auth: true }
+  },
   /* -------------------------------------------- board and season of the team */
   {
     path: '/demandas',
@@ -161,6 +171,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
   },
   {
+    /* Every account of the platform, with the teams of each one. No `tenant`: it works with no team open. */
+    path: '/admin/usuarios',
+    name: 'adminUsers',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/PlatformUsersView.vue'),
+    meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
+  },
+  {
     path: '/admin/membros',
     name: 'adminMembers',
     component: () => import(/* webpackChunkName: "admin" */ '../views/admin/MembersAdminView.vue'),
@@ -207,6 +224,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'RFID_MANAGE', feature: 'ATTENDANCE' }
   },
   {
+    path: '/admin/eventos',
+    name: 'adminEvents',
+    component: () => import(/* webpackChunkName: "people" */ '../views/admin/EventsAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'EVENT_VIEW', feature: 'EVENTS' }
+  },
+  {
     path: '/admin/processos',
     name: 'adminRecruitment',
     component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessesAdminView.vue'),
@@ -217,6 +240,13 @@ const routes: Array<RouteRecordRaw> = [
     name: 'recruitmentPanel',
     component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessPanelView.vue'),
     meta: { auth: true, tenant: true, permission: 'RECRUITMENT_VIEW' }
+  },
+  {
+    /* The editor of the team's public page: model, presentation, contact, images and posts. */
+    path: '/admin/pagina',
+    name: 'adminPage',
+    component: () => import(/* webpackChunkName: "page" */ '../views/page/PageAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'PAGE_MANAGE', feature: 'LANDING_PAGE' }
   },
 
   /* ------------------------------------------------------------------ cloud */
@@ -255,10 +285,14 @@ const routes: Array<RouteRecordRaw> = [
 
   /* ------------------------------------------------------- public / candidate */
   {
+    /*
+     * Not `bare` any more: the header shows only for a logged user (App.vue), so a member reaches the
+     * open processes from inside the dashboard, while a visitor still gets the plain public page.
+     */
     path: '/processos-seletivos',
     name: 'openProcesses',
     component: () => import(/* webpackChunkName: "public" */ '../views/public/OpenProcessesView.vue'),
-    meta: { bare: true, footer: true }
+    meta: { footer: true }
   },
   {
     path: '/candidatar/:token',
@@ -271,6 +305,17 @@ const routes: Array<RouteRecordRaw> = [
     name: 'myApplications',
     component: () => import(/* webpackChunkName: "public" */ '../views/public/MyApplicationsView.vue'),
     meta: { auth: true }
+  },
+  {
+    /*
+     * The public page of a team, for whoever has the link — a sponsor, a school, the parents. No
+     * login and no header, in the colour of the team; the server answers one 404 for everything it
+     * will not show a visitor, so the screen has a single "Equipe não encontrada".
+     */
+    path: '/pagina/:slug',
+    name: 'teamPage',
+    component: () => import(/* webpackChunkName: "page" */ '../views/page/PublicTeamPageView.vue'),
+    meta: { bare: true, footer: true }
   },
 
   { path: '/:pathMatch(.*)*', redirect: '/home' },

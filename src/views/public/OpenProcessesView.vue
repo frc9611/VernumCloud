@@ -2,12 +2,18 @@
   <main class="vc-page">
     <div class="vc-stack">
       <div class="open__brand">
-        <VernumLogo :size="40" :with-wordmark="false" />
+        <!-- A visitor has no header, so the brand stands here; a member already sees it up there. -->
+        <VernumLogo v-if="!auth.isAuth" :size="40" :with-wordmark="false" />
         <h1 class="vc-title">Processos <strong>Seletivos</strong></h1>
       </div>
 
       <p class="vc-muted" style="margin: 0">
-        Equipes que estão com inscrições abertas. Você pode se candidatar sem ter conta no Vernum Cloud.
+        <template v-if="auth.isAuth">
+          Equipes que estão com inscrições abertas. Você pode se candidatar a outra equipe sem sair da sua.
+        </template>
+        <template v-else>
+          Equipes que estão com inscrições abertas. Você pode se candidatar sem ter conta no Vernum Cloud.
+        </template>
       </p>
 
       <p v-if="loading" class="vc-faint">Carregando...</p>
@@ -15,13 +21,14 @@
       <EmptyState v-else-if="!processes.length" title="Nenhum processo aberto agora">
         Volte mais tarde ou fale com a equipe que você quer entrar.
         <template #actions>
-          <router-link class="vc-btn vc-btn--ghost" :to="{ name: 'login' }">Voltar ao login</router-link>
+          <router-link v-if="auth.isAuth" class="vc-btn vc-btn--ghost" :to="dashboardTarget">Voltar ao dashboard</router-link>
+          <router-link v-else class="vc-btn vc-btn--ghost" :to="{ name: 'login' }">Voltar ao login</router-link>
         </template>
       </EmptyState>
 
       <div v-else class="vc-grid">
         <article v-for="process in processes" :key="process.publicToken" class="vc-card">
-          <header class="vc-card__header" :style="{ background: process.tenantColor || '#8864AE' }">
+          <header class="vc-card__header" :style="{ background: process.tenantColor || 'var(--vc-purple)' }">
             <span>{{ process.tenantName }}</span>
             <span v-if="process.tenantTeamNumber" class="vc-card__icon">#{{ process.tenantTeamNumber }}</span>
           </header>
@@ -40,21 +47,33 @@
 
       <hr class="vc-divider" />
       <div class="vc-row">
-        <router-link class="vc-btn vc-btn--ghost" :to="{ name: 'login' }">Já sou da equipe: entrar</router-link>
+        <template v-if="auth.isAuth">
+          <router-link class="vc-btn vc-btn--ghost" :to="dashboardTarget">Voltar ao dashboard</router-link>
+          <router-link class="vc-btn vc-btn--ghost" :to="{ name: 'myApplications' }">Minhas candidaturas</router-link>
+        </template>
+        <router-link v-else class="vc-btn vc-btn--ghost" :to="{ name: 'login' }">Já sou da equipe: entrar</router-link>
       </div>
     </div>
   </main>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import VernumLogo from '@/components/VernumLogo.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { publicRecruitment } from '@/services/api.js';
+import { authStore } from '@/store/auth.js';
 
-/* Public list of processes with open applications. Reachable from the login screen. */
+/*
+ * Public list of processes with open applications. Reachable from the login screen by a visitor, and
+ * from the dashboard by a member — the same page, with the way back changing to match who is reading.
+ */
+const auth = authStore();
 const processes = ref([]);
 const loading = ref(true);
+
+/** Where "voltar" goes for somebody logged in: the home, or the waiting room when they have no team. */
+const dashboardTarget = computed(() => ({ name: auth.hasNoTenant ? 'waiting' : 'home' }));
 
 onMounted(async () => {
   try {
