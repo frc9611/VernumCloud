@@ -43,6 +43,32 @@
               <p class="countdown__target">termina {{ targetText }}</p>
             </section>
 
+            <!-- ------------------------------------------------------------------ race -->
+            <section v-else-if="panel === 'race'" class="panel panel--race">
+              <h2 class="panel__title"><AppIcon name="flag" :size="18" />Corrida entre divisões</h2>
+              <div class="list-race">
+                <div v-for="row in visibleRace" :key="row.divisionId ?? 'none'"
+                     :class="['lane', row.leader ? 'is-leader' : '']"
+                     :style="{ '--lane-color': row.divisionColor || 'var(--vc-purple)' }">
+                  <span class="lane__name">
+                    <AppIcon v-if="row.leader" class="lane__crown" name="award" :size="18" />
+                    <span class="lane__label">{{ row.divisionName }}</span>
+                  </span>
+                  <span class="lane__track">
+                    <span class="lane__fill" :style="{ width: laneWidth(row) + '%' }"></span>
+                  </span>
+                  <span class="lane__score">
+                    <b>{{ row.done }}</b>
+                    <i>{{ pointsText(row) }}</i>
+                  </span>
+                </div>
+                <p v-if="!race.length" class="panel__empty">
+                  Ninguém concluiu nenhuma demanda na janela ainda.
+                </p>
+              </div>
+              <p class="panel__more">{{ hiddenRace ? '+' + hiddenRace : '' }}</p>
+            </section>
+
             <!-- ---------------------------------------------------------------- kanban -->
             <section v-else-if="panel === 'kanban'" class="panel panel--kanban">
               <div class="kanban" :style="{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(0, 1fr))` }">
@@ -192,7 +218,7 @@ const API_BASE = process.env.VUE_APP_API_URL || 'https://vernumserver-prod.onren
 
 /* Wide blocks stack down the middle, narrow ones down the side; `panels` decides which and in
    which order, and the filters below keep that order inside each column. */
-const WIDE_PANELS = ['countdown', 'kanban', 'stats'];
+const WIDE_PANELS = ['countdown', 'race', 'kanban', 'stats'];
 const NARROW_PANELS = ['announcements', 'updates', 'room'];
 const DEFAULT_PANELS = ['countdown', 'kanban', 'announcements', 'updates', 'room', 'stats'];
 
@@ -226,7 +252,7 @@ const rootEl = ref(null);
  * pass because dropping the items that did not fit never moves the ones that did.
  */
 const measuring = ref(true);
-const caps = reactive({ cards: [], announcements: null, updates: null, room: null });
+const caps = reactive({ cards: [], announcements: null, updates: null, room: null, race: null });
 
 /* The device clock, ticking, plus how far the server is from it */
 const nowMs = ref(Date.now());
@@ -405,6 +431,7 @@ const announcements = computed(() => snapshot.value?.announcements || []);
 const updates = computed(() => snapshot.value?.updates || []);
 const inRoom = computed(() => snapshot.value?.inRoom || []);
 const stats = computed(() => snapshot.value?.stats || null);
+const race = computed(() => snapshot.value?.race || []);
 
 const visibleAnnouncements = computed(() => cut(announcements.value, caps.announcements));
 const hiddenAnnouncements = computed(() => left(announcements.value, caps.announcements));
@@ -412,6 +439,25 @@ const visibleUpdates = computed(() => cut(updates.value, caps.updates));
 const hiddenUpdates = computed(() => left(updates.value, caps.updates));
 const visibleInRoom = computed(() => cut(inRoom.value, caps.room));
 const hiddenInRoom = computed(() => left(inRoom.value, caps.room));
+const visibleRace = computed(() => cut(race.value, caps.race));
+const hiddenRace = computed(() => left(race.value, caps.race));
+
+/*
+ * The leader fills its track and everybody else is a fraction of it. The floor is there so a
+ * division that has scored is never a bar of nothing: three points against ninety is one percent,
+ * and a lane with no colour in it reads as a lane that did nothing.
+ */
+function laneWidth(row) {
+  //The floor is for whoever scored: a lane still on zero is a lane with nothing to show
+  if (!row.points) return 0;
+  const share = typeof row.sharePercent === 'number' ? row.sharePercent : 0;
+  return Math.max(2, Math.min(100, share));
+}
+
+function pointsText(row) {
+  const points = row.points || 0;
+  return points === 1 ? '1 pt' : `${points} pts`;
+}
 
 function visibleCards(column, index) {
   return cut(column.cards || [], caps.cards[index]);
@@ -460,6 +506,7 @@ async function measure() {
     caps.announcements = fitCount(root.querySelector('.list-announcements'), '.notice');
     caps.updates = fitCount(root.querySelector('.list-updates'), '.update');
     caps.room = fitCount(root.querySelector('.list-room'), '.person');
+    caps.race = fitCount(root.querySelector('.list-race'), '.lane');
   }
   measuring.value = false;
 }
@@ -720,9 +767,15 @@ function agoText(value) {
   background: var(--vc-surface);
 }
 
+/*
+ * A floor under the board, and not `min-height: 0`, because a flex box only takes room back from the
+ * panel above if the one below pushes: with the countdown, the race and the board all on, a 1080p
+ * television left the board 161 pixels and painted a card sliced in half by the bottom of its column.
+ * What gives way now is the race, which is the panel that knows how to cut itself down to "+N".
+ */
 .panel--kanban {
   flex: 1;
-  min-height: 0;
+  min-height: clamp(150px, 23vh, 420px);
   overflow: hidden;
 }
 
@@ -833,6 +886,128 @@ function agoText(value) {
   margin: clamp(5px, 0.5vh, 14px) 0 0;
   color: var(--vc-text-faint);
   font-size: clamp(11px, 1vw, 26px);
+}
+
+/* ----------------------------------------------------------------------- race */
+
+.panel--race {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  overflow: hidden;
+}
+
+/* Bounded by the flex box and not by a max-height of its own. What has to be true is only that this
+   element has a bottom edge, because the measuring pass counts the lanes that end above it: the edge
+   comes from the panel being the one wide block that shrinks (`flex: 0 1 auto`) while the board below
+   holds its floor, so a team with a dozen divisions cuts itself down to "+N" instead of pushing the
+   board off the television. A fixed cap did the same job while the board was on and cost lanes when
+   it was not: on a wall showing only the corrida it hid five divisions under an empty screen. */
+.list-race {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.6vh, 16px);
+}
+
+.lane {
+  --lane-color: var(--vc-purple);
+  flex: none;
+  display: grid;
+  /* A quarter for the name: at 1080p a fifth of it cut "Programação e Visão Computacional" into an
+     ellipsis, and the name of the division is the half of the lane that says who is running */
+  grid-template-columns: minmax(0, 26%) minmax(0, 1fr) minmax(4.4em, auto);
+  align-items: center;
+  gap: clamp(6px, 0.7vw, 18px);
+  font-size: clamp(11px, 1vw, 26px);
+}
+
+.lane__name {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  min-width: 0;
+  color: var(--vc-text-muted);
+}
+
+.lane__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AppIcon writes its size inline in px, which is the one length in this panel that does not follow
+   the screen: on a 4K television the medal stayed at 18px beside a number of 47. A minimum in `em`
+   is not the same property, so it wins over the inline size without an `!important` in a codebase
+   that has none, and the medal grows with the lane it marks. */
+.lane__crown {
+  flex: none;
+  min-width: 1.05em;
+  min-height: 1.05em;
+  color: var(--vc-warning-strong);
+}
+
+.lane__track {
+  display: block;
+  height: clamp(12px, 1.7vh, 42px);
+  border-radius: 999px;
+  background: var(--vc-surface-muted);
+  overflow: hidden;
+}
+
+.lane__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lane-color);
+  transition: width 0.8s ease-out;
+}
+
+/* Two columns and not one right-aligned run: "31 pts" is wider than "5 pts", and hanging both off
+   the same right edge left the counts ragged down the lane — which is the number the room reads. */
+.lane__score {
+  display: grid;
+  grid-template-columns: minmax(1.4em, auto) minmax(3.4em, auto);
+  align-items: baseline;
+  gap: 0.4em;
+  white-space: nowrap;
+}
+
+.lane__score b {
+  font-size: 1.4em;
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
+  color: var(--vc-text-muted);
+}
+
+.lane__score i {
+  font-style: normal;
+  font-size: 0.82em;
+  color: var(--vc-text-faint);
+}
+
+/*
+ * The one in front, read from the far end of the room: the medal, the name at full brightness, a
+ * thicker track and the only count that is not dimmed. The colour of the division is not what marks
+ * it — a team picks those, and one of them is always going to be a dark blue on a dark screen.
+ */
+.lane.is-leader .lane__name {
+  color: var(--vc-text);
+  font-weight: 700;
+}
+
+.lane.is-leader .lane__track {
+  height: clamp(16px, 2.2vh, 54px);
+}
+
+.lane.is-leader .lane__score b {
+  color: var(--vc-text);
+  font-size: 1.8em;
 }
 
 /* --------------------------------------------------------------------- kanban */

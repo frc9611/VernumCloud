@@ -184,6 +184,23 @@
               <span class="vc-faint panel-hint"> — {{ panel.hint }}</span>
             </span>
           </label>
+
+          <!--
+            Only while the corrida is on: the window is a setting of that panel and nothing else
+            reads it, so an unchecked race leaves a field on the card that changes nothing. The value
+            typed before is kept and saved all the same, and comes back with the checkbox.
+
+            Same care as the countdown above: the hour typed here is the hour of this computer.
+          -->
+          <div v-if="form.panels.includes('race')" class="vc-field race-window">
+            <label class="vc-label" for="race-since">Início da janela da corrida</label>
+            <input id="race-since" class="vc-input" type="datetime-local" v-model="form.raceSince" />
+            <p class="vc-faint hint">
+              A corrida só conta as demandas concluídas a partir desta hora. Em branco, ela olha as
+              últimas 24 horas.
+              <template v-if="zoneNote">A hora é a que você digita {{ zoneNote }}.</template>
+            </p>
+          </div>
         </PanelCard>
 
         <div class="vc-row">
@@ -229,6 +246,11 @@ const KINDS = [
 
 const PANELS = [
   { value: 'countdown', label: 'Cronômetro', hint: 'a contagem grande no centro' },
+  {
+    value: 'race',
+    label: 'Corrida entre divisões',
+    hint: 'uma faixa por divisão, com o que cada uma concluiu dentro da janela',
+  },
   { value: 'kanban', label: 'Quadro de demandas', hint: 'uma coluna por status' },
   { value: 'announcements', label: 'Avisos', hint: 'os avisos mais recentes da equipe' },
   { value: 'updates', label: 'Atualizações', hint: 'a linha do tempo do que acabou de acontecer' },
@@ -236,7 +258,15 @@ const PANELS = [
   { value: 'stats', label: 'Números', hint: 'a faixa de estatísticas do rodapé' },
 ];
 
-const DEFAULT_PANELS = PANELS.map((panel) => panel.value);
+/* The vocabulary, in the order the television reads it: what a saved list is sorted back into. */
+const PANEL_ORDER = PANELS.map((panel) => panel.value);
+
+/*
+ * What a wall that was never configured shows. The race is the one panel left out of it: the murals
+ * already hanging in rooms were set up before it existed, and a panel that switches itself on would
+ * rearrange a screen nobody asked to have rearranged.
+ */
+const DEFAULT_PANELS = PANEL_ORDER.filter((panel) => panel !== 'race');
 
 /* The shots somebody fires in the middle of a marathon, ready to go with one click plus "Disparar" */
 const SHORTCUTS = [
@@ -262,6 +292,7 @@ const form = reactive({
   countdownTarget: '',
   countdownTaskId: null,
   panels: [...DEFAULT_PANELS],
+  raceSince: '',
 });
 
 const eventForm = reactive({
@@ -329,6 +360,7 @@ function applyConfig(data) {
   form.countdownTarget = toInputValue(data.countdownTarget);
   form.countdownTaskId = data.countdownTaskId ?? null;
   form.panels = data.panels && data.panels.length ? [...data.panels] : [...DEFAULT_PANELS];
+  form.raceSince = toInputValue(data.raceSince);
 }
 
 async function save() {
@@ -340,7 +372,9 @@ async function save() {
       countdownTarget: fromInputValue(form.countdownTarget),
       countdownTaskId: form.countdownTaskId ?? null,
       //Send the vocabulary in the order the checkboxes are listed, not in the order they were clicked
-      panels: DEFAULT_PANELS.filter((panel) => form.panels.includes(panel)),
+      panels: PANEL_ORDER.filter((panel) => form.panels.includes(panel)),
+      //Blank is not "leave it alone": it is the corrida going back to the last 24 hours
+      raceSince: fromInputValue(form.raceSince),
     });
     applyConfig(data);
     toast.success('Mural salvo!');
@@ -514,6 +548,13 @@ async function copy(value) {
 /* The checkboxes are a list to read top to bottom, so they get air the base class does not have */
 .vc-checkbox {
   padding: 5px 0;
+}
+
+/* Reads as a setting of the checkbox above it, not as a card of its own: same air the list has, and
+   only as wide as a datetime needs so it does not look like the main field of the panel */
+.race-window {
+  margin-top: 10px;
+  max-width: 320px;
 }
 
 @media (max-width: 720px) {
