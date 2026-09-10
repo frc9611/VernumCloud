@@ -230,9 +230,9 @@ function submitAdd(tenantId) {
   margin: 0;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid var(--vc-warn-border, rgba(200, 140, 0, 0.35));
-  background: var(--vc-warn-bg, rgba(255, 196, 0, 0.08));
-  color: var(--vc-text);
+  border: 1px solid var(--vc-warning-border);
+  background: var(--vc-warning-bg);
+  color: var(--vc-warning-text);
   font-size: 12px;
   line-height: 1.45;
 }
