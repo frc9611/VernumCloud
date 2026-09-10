@@ -157,6 +157,31 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'TRIP_VIEW' }
   },
 
+  /* ------------------------------------------------- reuniões e calendário */
+  {
+    path: '/reunioes',
+    name: 'meetings',
+    component: () => import(/* webpackChunkName: "meetings" */ '../views/meetings/MeetingsView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEETING_VIEW', feature: 'MEETINGS' }
+  },
+  {
+    path: '/reunioes/:meetingId',
+    name: 'meeting',
+    component: () => import(/* webpackChunkName: "meetings" */ '../views/meetings/MeetingView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEETING_VIEW', feature: 'MEETINGS' }
+  },
+  {
+    /*
+     * Sem `permission` nem `feature`: o calendário é de quem é da equipe, e o que ele mostra depende
+     * do que cada origem deixa passar. Exigir uma permissão aqui esconderia a tela de quem tem direito
+     * a metade dela.
+     */
+    path: '/calendario',
+    name: 'calendar',
+    component: () => import(/* webpackChunkName: "meetings" */ '../views/calendar/CalendarView.vue'),
+    meta: { auth: true, tenant: true, permission: 'MEMBER_VIEW' }
+  },
+
   /* ------------------------------------------------- base de conhecimento */
   {
     /*

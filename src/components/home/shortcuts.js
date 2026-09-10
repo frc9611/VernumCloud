@@ -31,6 +31,16 @@ export const SHORTCUTS = [
     when: (auth) => auth.featureOn('TASKS') && auth.can('TASK_VIEW'),
   },
   {
+    key: 'calendar', label: 'Calendário', icon: 'calendar', to: { name: 'calendar' },
+    hint: 'Reuniões, viagens, eventos e prazos da equipe num lugar só.',
+    when: (auth) => auth.can('MEMBER_VIEW'),
+  },
+  {
+    key: 'meetings', label: 'Reuniões', icon: 'comment', to: { name: 'meetings' },
+    hint: 'Pauta, ata, decisões e o que ficou combinado — que vira demanda no quadro.',
+    when: (auth) => auth.featureOn('MEETINGS') && auth.can('MEETING_VIEW'),
+  },
+  {
     key: 'wiki', label: 'Base de conhecimento', icon: 'notebook', to: { name: 'wiki' },
     hint: 'Procedimentos, decisões e lições aprendidas — o que a equipe sabe, escrito.',
     when: (auth) => auth.featureOn('KNOWLEDGE_BASE') && auth.can('WIKI_VIEW'),

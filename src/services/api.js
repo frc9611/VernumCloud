@@ -540,6 +540,38 @@ const auditBase = (tenantId) => (tenantId ? `/tenants/${tenantId}/audit` : '/aud
  * A imagem vem como blob, como toda imagem autenticada da plataforma: um <img src> não manda o
  * cabeçalho de Authorization, então quem desenha a página troca o endereço por um object URL.
  */
+/*
+ * Reuniões: a pauta antes, a ata depois, sempre o mesmo registro.
+ *
+ * `toTask` é a única rota daqui que escreve fora das reuniões — ela cria a demanda no quadro —, e por
+ * isso cobra `TASK_MANAGE` além de `MEETING_MANAGE`.
+ */
+export const meetings = {
+  list: (tenantId) => http.get(`/tenants/${tenantId}/meetings`),
+  one: (tenantId, meetingId) => http.get(`/tenants/${tenantId}/meetings/${meetingId}`),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/meetings`, body),
+  update: (tenantId, meetingId, body) => http.put(`/tenants/${tenantId}/meetings/${meetingId}`, body),
+  remove: (tenantId, meetingId) => http.delete(`/tenants/${tenantId}/meetings/${meetingId}`),
+  setClosed: (tenantId, meetingId, closed) =>
+    http.put(`/tenants/${tenantId}/meetings/${meetingId}/closed`, null, { params: { closed } }),
+  setAttendance: (tenantId, meetingId, body) =>
+    http.put(`/tenants/${tenantId}/meetings/${meetingId}/attendance`, body),
+  addDecision: (tenantId, meetingId, text) =>
+    http.post(`/tenants/${tenantId}/meetings/${meetingId}/decisions`, { text }),
+  removeDecision: (tenantId, decisionId) =>
+    http.delete(`/tenants/${tenantId}/meetings/decisions/${decisionId}`),
+  addAction: (tenantId, meetingId, body) =>
+    http.post(`/tenants/${tenantId}/meetings/${meetingId}/actions`, body),
+  removeAction: (tenantId, actionId) => http.delete(`/tenants/${tenantId}/meetings/actions/${actionId}`),
+  toTask: (tenantId, actionId) => http.post(`/tenants/${tenantId}/meetings/actions/${actionId}/task`),
+};
+
+/* O calendário único. Só leitura: a data se muda na tela de origem de cada coisa. */
+export const calendar = {
+  between: (tenantId, from, to) =>
+    http.get(`/tenants/${tenantId}/calendar`, { params: { from, to } }),
+};
+
 export const wiki = {
   index: (tenantId) => http.get(`/tenants/${tenantId}/wiki`),
   page: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}`),
