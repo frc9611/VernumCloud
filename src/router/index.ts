@@ -157,6 +157,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'TRIP_VIEW' }
   },
 
+  {
+    path: '/reconhecimento',
+    name: 'recognition',
+    component: () => import(/* webpackChunkName: "recognition" */ '../views/recognition/RecognitionView.vue'),
+    meta: { auth: true, tenant: true, permission: 'KUDO_VIEW', feature: 'RECOGNITION' }
+  },
+
   /* ------------------------------------------------- reuniões e calendário */
   {
     path: '/reunioes',

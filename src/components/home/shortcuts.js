@@ -31,6 +31,11 @@ export const SHORTCUTS = [
     when: (auth) => auth.featureOn('TASKS') && auth.can('TASK_VIEW'),
   },
   {
+    key: 'recognition', label: 'Reconhecimento', icon: 'heart', to: { name: 'recognition' },
+    hint: 'Quem ensinou, ajudou ou segurou a barra — dito em uma frase, para a equipe ver.',
+    when: (auth) => auth.featureOn('RECOGNITION') && auth.can('KUDO_VIEW'),
+  },
+  {
     key: 'calendar', label: 'Calendário', icon: 'calendar', to: { name: 'calendar' },
     hint: 'Reuniões, viagens, eventos e prazos da equipe num lugar só.',
     when: (auth) => auth.can('MEMBER_VIEW'),

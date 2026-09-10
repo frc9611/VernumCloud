@@ -77,6 +77,22 @@
       </div>
 
       <footer class="vc-announcement__foot">
+        <!--
+          Os quatro tipos aparecem sempre, mesmo em zero: um botão que só existe depois de alguém
+          clicar é um botão que ninguém clica primeiro. O número fica escondido no zero para a barra
+          não ser uma fileira de zeros.
+        -->
+        <button
+          v-for="tally in item.reactions || []"
+          :key="tally.kind"
+          :class="['vc-chip', 'vc-chip--button', 'reaction', tally.mine ? 'is-mine' : '']"
+          type="button"
+          :title="tally.label"
+          @click="react(item, tally)"
+        >
+          <span class="reaction__symbol">{{ tally.symbol }}</span>
+          <span v-if="tally.count" class="reaction__count">{{ tally.count }}</span>
+        </button>
         <button class="vc-chip vc-chip--button" type="button" @click="toggleComments(item)">
           <AppIcon name="comment" :size="13" />
           {{ commentLabel(item) }}
@@ -234,6 +250,21 @@ async function remove(item) {
   }
 }
 
+/*
+ * Reage, ou desfaz reagindo igual de novo.
+ *
+ * A resposta traz a contagem inteira do aviso, e é ela que entra no lugar da antiga — somar um do lado
+ * do cliente erraria toda vez que duas pessoas reagissem quase junto.
+ */
+async function react(item, tally) {
+  try {
+    const { data } = await announcementsApi.react(item.announcementId, tally.kind);
+    item.reactions = data;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao reagir'));
+  }
+}
+
 function commentLabel(item) {
   const count = comments[item.announcementId]?.length ?? item.commentCount ?? 0;
   if (open[item.announcementId]) return 'Fechar comentários';
@@ -299,3 +330,20 @@ function formatWhen(value) {
     : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 </script>
+
+<style scoped>
+.reaction {
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.reaction.is-mine {
+  border-color: var(--vc-purple);
+  background: var(--vc-purple-soft);
+  color: var(--vc-purple-strong);
+}
+
+.reaction__symbol { font-size: 14px; }
+.reaction__count { font-size: 11px; font-weight: 600; }
+</style>

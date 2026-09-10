@@ -222,6 +222,9 @@ export const users = {
 /* ------------------------------------------------------------ announcements */
 
 export const announcements = {
+  /* Reage, ou desfaz reagindo igual de novo. Devolve a contagem inteira do aviso. */
+  react: (announcementId, kind) =>
+    http.post(`/announcements/${announcementId}/reactions`, null, { params: { kind } }),
   /* The board of a team: the platform announcements, the team ones and the divisions of the reader. */
   list: (tenantId) => http.get(`/tenants/${tenantId}/announcements`),
   /* Which reaches this person may publish to — the server decides, leading a division is not a permission. */
@@ -546,6 +549,27 @@ const auditBase = (tenantId) => (tenantId ? `/tenants/${tenantId}/audit` : '/aud
  * `toTask` é a única rota daqui que escreve fora das reuniões — ela cria a demanda no quadro —, e por
  * isso cobra `TASK_MANAGE` além de `MEETING_MANAGE`.
  */
+/*
+ * Gamificação: reconhecimento entre pares, marcos e os primeiros passos de quem chega.
+ *
+ * Não há rota de ranking, e a ausência é a decisão do recurso e não um esquecimento — ver
+ * `ARCHITECTURE.md`, seção 24.
+ */
+export const kudos = {
+  board: (tenantId) => http.get(`/tenants/${tenantId}/kudos`),
+  give: (tenantId, body) => http.post(`/tenants/${tenantId}/kudos`, body),
+  remove: (tenantId, kudoId) => http.delete(`/tenants/${tenantId}/kudos/${kudoId}`),
+};
+
+export const milestones = {
+  of: (tenantId, userId) => http.get(`/tenants/${tenantId}/people/${userId}/milestones`),
+  recalculate: (tenantId) => http.post(`/tenants/${tenantId}/milestones/recalculate`),
+};
+
+export const onboarding = {
+  mine: (tenantId) => http.get(`/tenants/${tenantId}/onboarding`),
+};
+
 export const meetings = {
   list: (tenantId) => http.get(`/tenants/${tenantId}/meetings`),
   one: (tenantId, meetingId) => http.get(`/tenants/${tenantId}/meetings/${meetingId}`),

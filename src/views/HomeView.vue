@@ -21,6 +21,13 @@
         {{ auth.getName }}
       </AlertBanner>
 
+      <!--
+        Fora do arranjo movível de propósito: é um cartão que existe por algumas semanas e depois some
+        sozinho, e uma seção que aparece e desaparece na ordem que a pessoa montou desarruma o arranjo
+        dela sem ela ter pedido.
+      -->
+      <OnboardingCard v-if="!organizing" />
+
       <LayoutOrganizer
         :organizing="organizing"
         :customized="layout.customized.value"
@@ -91,6 +98,7 @@ import AlertBanner from '@/components/AlertBanner.vue';
 import AnnouncementBoard from '@/components/AnnouncementBoard.vue';
 import TripCarousel from '@/components/TripCarousel.vue';
 import HomeSection from '@/components/home/HomeSection.vue';
+import OnboardingCard from '@/components/home/OnboardingCard.vue';
 import LayoutOrganizer from '@/components/home/LayoutOrganizer.vue';
 import ShortcutGrid from '@/components/home/ShortcutGrid.vue';
 import MyTasksPanel from '@/components/home/MyTasksPanel.vue';
