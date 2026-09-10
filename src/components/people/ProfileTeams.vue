@@ -6,10 +6,29 @@
       </template>
     </SectionTitle>
 
-    <p v-if="customizing" class="vc-faint" style="margin: 0">
-      O olho decide se uma equipe aparece no seu perfil público. Ocultar uma equipe não muda nada nela —
-      só o que esta página mostra.
-    </p>
+    <!--
+      Ocultar uma equipe vale em todo lugar que sabe nomeá-la, e não só nesta lista, então o texto tem
+      que dizer as duas coisas que decidem se a opção serve para alguém: até onde ela chega, e onde ela
+      não chega. O texto livre é o "onde não chega" — nada filtra o que uma pessoa escreveu, e deixar
+      isso implícito seria prometer um sigilo que a página não tem como cumprir.
+    -->
+    <div v-if="customizing" class="pteams__note vc-stack">
+      <p class="vc-faint" style="margin: 0">
+        O olho decide quem pode saber que você está na equipe. Uma equipe oculta some do seu perfil, da
+        busca de pessoas e de tudo que a nomearia — badges concedidos por ela, destaques escritos nela e
+        eventos dela. A membership em si não muda: só quem pode saber dela.
+      </p>
+      <p class="vc-faint" style="margin: 0">
+        Continuam vendo: você, quem está naquela equipe e quem administra a plataforma.
+      </p>
+      <p class="pteams__warn">
+        <AppIcon name="alert" :size="14" />
+        <span>
+          Isso não alcança texto que você escreveu. Sua bio, seu destaque em uma frase e as palavras de
+          um destaque que alguém te deu aparecem como estão — se citarem a equipe, o nome dela aparece.
+        </span>
+      </p>
+    </div>
 
     <EmptyState v-if="!visible.length" title="Sem equipe no momento">
       <template v-if="hasHistory">A história desta pessoa está logo abaixo.</template>
@@ -200,6 +219,29 @@ function submitAdd(tenantId) {
 </script>
 
 <style scoped>
+.pteams__note {
+  gap: 6px;
+}
+
+.pteams__warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--vc-warn-border, rgba(200, 140, 0, 0.35));
+  background: var(--vc-warn-bg, rgba(255, 196, 0, 0.08));
+  color: var(--vc-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pteams__warn :deep(svg) {
+  flex: none;
+  margin-top: 2px;
+}
+
 .pteams__list {
   list-style: none;
   margin: 0;
