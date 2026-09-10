@@ -217,6 +217,49 @@
                 Mostrar na página os processos seletivos com inscrições abertas, com o botão "Candidatar"
               </label>
             </div>
+
+            <!--
+              Os dois convites. A página tem dois leitores — quem quer entrar e quem pode patrocinar —
+              e cada um precisa de uma frase escrita para ele; sem isso os dois leem a mesma
+              apresentação institucional e nenhum sabe o que fazer em seguida.
+            -->
+            <div class="vc-field">
+              <label class="vc-label" for="pg-join">Convite para quem quer entrar</label>
+              <textarea id="pg-join" class="vc-input" rows="2" maxlength="400" v-model="form.joinPitch"
+                        placeholder="Inscrições abrem duas vezes por ano e não precisa saber nada antes."></textarea>
+              <span class="vc-faint">
+                Aparece na seção "Quero entrar" — inclusive fora da janela de inscrição, para quem chegou
+                antes da hora saber que existe uma.
+              </span>
+            </div>
+
+            <div class="vc-field">
+              <label class="vc-label" for="pg-sponsor">Convite para patrocínio</label>
+              <textarea id="pg-sponsor" class="vc-input" rows="2" maxlength="400" v-model="form.sponsorPitch"
+                        placeholder="Seu apoio vira ferramenta na bancada e estudante na competição."></textarea>
+            </div>
+
+            <div class="vc-field">
+              <label class="vc-label" for="pg-sponsor-mail">E-mail de patrocínio</label>
+              <input id="pg-sponsor-mail" class="vc-input" type="email" maxlength="160"
+                     v-model="form.sponsorEmail" placeholder="patrocinio@suaequipe.com" />
+              <span class="vc-faint">
+                Separado do contato geral: quem quer apoiar não deveria cair na mesma caixa de quem quer
+                se inscrever.
+              </span>
+            </div>
+
+            <div class="vc-field">
+              <span class="vc-label">Números</span>
+              <label class="vc-checkbox">
+                <input type="checkbox" v-model="form.showStats" />
+                Mostrar pessoas, áreas, eventos e prêmios — apurados do próprio Vernum, nunca digitados
+              </label>
+              <span class="vc-faint">
+                É o bloco que um patrocinador lê primeiro. Desligue se a equipe é nova e os números ainda
+                não contam a história dela.
+              </span>
+            </div>
           </div>
 
           <template #footer>
@@ -393,8 +436,9 @@ const IMAGE_KINDS = [
 const TEXT_FIELDS = [
   'headline', 'subheadline', 'about', 'contactEmail', 'contactPhone',
   'instagram', 'youtube', 'website', 'location', 'accent',
+  'joinPitch', 'sponsorPitch', 'sponsorEmail',
 ];
-const FIELDS = [...TEXT_FIELDS, 'template', 'showProcesses'];
+const FIELDS = [...TEXT_FIELDS, 'template', 'showProcesses', 'showStats'];
 
 const page = ref(null);
 const posts = ref([]);
@@ -428,7 +472,7 @@ watch(() => auth.activeTenantId, load);
 onUnmounted(revokeAll);
 
 function blankForm() {
-  const values = { template: 'CLASSIC', showProcesses: true };
+  const values = { template: 'CLASSIC', showProcesses: true, showStats: true };
   TEXT_FIELDS.forEach((field) => { values[field] = ''; });
   return values;
 }
@@ -471,7 +515,11 @@ function applyPage(data) {
 }
 
 function fromDto(data) {
-  const values = { template: data.template || 'CLASSIC', showProcesses: data.showProcesses !== false };
+  const values = {
+    template: data.template || 'CLASSIC',
+    showProcesses: data.showProcesses !== false,
+    showStats: data.showStats !== false,
+  };
   TEXT_FIELDS.forEach((field) => { values[field] = data[field] || ''; });
   return values;
 }

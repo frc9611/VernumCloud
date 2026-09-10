@@ -27,6 +27,49 @@
         <p class="page__text">{{ page.about }}</p>
       </section>
 
+      <!--
+        Os números vêm antes de tudo que se pede: quem lê esta página decidindo se apoia a equipe
+        decide por eles, e eles são apurados do banco em vez de digitados — um número escrito à mão
+        envelhece na página.
+      -->
+      <section v-if="page.stats" class="page__section">
+        <h2 class="page__title">A equipe em números</h2>
+        <div class="page__numbers">
+          <div v-for="item in numbers" :key="item.label" class="page__stat">
+            <strong>{{ item.value }}</strong>
+            <span>{{ item.label }}</span>
+          </div>
+        </div>
+        <p v-if="page.stats.since" class="page__meta">
+          Na plataforma desde {{ page.stats.since }}.
+        </p>
+      </section>
+
+      <section v-if="page.areas && page.areas.length" class="page__section">
+        <h2 class="page__title">O que a equipe faz</h2>
+        <p class="page__text">Estas são as áreas — é numa delas que você entraria.</p>
+        <div class="page__areas">
+          <article v-for="area in page.areas" :key="area.name" class="page__area"
+                   :style="{ '--area': area.color || 'currentColor' }">
+            <strong>{{ area.name }}</strong>
+            <p v-if="area.description">{{ area.description }}</p>
+          </article>
+        </div>
+      </section>
+
+      <!--
+        O convite de patrocínio é uma seção própria e não uma linha no contato: quem pode apoiar não
+        está lendo a mesma página que quem quer entrar, e um e-mail no meio de uma lista de links não
+        é um convite.
+      -->
+      <section v-if="page.sponsorPitch || page.sponsorEmail" class="page__section page__sponsor">
+        <h2 class="page__title">Apoie a equipe</h2>
+        <p v-if="page.sponsorPitch" class="page__text">{{ page.sponsorPitch }}</p>
+        <a v-if="page.sponsorEmail" class="page__btn" :href="'mailto:' + page.sponsorEmail">
+          Falar sobre patrocínio
+        </a>
+      </section>
+
       <section v-if="hasContact" class="page__section">
         <h2 class="page__title">Contato</h2>
         <ul class="page__links">
@@ -58,8 +101,17 @@
         </ul>
       </section>
 
-      <section v-if="page.openProcesses && page.openProcesses.length" class="page__section">
+      <section v-if="page.joinPitch || (page.openProcesses && page.openProcesses.length)"
+               class="page__section">
         <h2 class="page__title">Quero entrar</h2>
+        <!--
+          O convite aparece mesmo sem processo aberto: quem chegou aqui fora da janela de inscrição
+          precisa saber que existe uma janela, e não encontrar a seção sumida.
+        -->
+        <p v-if="page.joinPitch" class="page__text">{{ page.joinPitch }}</p>
+        <p v-if="page.joinPitch && !(page.openProcesses && page.openProcesses.length)" class="page__meta">
+          Não há inscrições abertas agora.
+        </p>
         <div class="page__processes">
           <article v-for="process in page.openProcesses" :key="process.publicToken" class="page__process">
             <div class="page__process-text">
@@ -134,6 +186,24 @@ const monogram = computed(() => {
 const coverStyle = computed(() =>
   props.page.hasCover ? { backgroundImage: `url("${props.imageUrl(props.page.coverPath)}")` } : null,
 );
+
+/*
+ * Os números, só os que dizem algo.
+ *
+ * Um zero é escondido de propósito: "0 prêmios" numa página de equipe nova é pior do que não dizer
+ * nada, e a decisão de mostrar o bloco já foi tomada pela equipe no editor. Membros aparece sempre,
+ * porque uma equipe sem membros não existiria para ter página.
+ */
+const numbers = computed(() => {
+  const s = props.page.stats;
+  if (!s) return [];
+  const out = [{ value: s.members, label: s.members === 1 ? 'pessoa' : 'pessoas' }];
+  if (s.divisions) out.push({ value: s.divisions, label: s.divisions === 1 ? 'área' : 'áreas' });
+  if (s.events) out.push({ value: s.events, label: s.events === 1 ? 'evento' : 'eventos' });
+  if (s.awards) out.push({ value: s.awards, label: s.awards === 1 ? 'prêmio' : 'prêmios' });
+  if (s.seasons > 1) out.push({ value: s.seasons, label: 'temporadas' });
+  return out;
+});
 
 const hasContact = computed(() =>
   ['contactEmail', 'contactPhone', 'location', 'website', 'instagram', 'youtube']
@@ -386,6 +456,57 @@ function formatDay(value) {
 
 .page__btn:hover {
   background: var(--vc-purple-strong);
+}
+
+.page__numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+/* `page__stat` e não `page__number`: o número da equipe no cabeçalho já usa aquele nome */
+.page__stat {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  opacity: 0.95;
+}
+
+.page__stat strong {
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.page__stat span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.page__areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.page__area {
+  padding: 14px;
+  border-left: 3px solid var(--area);
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.page__area strong { display: block; margin-bottom: 4px; }
+.page__area p { margin: 0; font-size: 13px; opacity: 0.85; }
+
+/* A seção é um flex column, então sem isto o botão estica na largura toda da página */
+.page__sponsor .page__btn {
+  margin-top: 10px;
+  align-self: flex-start;
+  width: fit-content;
 }
 
 .page__posts {
