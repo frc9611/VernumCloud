@@ -23,7 +23,7 @@
               </td>
               <td>{{ request.requestedLevel }}</td>
               <td class="vc-faint">{{ request.message || '—' }}</td>
-              <td class="vc-faint">{{ formatWhen(request.createdAt) }}</td>
+              <td class="vc-faint">{{ formatDateTime(request.createdAt) }}</td>
               <td style="text-align: right; white-space: nowrap">
                 <button class="vc-btn vc-btn--small" type="button" @click="decide(request, true)">Aprovar</button>
                 <button class="vc-btn vc-btn--danger vc-btn--small" style="margin-left: 6px"
@@ -54,7 +54,7 @@
               <td>{{ request.requestedLevel }}</td>
               <td><span class="vc-badge" :class="badgeClass(request.status)">{{ request.statusLabel }}</span></td>
               <td class="vc-faint">{{ request.decisionNote || '—' }}</td>
-              <td class="vc-faint">{{ formatWhen(request.createdAt) }}</td>
+              <td class="vc-faint">{{ formatDateTime(request.createdAt) }}</td>
             </tr>
           </tbody>
         </table>
@@ -71,6 +71,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { cloud } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { formatDateTime } from '@/services/time.js';
 
 /*
  * Two lists: the pedidos the user can decide, because they manage the item, and the ones
@@ -120,9 +121,5 @@ function badgeClass(status) {
   if (status === 'APPROVED') return 'vc-badge--on';
   if (status === 'DENIED') return 'vc-badge--off';
   return 'vc-badge--neutral';
-}
-
-function formatWhen(value) {
-  return value ? new Date(value).toLocaleString('pt-BR') : '';
 }
 </script>

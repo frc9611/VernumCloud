@@ -76,7 +76,8 @@ async function download(file) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    //Revoking on the next line cancels the save on Firefox and Safari, which read the url later
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao baixar arquivo'));
   }
