@@ -17,6 +17,9 @@
         {{ scopeHint }}
       </AlertBanner>
 
+      <!-- The room keeps its hours in Brasília; a computer somewhere else reads them in its own -->
+      <p v-if="zoneNote" class="vc-faint" style="margin: 0">Horários {{ zoneNote }}.</p>
+
       <!-- Everybody reads their own presence, whatever the permissions say. -->
       <PanelCard title="Minha presença" icon="clock">
         <div class="vc-row vc-row--between" style="align-items: flex-start">
@@ -222,6 +225,9 @@
       <div class="vc-field">
         <label class="vc-label" for="endTime">Saída</label>
         <input id="endTime" class="vc-input" type="datetime-local" v-model="closeEndTime" />
+        <p v-if="zoneNote" class="vc-faint" style="margin: 6px 0 0">
+          A hora que você digitar é lida {{ zoneNote }}.
+        </p>
       </div>
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="closing = null">Cancelar</button>
@@ -245,6 +251,9 @@ import TabBar from '@/components/TabBar.vue';
 import { authStore } from '@/store/auth.js';
 import { attendance as attendanceApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import {
+  formatDateTime as formatMoment, toDateInputValue, toInputValue, toPlatformValue, zoneNotice,
+} from '@/services/time.js';
 
 /*
  * The presence register of the team, from the dashboard.
@@ -276,9 +285,11 @@ const includeStaff = ref(localStorage.getItem(INCLUDE_STAFF_KEY) === 'true');
 const personFilter = ref('');
 const closing = ref(null);
 const closeEndTime = ref('');
+/* Empty on a computer in UTC-3, which is what keeps both notices off the screen. */
+const zoneNote = zoneNotice();
 
 /* Last thirty days: enough to answer "quem veio esse mês" without dragging the whole history. */
-const period = reactive({ from: isoDate(daysAgo(30)), to: isoDate(new Date()) });
+const period = reactive({ from: toDateInputValue(daysAgo(30)), to: toDateInputValue(new Date()) });
 
 let timer = null;
 
@@ -393,7 +404,7 @@ async function load() {
 
 function openClose(stay) {
   closing.value = stay;
-  closeEndTime.value = localInputValue(new Date());
+  closeEndTime.value = toInputValue(new Date());
 }
 
 /** A row of the room is a person, and the stay to close is the one of the team being read. */
@@ -407,7 +418,7 @@ function openCloseRoom(person) {
 
 async function confirmClose() {
   try {
-    await attendanceApi.close(closing.value.attendanceId, closeEndTime.value || null);
+    await attendanceApi.close(closing.value.attendanceId, toPlatformValue(closeEndTime.value));
     closing.value = null;
     await load();
     toast.success('Estada fechada!');
@@ -424,18 +435,6 @@ function daysAgo(days) {
   return date;
 }
 
-/** yyyy-mm-dd in the local timezone, which is what the date input and the API expect. */
-function isoDate(date) {
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
-}
-
-/** yyyy-mm-ddThh:mm, the format of an <input type="datetime-local"> and of LocalDateTime. */
-function localInputValue(date) {
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
 function formatDate(value) {
   if (!value) return '—';
   const [year, month, day] = value.split('-');
@@ -443,14 +442,12 @@ function formatDate(value) {
 }
 
 function formatDateTime(value) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return date.toLocaleString('pt-BR', {
+  return formatMoment(value, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }) || '—';
 }
 
 /* Never shows a negative time: a clock out of step is a defect, not something to print. */

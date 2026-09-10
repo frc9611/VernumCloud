@@ -118,6 +118,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';
 import { development } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 const auth = authStore();
 const toast = useToast();
@@ -149,7 +150,7 @@ onMounted(load);
 watch(() => auth.activeTenantId, load);
 
 function blank() {
-  return { entryId: null, type: 'DECISION', entryDate: new Date().toISOString().slice(0, 10), title: '', body: '' };
+  return { entryId: null, type: 'DECISION', entryDate: toDateInputValue(new Date()), title: '', body: '' };
 }
 
 async function load() {

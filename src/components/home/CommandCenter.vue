@@ -117,6 +117,7 @@ import SectionTitle from '@/components/SectionTitle.vue';
 import { authStore } from '@/store/auth.js';
 import { teamDashboard } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 /*
  * The tab of whoever conducts the team: the few numbers that decide what somebody does next, the
@@ -167,7 +168,7 @@ async function backup() {
   try {
     const { data } = await teamDashboard.export(auth.activeTenantId);
     const slug = auth.activeTenant?.slug || 'equipe';
-    const day = new Date().toISOString().slice(0, 10);
+    const day = toDateInputValue(new Date()); //The day here, not the UTC one: at ten at night they differ
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

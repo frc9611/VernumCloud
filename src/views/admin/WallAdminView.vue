@@ -155,6 +155,12 @@
             </p>
           </div>
 
+          <!-- The hour typed here is the hour of whoever types it, and only a foreign zone makes that worth saying -->
+          <AlertBanner v-if="zoneNote" variant="warning" title="Horários no fuso deste computador.">
+            Você está vendo e digitando {{ zoneNote }}, e não no de Brasília. A hora que marcar como
+            fim da contagem é a hora daqui — na TV ela aparece no fuso de quem estiver olhando.
+          </AlertBanner>
+
           <div class="vc-split">
             <div class="vc-field">
               <label class="vc-label" for="countdown-target">Fim da contagem</label>
@@ -199,6 +205,9 @@ import PanelCard from '@/components/PanelCard.vue';
 import { authStore } from '@/store/auth.js';
 import { tasks as tasksApi, wall } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import {
+  formatDate, formatDateTime as formatMoment, fromInputValue, parseServer, toInputValue, zoneNotice,
+} from '@/services/time.js';
 
 /*
  * The wall from the side of whoever runs the room.
@@ -244,6 +253,8 @@ const switchedOff = ref(false);
 const saving = ref(false);
 const firing = ref(false);
 const regenerating = ref(false);
+/* Empty on a computer in UTC-3, which is what keeps the warning about the typed hour out of the way. */
+const zoneNote = zoneNotice();
 
 const form = reactive({
   enabled: true,
@@ -326,7 +337,7 @@ async function save() {
     const { data } = await wall.save(auth.activeTenantId, {
       enabled: form.enabled,
       countdownLabel: form.countdownLabel.trim() || null,
-      countdownTarget: toServerValue(form.countdownTarget),
+      countdownTarget: fromInputValue(form.countdownTarget),
       countdownTaskId: form.countdownTaskId ?? null,
       //Send the vocabulary in the order the checkboxes are listed, not in the order they were clicked
       panels: DEFAULT_PANELS.filter((panel) => form.panels.includes(panel)),
@@ -416,7 +427,8 @@ async function refreshEvents() {
 
 /** Whether the event is still covering the wall — only those can be taken off it. */
 function onScreen(event) {
-  return !!event.expiresAt && parseLocal(event.expiresAt).getTime() > nowMs.value;
+  const ends = parseServer(event.expiresAt);
+  return !!ends && ends.getTime() > nowMs.value;
 }
 
 /* -------------------------------------------------------------------- helpers */
@@ -430,30 +442,8 @@ function suggestTarget() {
   }
 }
 
-/* LocalDateTime comes with six fractional digits and no zone; the input wants minutes and no zone. */
-function toInputValue(value) {
-  return value ? String(value).slice(0, 16) : '';
-}
-
-/* The other way: a datetime-local answers "YYYY-MM-DDTHH:mm", and LocalDateTime wants the seconds
-   spelled out — but a browser that hands over the seconds as well must not get a second pair. */
-function toServerValue(value) {
-  if (!value) return null;
-  return value.length === 16 ? `${value}:00` : value;
-}
-
-function parseLocal(value) {
-  return new Date(String(value).slice(0, 19));
-}
-
 function formatDateTime(value) {
-  if (!value) return '—';
-  return parseLocal(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-}
-
-function formatDate(value) {
-  if (!value) return '';
-  return new Date(String(value).slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR', { dateStyle: 'short' });
+  return formatMoment(value) || '—';
 }
 
 async function copy(value) {

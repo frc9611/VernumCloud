@@ -222,6 +222,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { development } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 /*
  * Autonomy, competences and frequency, one card per person.
@@ -255,8 +256,10 @@ const averageAutonomy = computed(() => {
 onMounted(load);
 watch(() => auth.activeTenantId, load);
 
+/* The day of whoever is filling the form. toISOString() would answer UTC, which after nine at
+   night in Brasília is already tomorrow, and the field would open on the wrong day. */
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return toDateInputValue(new Date());
 }
 
 /* A staff bar is neither good nor bad, so it keeps the team colour instead of turning red or green. */

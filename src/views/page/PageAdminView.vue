@@ -354,6 +354,7 @@ import TemplatePreview from '@/components/page/TemplatePreview.vue';
 import { authStore } from '@/store/auth.js';
 import { page as pageApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { formatDateTime as formatMoment } from '@/services/time.js';
 
 /*
  * The editor of the team's public page.
@@ -707,10 +708,8 @@ async function copy(value) {
   }
 }
 
-/* LocalDateTime comes with six fractional digits and no zone: keep the seconds and read it as local time. */
 function formatDateTime(value) {
-  if (!value) return '—';
-  return new Date(String(value).slice(0, 19)).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  return formatMoment(value) || '—';
 }
 
 function excerpt(text) {

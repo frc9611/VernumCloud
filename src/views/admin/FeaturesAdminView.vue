@@ -138,6 +138,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { catalogs, features as featuresApi, teamDashboard, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 /*
  * Where a team decides which parts of the platform it uses.
@@ -266,7 +267,7 @@ async function downloadExport() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `vernum-${auth.activeTenant?.slug || 'equipe'}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `vernum-${auth.activeTenant?.slug || 'equipe'}-${toDateInputValue(new Date())}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
     toast.success('Backup baixado.');

@@ -108,6 +108,10 @@
                   </select>
                 </div>
               </div>
+              <!-- Only when this computer is not on UTC-3: the two hours above are read here, not in Brasília -->
+              <p v-if="zoneNote" class="vc-faint" style="margin: -4px 0 0">
+                Saída e retorno são lidos {{ zoneNote }}, e não no de Brasília.
+              </p>
               <div class="vc-field">
                 <label class="vc-label" for="description">Descrição</label>
                 <textarea id="description" class="vc-textarea" rows="2" maxlength="1000"
@@ -291,6 +295,9 @@
           </select>
         </div>
       </div>
+      <p v-if="zoneNote" class="vc-faint" style="margin: -4px 0 0">
+        Saída e retorno são lidos {{ zoneNote }}, e não no de Brasília.
+      </p>
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="creating = false">Cancelar</button>
         <button class="vc-btn" type="button"
@@ -370,6 +377,7 @@ import SectionTitle from '@/components/SectionTitle.vue';
 import { authStore } from '@/store/auth.js';
 import { cloud, tenants as tenantsApi, trips as tripsApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { formatDateTime, fromInputValue, toInputValue, zoneNotice } from '@/services/time.js';
 
 /*
  * Organising a trip: the event, the documents asked for, the audience, and who answered.
@@ -396,6 +404,8 @@ const newPerson = ref('');
 
 const form = reactive({ title: '', destination: '', description: '', departureAt: '', returnAt: '', transport: 'BUS', status: 'OPEN' });
 const draft = reactive({ title: '', destination: '', departureAt: '', returnAt: '', transport: 'BUS' });
+/* Empty on a computer in UTC-3, which is what keeps the two notices about the typed hour hidden. */
+const zoneNote = zoneNotice();
 const documentDraft = reactive({ tripDocumentId: null, name: '', description: '', required: true });
 const picker = reactive({ path: [], folders: [], files: [] });
 
@@ -433,8 +443,8 @@ async function open(tripId) {
       title: data.title,
       destination: data.destination,
       description: data.description || '',
-      departureAt: toInput(data.departureAt),
-      returnAt: toInput(data.returnAt),
+      departureAt: toInputValue(data.departureAt),
+      returnAt: toInputValue(data.returnAt),
       transport: data.transport,
       status: data.status === 'CANCELLED' ? 'CLOSED' : data.status,
     });
@@ -447,6 +457,14 @@ async function open(tripId) {
   }
 }
 
+/*
+ * The two datetime-local fields hold the hour of whoever typed it and no zone at all; the server
+ * only knows which hour that was if the offset of this computer goes with them.
+ */
+function withHours(source) {
+  return { ...source, departureAt: fromInputValue(source.departureAt), returnAt: fromInputValue(source.returnAt) };
+}
+
 function openNew() {
   Object.assign(draft, { title: '', destination: '', departureAt: '', returnAt: '', transport: 'BUS' });
   creating.value = true;
@@ -454,7 +472,7 @@ function openNew() {
 
 async function create() {
   try {
-    const { data } = await tripsApi.create(auth.activeTenantId, { ...draft });
+    const { data } = await tripsApi.create(auth.activeTenantId, withHours(draft));
     creating.value = false;
     await load();
     await open(data.tripId);
@@ -466,7 +484,7 @@ async function create() {
 
 async function save() {
   try {
-    const { data } = await tripsApi.update(trip.value.tripId, { ...form });
+    const { data } = await tripsApi.update(trip.value.tripId, withHours(form));
     trip.value = data;
     await load();
     toast.success('Viagem salva!');
@@ -640,16 +658,10 @@ async function downloadSubmission(submission) {
 
 /* ----------------------------------------------------------------- helpers */
 
-/** yyyy-MM-ddTHH:mm, which is what a datetime-local holds and what the server parses. */
-function toInput(value) {
-  return value ? String(value).slice(0, 16) : '';
-}
-
 function formatWhen(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('pt-BR', {
+  return formatDateTime(value, {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-  });
+  }) || '—';
 }
 
 function statusChip(status) {

@@ -309,6 +309,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
 import { performance as performanceApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 /*
  * The performance module, whatever the team competes in.
@@ -327,7 +328,7 @@ const readinessModal = ref(false);
 
 const areaForm = reactive({ areaId: null, name: '', kind: 'SUBSYSTEM', score: 0, status: 'EVOLVING', notes: '' });
 const runForm = reactive({ areaId: '', title: '', points: null, durationSeconds: null,
-  successes: 0, attempts: 1, runDate: new Date().toISOString().slice(0, 10), notes: '' });
+  successes: 0, attempts: 1, runDate: toDateInputValue(new Date()), notes: '' });
 const readinessForm = reactive({ readinessScore: null, autonomy: null, deliveryRate: null,
   nextMilestone: '', status: 'YELLOW', priorities: ['', '', ''] });
 
@@ -403,7 +404,7 @@ async function removeArea() {
 
 function openRun() {
   Object.assign(runForm, { areaId: '', title: '', points: null, durationSeconds: null,
-    successes: 0, attempts: 1, runDate: new Date().toISOString().slice(0, 10), notes: '' });
+    successes: 0, attempts: 1, runDate: toDateInputValue(new Date()), notes: '' });
   runModal.value = true;
 }
 

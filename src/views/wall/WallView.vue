@@ -21,6 +21,8 @@
           <span class="wall__dot"></span>
           {{ live ? 'ao vivo' : 'reconectando' }}
         </span>
+        <!-- Only when the television is not on UTC-3: the clock beside it is this computer's, not Brasília's -->
+        <span v-if="zoneNote" class="wall__zone">Horários {{ zoneNote }}</span>
         <span class="wall__date">{{ dateText }}</span>
         <span class="wall__clock">{{ clockText }}</span>
       </header>
@@ -165,6 +167,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import VernumLogo from '@/components/VernumLogo.vue';
 import { wall } from '@/services/api.js';
 import { applyTheme } from '@/services/theme.js';
+import { formatAgo, formatDateTime, formatTime, parseServer, zoneNotice } from '@/services/time.js';
 
 /*
  * The wall as a television in the room reads it: no login, no header, no footer, and nobody
@@ -379,8 +382,9 @@ function apply(data) {
   }
   snapshot.value = data;
   notFound.value = false;
-  if (data.serverTime) {
-    clockSkew.value = parseLocal(data.serverTime).getTime() - Date.now();
+  const serverTime = parseServer(data.serverTime);
+  if (serverTime) {
+    clockSkew.value = serverTime.getTime() - Date.now();
   }
   applyTheme('dark', data.teamColor || null);
   document.title = `${data.teamName} · Mural`;
@@ -474,9 +478,9 @@ function excerpt(text) {
 const countdown = computed(() => snapshot.value?.countdown || null);
 
 const countdownLeft = computed(() => {
-  const target = countdown.value?.target;
+  const target = parseServer(countdown.value?.target);
   if (!target) return null;
-  return Math.max(0, Math.round((parseLocal(target).getTime() - serverNow.value) / 1000));
+  return Math.max(0, Math.round((target.getTime() - serverNow.value) / 1000));
 });
 
 /* The local count is what ticks between snapshots, and the server's word settles the edge of it */
@@ -513,7 +517,7 @@ const countdownPercent = computed(() => {
 const targetText = computed(() => {
   const target = countdown.value?.target;
   if (!target) return '';
-  return parseLocal(target).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  return formatDateTime(target);
 });
 
 /* ---------------------------------------------------------------- the live event */
@@ -525,22 +529,25 @@ const targetText = computed(() => {
 const liveEvent = computed(() => {
   const event = snapshot.value?.liveEvent;
   if (!event) return null;
-  const ends = event.expiresAt ? parseLocal(event.expiresAt).getTime() : null;
+  const ends = parseServer(event.expiresAt)?.getTime() ?? null;
   if (ends !== null && serverNow.value >= ends) return null;
   return event;
 });
 
 const eventPercent = computed(() => {
   const event = liveEvent.value;
-  if (!event?.expiresAt) return 100;
-  const ends = parseLocal(event.expiresAt).getTime();
-  const started = event.createdAt ? parseLocal(event.createdAt).getTime() : null;
-  const total = started === null ? 0 : ends - started;
+  const ends = parseServer(event?.expiresAt)?.getTime();
+  if (!ends) return 100;
+  const started = parseServer(event.createdAt)?.getTime();
+  const total = started ? ends - started : 0;
   if (total <= 0) return 100;
   return Math.max(0, Math.min(100, ((ends - serverNow.value) / total) * 100));
 });
 
 /* --------------------------------------------------------------------- the clock */
+
+/* The clock is the hour of whoever is looking; the strip says so when that is not the hour of Brasília. */
+const zoneNote = zoneNotice();
 
 const clockText = computed(() =>
   new Date(serverNow.value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -548,11 +555,6 @@ const clockText = computed(() =>
 const dateText = computed(() =>
   new Date(serverNow.value).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }),
 );
-
-/* LocalDateTime comes with no zone and six fractional digits: cut them and read it as local time. */
-function parseLocal(value) {
-  return new Date(String(value).slice(0, 19));
-}
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -565,19 +567,12 @@ function formatClock(totalSeconds) {
 }
 
 function hourText(value) {
-  if (!value) return '';
-  return parseLocal(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return formatTime(value);
 }
 
+/* Counted against the server's clock and not this television's, which may have never been set. */
 function agoText(value) {
-  if (!value) return '';
-  const seconds = Math.max(0, Math.round((serverNow.value - parseLocal(value).getTime()) / 1000));
-  if (seconds < 60) return 'agora';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
-  return `há ${Math.floor(hours / 24)} d`;
+  return formatAgo(value, serverNow.value);
 }
 </script>
 
@@ -633,8 +628,13 @@ function agoText(value) {
   letter-spacing: 0.01em;
 }
 
+.wall__zone,
 .wall__date {
   color: var(--vc-text-faint);
+}
+
+.wall__zone {
+  font-size: 0.8em;
 }
 
 /* pt-BR writes the weekday and the month in lower case; only the first letter is ours to raise */

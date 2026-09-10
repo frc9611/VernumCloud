@@ -103,6 +103,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
+import { formatDate as formatDateOf } from '@/services/time.js';
 
 /*
  * The public page of a team, as a visitor reads it.
@@ -184,16 +185,12 @@ function hostOf(url) {
   }
 }
 
-/* LocalDateTime comes with six fractional digits and no zone: keep the seconds and read it as local time. */
 function formatDate(value) {
-  if (!value) return '';
-  return new Date(String(value).slice(0, 19)).toLocaleDateString('pt-BR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
+  return formatDateOf(value, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function formatDay(value) {
-  return value ? new Date(value + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+  return formatDateOf(value);
 }
 </script>
 
