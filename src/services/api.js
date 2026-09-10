@@ -524,6 +524,30 @@ export const wall = {
  * teams from the profile page goes through `tenants.*Member` (team admin) or `platform.*` (platform
  * admin) — there is no separate route for that on purpose.
  */
+/*
+ * A trilha de auditoria. Tudo aqui é leitura e custa AUDIT_VIEW — na equipe do caminho, ou no tenant
+ * de sistema para as rotas sem equipe, que enxergam todas as equipes de uma vez.
+ *
+ * `tenantId` nulo é o que escolhe entre as duas: a tela do painel da equipe passa o id, a da
+ * plataforma não passa nada, e as duas usam exatamente os mesmos filtros.
+ */
+const auditBase = (tenantId) => (tenantId ? `/tenants/${tenantId}/audit` : '/audit');
+
+export const audit = {
+  list: (tenantId, params) => http.get(auditBase(tenantId), { params }),
+  one: (tenantId, auditId) => http.get(`${auditBase(tenantId)}/${auditId}`),
+  personTimeline: (tenantId, userId, params) =>
+    http.get(`${auditBase(tenantId)}/users/${userId}`, { params }),
+  objectTimeline: (tenantId, objectType, objectId, params) =>
+    http.get(`${auditBase(tenantId)}/objects/${objectType}/${objectId}`, { params }),
+  actions: (tenantId) => http.get(`${auditBase(tenantId)}/actions`),
+  stats: (tenantId) => http.get(`${auditBase(tenantId)}/stats`),
+  verify: (tenantId) => http.get(`${auditBase(tenantId)}/verify`),
+  /* Texto, e não JSON: o CSV é baixado como arquivo, então quem chama monta o Blob. */
+  exportCsv: (tenantId, params) =>
+    http.get(`${auditBase(tenantId)}/export.csv`, { params, responseType: 'blob' }),
+};
+
 export const people = {
   profile: (userId) => http.get(`/people/${userId}`),
   search: (search) => http.get('/people', { params: { search } }),

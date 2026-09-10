@@ -215,6 +215,17 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'APP_MANAGE' }
   },
   {
+    /*
+     * A trilha da equipe aberta e, com `?escopo=plataforma`, a de todas. O escopo mora na query e não
+     * num estado da tela para que um passo da investigação seja um link, e o botão de voltar desfaça
+     * o passo em vez de sair da tela.
+     */
+    path: '/admin/auditoria',
+    name: 'adminAudit',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/AuditView.vue'),
+    meta: { auth: true, tenant: true, permission: 'AUDIT_VIEW' }
+  },
+  {
     path: '/admin/chaves',
     name: 'adminApiKeys',
     component: () => import(/* webpackChunkName: "admin" */ '../views/admin/ApiKeysAdminView.vue'),

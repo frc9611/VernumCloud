@@ -183,6 +183,14 @@ const teamCards = computed(() => {
       to: { name: 'adminMembers' },
     });
   }
+  if (auth.can('AUDIT_VIEW')) {
+    cards.push({
+      label: 'Auditoria',
+      icon: 'history',
+      hint: 'Tudo que foi escrito na equipe, com filtros, linha do tempo de uma pessoa ou de um objeto, o antes e o depois de cada mudança, e a conferência da corrente.',
+      to: { name: 'adminAudit' },
+    });
+  }
   if (auth.can('DIVISION_VIEW')) {
     cards.push({
       label: 'Divisões e subdivisões',
