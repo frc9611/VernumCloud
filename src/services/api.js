@@ -533,6 +533,47 @@ export const wall = {
  */
 const auditBase = (tenantId) => (tenantId ? `/tenants/${tenantId}/audit` : '/audit');
 
+/*
+ * A base de conhecimento. Endereçada por slug e não por id, porque um link escrito dentro de outra
+ * página tem que sobreviver ao título ser reescrito.
+ *
+ * A imagem vem como blob, como toda imagem autenticada da plataforma: um <img src> não manda o
+ * cabeçalho de Authorization, então quem desenha a página troca o endereço por um object URL.
+ */
+export const wiki = {
+  index: (tenantId) => http.get(`/tenants/${tenantId}/wiki`),
+  page: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}`),
+  create: (tenantId, body) => http.post(`/tenants/${tenantId}/wiki`, body),
+  update: (tenantId, slug, body) => http.put(`/tenants/${tenantId}/wiki/${slug}`, body),
+  remove: (tenantId, slug) => http.delete(`/tenants/${tenantId}/wiki/${slug}`),
+
+  revisions: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}/revisions`),
+  revision: (tenantId, slug, number) => http.get(`/tenants/${tenantId}/wiki/${slug}/revisions/${number}`),
+  restore: (tenantId, slug, number) =>
+    http.post(`/tenants/${tenantId}/wiki/${slug}/revisions/${number}/restore`),
+
+  attachments: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}/attachments`),
+  attach: (tenantId, slug, fileId) =>
+    http.post(`/tenants/${tenantId}/wiki/${slug}/attachments`, null, { params: { fileId } }),
+  detach: (tenantId, slug, fileId) =>
+    http.delete(`/tenants/${tenantId}/wiki/${slug}/attachments/${fileId}`),
+  uploadImage: (tenantId, slug, file) => {
+    const body = new FormData();
+    body.append('file', file);
+    return http.post(`/tenants/${tenantId}/wiki/${slug}/images`, body);
+  },
+  imageBlob: (tenantId, fileId) =>
+    http.get(`/tenants/${tenantId}/wiki/images/${fileId}`, { responseType: 'blob' }),
+
+  pdf: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}/pdf`, { responseType: 'blob' }),
+
+  templates: (tenantId) => http.get(`/tenants/${tenantId}/wiki-templates`),
+  createTemplate: (tenantId, body) => http.post(`/tenants/${tenantId}/wiki-templates`, body),
+  updateTemplate: (tenantId, templateId, body) =>
+    http.put(`/tenants/${tenantId}/wiki-templates/${templateId}`, body),
+  removeTemplate: (tenantId, templateId) => http.delete(`/tenants/${tenantId}/wiki-templates/${templateId}`),
+};
+
 export const audit = {
   list: (tenantId, params) => http.get(auditBase(tenantId), { params }),
   one: (tenantId, auditId) => http.get(`${auditBase(tenantId)}/${auditId}`),

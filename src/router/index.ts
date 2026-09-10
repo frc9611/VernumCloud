@@ -157,6 +157,38 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'TRIP_VIEW' }
   },
 
+  /* ------------------------------------------------- base de conhecimento */
+  {
+    /*
+     * A página aberta está na rota e não num estado da tela: uma página de wiki é feita para ser
+     * mandada para alguém, então "lê o procedimento da bateria" tem que ser um link, e voltar tem
+     * que andar entre páginas em vez de sair da base.
+     */
+    path: '/base',
+    name: 'wiki',
+    component: () => import(/* webpackChunkName: "wiki" */ '../views/wiki/WikiView.vue'),
+    meta: { auth: true, tenant: true, permission: 'WIKI_VIEW', feature: 'KNOWLEDGE_BASE' }
+  },
+  {
+    path: '/base/nova',
+    name: 'wikiNew',
+    component: () => import(/* webpackChunkName: "wiki" */ '../views/wiki/WikiEditorView.vue'),
+    meta: { auth: true, tenant: true, permission: 'WIKI_MANAGE', feature: 'KNOWLEDGE_BASE' }
+  },
+  {
+    path: '/base/:slug/editar',
+    name: 'wikiEdit',
+    component: () => import(/* webpackChunkName: "wiki" */ '../views/wiki/WikiEditorView.vue'),
+    meta: { auth: true, tenant: true, permission: 'WIKI_MANAGE', feature: 'KNOWLEDGE_BASE' }
+  },
+  {
+    /* Depois de /base/nova de propósito: senão "nova" cairia como se fosse um slug. */
+    path: '/base/:slug',
+    name: 'wikiPage',
+    component: () => import(/* webpackChunkName: "wiki" */ '../views/wiki/WikiView.vue'),
+    meta: { auth: true, tenant: true, permission: 'WIKI_VIEW', feature: 'KNOWLEDGE_BASE' }
+  },
+
   /* ------------------------------------------------------------ admin panel */
   {
     path: '/admin',

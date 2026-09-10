@@ -31,6 +31,11 @@ export const SHORTCUTS = [
     when: (auth) => auth.featureOn('TASKS') && auth.can('TASK_VIEW'),
   },
   {
+    key: 'wiki', label: 'Base de conhecimento', icon: 'notebook', to: { name: 'wiki' },
+    hint: 'Procedimentos, decisões e lições aprendidas — o que a equipe sabe, escrito.',
+    when: (auth) => auth.featureOn('KNOWLEDGE_BASE') && auth.can('WIKI_VIEW'),
+  },
+  {
     key: 'risks', label: 'Riscos', icon: 'alert', to: { name: 'risks' },
     hint: 'Probabilidade, impacto, responsável e mitigação.',
     when: (auth) => auth.featureOn('RISKS') && auth.can('RISK_VIEW'),
