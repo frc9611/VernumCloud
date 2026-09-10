@@ -37,16 +37,26 @@ const showFooter = computed(() => !!route.meta?.footer);
  * Anywhere else the palette is what the person chose (light, dark, or whatever the OS says) and
  * the accent is the color of the team open, falling back to the default purple outside a team
  * and on the public screens.
+ *
+ * A route that declares `ownTheme` is left alone: it paints itself and nothing here may repaint it.
  */
 watch(
   () => {
     const admin = !!route.meta?.platform || auth.activeTenantIsSystem;
     return {
+      own: !!route.meta?.ownTheme,
       mode: admin ? 'admin' : prefs.resolvedTheme,
       accent: admin ? ADMIN_ACCENT : route.meta?.bare ? null : auth.activeTenant?.color,
     };
   },
-  ({ mode, accent }) => {
+  ({ own, mode, accent }) => {
+    /*
+     * The wall on the television is the one screen that owns its palette: always dark, in the color
+     * of the team it is showing. Repainting it from here would blank it in the middle of a marathon
+     * — /me answering with the preference of whoever happens to be logged in on that browser, or
+     * the operating system flipping to light at dawn, would turn it into a white lamp on the wall.
+     */
+    if (own) return;
     applyTheme(mode, accent);
     prefs.setActiveMode(mode);
   },

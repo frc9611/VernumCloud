@@ -255,6 +255,13 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import(/* webpackChunkName: "page" */ '../views/page/PageAdminView.vue'),
     meta: { auth: true, tenant: true, permission: 'PAGE_MANAGE', feature: 'LANDING_PAGE' }
   },
+  {
+    /* Sets up the wall on the television and fires the messages that take over its screen. */
+    path: '/admin/mural',
+    name: 'adminWall',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/WallAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'WALL_MANAGE', feature: 'LIVE_WALL' }
+  },
 
   /* ------------------------------------------------------------------ cloud */
   {
@@ -323,6 +330,18 @@ const routes: Array<RouteRecordRaw> = [
     name: 'teamPage',
     component: () => import(/* webpackChunkName: "page" */ '../views/page/PublicTeamPageView.vue'),
     meta: { bare: true, footer: true }
+  },
+  {
+    /*
+     * The wall as the television in the room reads it. No `auth` and no `footer` on purpose: the
+     * screen never logs in and fills the whole display, so the guard below lets it through and
+     * App.vue draws neither header nor footer around it. `ownTheme` is the other half of that: the
+     * screen pins its own dark palette and App.vue keeps its hands off it.
+     */
+    path: '/mural/:token',
+    name: 'wall',
+    component: () => import(/* webpackChunkName: "wall" */ '../views/wall/WallView.vue'),
+    meta: { bare: true, ownTheme: true }
   },
 
   { path: '/:pathMatch(.*)*', redirect: '/home' },

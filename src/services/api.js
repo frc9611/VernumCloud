@@ -494,6 +494,28 @@ export const publicPage = {
   imageUrl: (path) => `${http.defaults.baseURL}${path}`,
 };
 
+/* ---------------------------------------------------------------- live wall */
+
+/*
+ * The television in the room: the kanban, the notices, who is in and a countdown, repainted in real
+ * time. `snapshot` is what the screen on the wall reads — no token of a person, because a television
+ * never logs in — and it answers the same 404 for an unknown address, a wall switched off and a team
+ * that turned the feature off. Everything the screen shows afterwards arrives on its own through the
+ * SSE stream at `/public/wall/{token}/stream`, which does not go through axios and so is not here.
+ *
+ * The rest is for whoever runs the room, and asks for WALL_MANAGE.
+ */
+export const wall = {
+  config: (tenantId) => http.get(`/tenants/${tenantId}/wall`),
+  save: (tenantId, body) => http.put(`/tenants/${tenantId}/wall`, body),
+  /* A new address for the television; the old one stops answering at once. */
+  newToken: (tenantId) => http.post(`/tenants/${tenantId}/wall/token`),
+  /* The message that takes over the whole screen until its duration runs out. */
+  fire: (tenantId, body) => http.post(`/tenants/${tenantId}/wall/events`, body),
+  dismiss: (eventId) => http.delete(`/wall/events/${eventId}`),
+  snapshot: (token) => http.get(`/public/wall/${token}`),
+};
+
 /* -------------------------------------------------------------------- people */
 
 /*
@@ -579,4 +601,5 @@ export default {
   publicRecruitment,
   page,
   publicPage,
+  wall,
 };

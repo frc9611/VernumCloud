@@ -295,6 +295,14 @@ const teamCards = computed(() => {
       to: { name: 'adminPage' },
     });
   }
+  if (auth.featureOn('LIVE_WALL') && auth.can('WALL_MANAGE')) {
+    cards.push({
+      label: 'Mural ao vivo',
+      icon: 'monitor',
+      hint: 'A tela de TV da sala: o link da televisão, o cronômetro, o que aparece e os eventos que tomam a tela.',
+      to: { name: 'adminWall' },
+    });
+  }
   if (auth.can('MEMBER_INVITE')) {
     cards.push({
       label: 'Cadastrar usuário',
