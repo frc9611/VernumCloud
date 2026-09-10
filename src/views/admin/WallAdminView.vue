@@ -150,8 +150,17 @@
               </option>
             </select>
             <p class="vc-faint hint">
-              A demanda dá o nome do que está sendo contado; o campo abaixo dá a hora exata do fim.
-              Escolher uma demanda com prazo já sugere as 23:59 daquele dia.
+              A demanda dá o nome <strong>e a hora</strong> do que está sendo contado: o cronômetro vai
+              até o fim do prazo dela. Use o campo abaixo só se o fim não for meia-noite.
+            </p>
+            <!--
+              Uma demanda sem prazo não tem o que contar, e o mural fica sem relógio. Dizer isso aqui é
+              o que evita a pessoa salvar, ir até a televisão e descobrir lá.
+            -->
+            <p v-if="taskWithoutDeadline" class="hint hint--warn">
+              <AppIcon name="alert" :size="13" />
+              Essa demanda não tem prazo, então não há o que contar. Dê um prazo a ela no quadro, ou
+              digite a hora do fim abaixo.
             </p>
           </div>
 
@@ -467,6 +476,13 @@ function onScreen(event) {
 
 /* -------------------------------------------------------------------- helpers */
 
+/* Escolheu demanda, ela não tem prazo e ninguém digitou hora: não vai haver cronômetro na tela. */
+const taskWithoutDeadline = computed(() => {
+  if (!form.countdownTaskId || form.countdownTarget) return false;
+  const task = tasks.value.find((item) => item.taskId === form.countdownTaskId);
+  return !!task && !task.dueDate;
+});
+
 /* A deadline is a day, so the end of it is the natural guess for the exact minute of the countdown. */
 function suggestTarget() {
   if (!form.countdownTaskId) return;
@@ -491,6 +507,19 @@ async function copy(value) {
 </script>
 
 <style scoped>
+.hint--warn {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 6px 0 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--vc-warning-border);
+  background: var(--vc-warning-bg);
+  color: var(--vc-warning-text);
+  font-size: 12px;
+}
+
 .note {
   margin: 0 0 10px;
   font-size: 0.84rem;
