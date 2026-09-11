@@ -139,10 +139,15 @@ const dropSection = ref(null);
 
 const CONDUCTING_ROLES = ['OWNER', 'ADMIN', 'COACH'];
 
-/** Whether this person conducts the team: by role, or by holding any of the mentor permissions. */
+/**
+ * Whether this person conducts the team: by role, or by holding any of the mentor permissions.
+ *
+ * TASK_MANAGE saiu da lista: o quadro é da equipe inteira agora, então todo estudante a tem e ela não
+ * separa mais quem conduz de quem é conduzido.
+ */
 const conducts = computed(() =>
   CONDUCTING_ROLES.includes(auth.activeMembership?.role)
-  || auth.canAny('TASK_MANAGE', 'RISK_MANAGE', 'DEVELOPMENT_MANAGE', 'EVALUATION_MANAGE',
+  || auth.canAny('RISK_MANAGE', 'DEVELOPMENT_MANAGE', 'EVALUATION_MANAGE',
     'JOURNAL_VIEW', 'PERFORMANCE_MANAGE', 'TENANT_MANAGE'),
 );
 

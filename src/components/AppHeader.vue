@@ -139,7 +139,11 @@ const menuOpen = ref(false);
 const tenantOpen = ref(false);
 const notificationsOpen = ref(false);
 
-/* The Admin Panel link only appears when there is something to administrate. */
+/*
+ * The Admin Panel link only appears when there is something to administrate. TASK_MANAGE deliberately
+ * is not on the list: desde que o quadro virou da equipe inteira, todo estudante tem essa permissão, e
+ * ela deixou de dizer que alguém administra alguma coisa.
+ */
 const showAdminPanel = computed(
   () =>
     auth.platformAdmin ||
@@ -152,7 +156,6 @@ const showAdminPanel = computed(
       'DIVISION_CREATE',
       'DIVISION_UPDATE',
       'RECRUITMENT_MANAGE',
-      'TASK_MANAGE',
       'RISK_MANAGE',
       'PERFORMANCE_MANAGE',
       'DEVELOPMENT_MANAGE',
