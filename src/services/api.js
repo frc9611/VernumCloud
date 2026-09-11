@@ -125,6 +125,13 @@ export const tasks = {
   get: (taskId) => http.get(`/tasks/${taskId}`),
   update: (taskId, body) => http.put(`/tasks/${taskId}`, body),
   remove: (taskId) => http.delete(`/tasks/${taskId}`),
+  /*
+   * Move o cartão de coluna. É a única escrita numa demanda que pede só TASK_VIEW: qualquer pessoa da
+   * equipe arrasta um cartão, seja a demanda dela ou não, e o servidor registra quem moveu.
+   */
+  move: (taskId, status) => http.post(`/tasks/${taskId}/status`, { status }),
+  /* O histórico do cartão: quem moveu, de onde para onde, quando. */
+  moves: (taskId) => http.get(`/tasks/${taskId}/moves`),
   /* Notifies whoever the demanda is on and answers the text, for e-mail or WhatsApp. */
   remind: (taskId) => http.post(`/tasks/${taskId}/reminder`),
   /*

@@ -76,7 +76,7 @@
               { 'vc-kanban__card--team': allTeams, 'is-dragging': dragging === task.taskId },
             ]"
             :style="allTeams ? { borderTopColor: task.tenantColor || 'var(--vc-purple)' } : null"
-            :draggable="canManage(task)"
+            :draggable="canMove(task)"
             @dragstart="onDragStart($event, task)"
             @dragend="onDragEnd"
             @click="open(task)"
@@ -187,12 +187,31 @@
         Último lembrete: {{ formatDate(selected.lastReminderOn) }}.
       </p>
 
+      <!--
+        O histórico do cartão. Ele é o que responde por mover uma demanda sem TASK_MANAGE: qualquer
+        pessoa arrasta, e toda movimentação fica assinada aqui.
+      -->
+      <SectionTitle lead="Histórico" title="Do Cartão" />
+      <div v-if="moves.length" class="vc-list">
+        <div v-for="move in moves" :key="move.moveId" class="vc-list__item vc-list__item--plain">
+          <div class="vc-list__text">
+            <strong>{{ move.who }}</strong>
+            <span>{{ move.change }}</span>
+          </div>
+          <span class="vc-list__aside">{{ formatMoment(move.movedAt) }}</span>
+        </div>
+      </div>
+      <p v-else-if="loadingMoves" class="vc-faint">Carregando o histórico...</p>
+      <EmptyState v-else title="Sem movimentações">
+        Este cartão ainda não mudou de coluna.
+      </EmptyState>
+
       <template #footer>
         <button v-if="canManage(selected) && selected.assignees.length" class="vc-btn vc-btn--outline"
                 type="button" @click="remind(selected)">
           Lembrar agora
         </button>
-        <button v-if="canManage(selected)" class="vc-btn vc-btn--outline" type="button"
+        <button v-if="canMove(selected)" class="vc-btn vc-btn--outline" type="button"
                 @click="advance(selected)">
           Avançar situação
         </button>
@@ -339,6 +358,9 @@ const divisionList = ref([]);
 /* Whose members and divisions the form is showing; the edit of another team's card swaps them. */
 const peopleTenantId = ref(null);
 const selected = ref(null);
+/* O histórico do cartão aberto, pedido ao servidor quando ele abre: não vem junto da lista de cartões. */
+const moves = ref([]);
+const loadingMoves = ref(false);
 const editing = ref(false);
 const search = ref('');
 const filters = reactive({ divisionId: '', mine: false, assignedToMe: false, inMyDivisions: false });
@@ -432,6 +454,17 @@ function canManage(task) {
   if (!task) return false;
   if (!allTeams.value) return auth.can('TASK_MANAGE');
   return auth.permissionsOn(task.tenantId).includes('TASK_MANAGE');
+}
+
+/*
+ * Quem pode mover um cartão de coluna, que é qualquer pessoa que enxerga o quadro — a demanda não
+ * precisa ser dela. Quem terminou o trabalho é quem sabe que o cartão andou, e o servidor registra a
+ * movimentação no próprio cartão. Alterar o resto da demanda continua sendo canManage().
+ */
+function canMove(task) {
+  if (!task) return false;
+  if (!allTeams.value) return auth.can('TASK_VIEW');
+  return auth.permissionsOn(task.tenantId).includes('TASK_VIEW');
 }
 
 async function load() {
@@ -549,6 +582,21 @@ async function loadPeople(tenantId) {
 
 function open(task) {
   selected.value = task;
+  loadMoves(task.taskId);
+}
+
+/* O histórico de um cartão. Um erro aqui esvazia a lista e não estraga o resto do cartão. */
+async function loadMoves(taskId) {
+  loadingMoves.value = true;
+  moves.value = [];
+  try {
+    const { data } = await tasksApi.moves(taskId);
+    moves.value = data;
+  } catch (error) {
+    moves.value = [];
+  } finally {
+    loadingMoves.value = false;
+  }
 }
 
 async function openCreate() {
@@ -628,10 +676,12 @@ async function moveTo(task, status) {
   const before = task.status;
   applyStatus(task, status);
   try {
-    const { data } = await tasksApi.update(task.taskId, { status });
+    const { data } = await tasksApi.move(task.taskId, status);
     //The card the hand is still on gets the server's own words, before the board is read again
     Object.assign(task, { status: data.status, statusLabel: data.statusLabel, updatedAt: data.updatedAt });
     if (!allTeams.value) await reload();
+    //O cartão aberto passou a ter mais uma linha de histórico
+    if (selected.value && selected.value.taskId === task.taskId) await loadMoves(task.taskId);
     return true;
   } catch (error) {
     applyStatus(task, before);
@@ -678,7 +728,7 @@ async function advance(task) {
 }
 
 function onDragStart(event, task) {
-  if (!canManage(task)) {
+  if (!canMove(task)) {
     event.preventDefault();
     return;
   }
@@ -713,7 +763,7 @@ async function onDrop(event, status) {
   dragging.value = null;
   dropTarget.value = null;
   const task = findTask(taskId);
-  if (!task || task.status === status || !canManage(task)) return;
+  if (!task || task.status === status || !canMove(task)) return;
   await moveTo(task, status);
 }
 
@@ -749,6 +799,12 @@ function mailto(person) {
     + `Critério de conclusão: ${selected.value.definitionOfDone || '—'}\n`;
   return `mailto:${encodeURIComponent(person.email)}?subject=${encodeURIComponent(subject)}`
     + `&body=${encodeURIComponent(body)}`;
+}
+
+/* Data e hora de uma movimentação: o dia sozinho não distingue dois movimentos da mesma tarde. */
+function formatMoment(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 function formatDate(value) {
