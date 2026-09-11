@@ -54,13 +54,22 @@
         </p>
 
         <div v-if="platformCards.length" class="vc-grid">
-          <router-link v-for="card in platformCards" :key="card.label" :to="card.to" class="vc-card vc-card--action">
+          <component
+            :is="card.href ? 'a' : 'router-link'"
+            v-for="card in platformCards"
+            :key="card.label"
+            :to="card.to"
+            :href="card.href"
+            :target="card.href ? '_blank' : undefined"
+            :rel="card.href ? 'noopener' : undefined"
+            class="vc-card vc-card--action"
+          >
             <div class="vc-card__header">
               <span>{{ card.label }}</span>
               <AppIcon class="vc-card__icon" :name="card.icon" :size="17" />
             </div>
             <div class="vc-card__body"><p>{{ card.hint }}</p></div>
-          </router-link>
+          </component>
         </div>
       </section>
 
@@ -117,6 +126,9 @@ const inactiveUsers = computed(() =>
   Math.max(0, (overview.value?.users ?? 0) - (overview.value?.activeUsers ?? 0)),
 );
 
+/* The arena master is a separate app on its own address, so its card is a link out and not a route. */
+const arenaUrl = process.env.VUE_APP_ARENA_URL || 'https://arena.frc9611.com';
+
 const platformCards = computed(() => {
   const cards = [];
   if (auth.canPlatform('TENANT_VIEW_ALL') || auth.canPlatform('TENANT_CREATE')) {
@@ -133,6 +145,14 @@ const platformCards = computed(() => {
       icon: 'users',
       hint: 'Todas as contas: em que equipes cada pessoa está, senha provisória, desativar e apagar.',
       to: { name: 'adminUsers' },
+    });
+  }
+  if (auth.canPlatform('ARENA_ACCESS')) {
+    cards.push({
+      label: 'Arena Master',
+      icon: 'arena',
+      hint: 'Eventos, instâncias do cyber-arena e a página pública do torneio. Abre em outra aba.',
+      href: arenaUrl,
     });
   }
   if (auth.canPlatform('TENANT_UPDATE')) {
