@@ -15,7 +15,13 @@
       </EmptyState>
     </div>
 
-    <TeamPage v-else :page="page" :image-url="publicPage.imageUrl" />
+    <TeamPage
+      v-else
+      :page="page"
+      :image-url="publicPage.imageUrl"
+      :load-post="loadPost"
+      :load-more="loadMorePosts"
+    />
   </main>
 </template>
 
@@ -40,6 +46,12 @@ const route = useRoute();
 const page = ref(null);
 const loading = ref(true);
 const notFound = ref(false);
+/*
+ * The page itself carries the six most recent posts, so the "ver mais" continues from page 1 of six.
+ * Asking for a different size would step over or repeat whatever the page already showed.
+ */
+const POSTS_PER_PAGE = 6;
+const postsPage = ref(0);
 
 const originalTitle = document.title;
 
@@ -54,6 +66,7 @@ onUnmounted(() => {
 async function load() {
   loading.value = true;
   notFound.value = false;
+  postsPage.value = 0;
   try {
     const { data } = await publicPage.team(route.params.slug);
     page.value = data;
@@ -66,6 +79,28 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+/*
+ * The next page of posts, appended. De-duplicated by id because a post published between the two
+ * requests pushes everything one place down, and the same post would otherwise arrive twice.
+ */
+async function loadMorePosts() {
+  const next = postsPage.value + 1;
+  const { data } = await publicPage.posts(route.params.slug, { page: next, size: POSTS_PER_PAGE });
+  const known = new Set((page.value.posts || []).map((post) => post.postId));
+  page.value.posts = [
+    ...(page.value.posts || []),
+    ...(data.items || []).filter((post) => !known.has(post.postId)),
+  ];
+  page.value.postCount = data.totalElements;
+  postsPage.value = next;
+}
+
+/* One post in full: the list comes without the bodies, and this is what "ler mais" reaches for. */
+async function loadPost(postId) {
+  const { data } = await publicPage.post(route.params.slug, postId);
+  return data;
 }
 </script>
 

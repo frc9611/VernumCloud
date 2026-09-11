@@ -521,6 +521,12 @@ export const page = {
  */
 export const publicPage = {
   team: (slug) => http.get(`/public/teams/${encodeURIComponent(slug)}`),
+  /*
+   * The published posts of a team, paged and without the body: the page itself already brings the
+   * first ones, and this is the "ver mais". Params: page, size.
+   */
+  posts: (slug, params) =>
+    http.get(`/public/teams/${encodeURIComponent(slug)}/posts`, { params: params || {} }),
   post: (slug, postId) => http.get(`/public/teams/${encodeURIComponent(slug)}/posts/${postId}`),
   imageUrl: (path) => `${http.defaults.baseURL}${path}`,
 };

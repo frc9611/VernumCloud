@@ -124,10 +124,15 @@
         </div>
       </section>
 
-      <section v-if="page.posts && page.posts.length" class="page__section">
+      <!--
+        A lista de publicações vem sem o corpo: um corpo tem até trinta mil caracteres, e mandar todos
+        de uma vez era mandar a equipe inteira para quem veio ler uma publicação. O que a lista traz é o
+        resumo ou o começo do texto; "ler mais" busca o corpo daquela publicação.
+      -->
+      <section v-if="posts.length" class="page__section">
         <h2 class="page__title">Publicações</h2>
         <div class="page__posts">
-          <article v-for="post in page.posts" :key="post.postId" :class="['page__post', { 'has-cover': post.hasCover }]">
+          <article v-for="post in posts" :key="post.postId" :class="['page__post', { 'has-cover': post.hasCover }]">
             <img v-if="post.hasCover" class="page__post-cover" :src="imageUrl(post.coverPath)" alt="" />
             <div class="page__post-body">
               <h3 class="page__post-title">{{ post.title }}</h3>
@@ -136,13 +141,19 @@
                 <template v-if="post.authorName"> · {{ post.authorName }}</template>
               </p>
               <p v-if="post.summary" class="page__post-summary">{{ post.summary }}</p>
-              <p v-if="post.body && showsBody(post)" class="page__text">{{ post.body }}</p>
-              <button v-if="post.summary && post.body" class="page__more" type="button" @click="toggle(post.postId)">
-                {{ expanded.includes(post.postId) ? 'Ler menos' : 'Ler mais' }}
+              <p v-else-if="post.excerpt && !opened(post)" class="page__text">{{ post.excerpt }}</p>
+              <p v-if="opened(post) && bodyOf(post)" class="page__text">{{ bodyOf(post) }}</p>
+              <p v-if="opened(post) && !bodyOf(post)" class="vc-faint">Carregando...</p>
+              <button v-if="hasMore(post)" class="page__more" type="button" @click="toggle(post)">
+                {{ opened(post) ? 'Ler menos' : 'Ler mais' }}
               </button>
             </div>
           </article>
         </div>
+        <button v-if="hasMorePosts" class="page__more" type="button" :disabled="loadingMore"
+                @click="more">
+          Ver mais publicações
+        </button>
       </section>
     </div>
 
@@ -153,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { formatDate as formatDateOf } from '@/services/time.js';
 
@@ -166,17 +177,35 @@ import { formatDate as formatDateOf } from '@/services/time.js';
  *
  * `imageUrl` turns the *Path fields of the DTO into something an <img> can load, so the same
  * component serves the public route (direct URLs) and, one day, an authenticated preview (blobs).
+ *
+ * `loadPost` e `loadMore` seguem a mesma ideia: quem sabe buscar é quem montou a página. Sem eles o
+ * componente continua desenhando tudo que recebeu — é assim que uma pré-visualização, que já tem os
+ * corpos em mãos, usa este arquivo sem precisar de rota nenhuma.
  */
 const props = defineProps({
   page: { type: Object, required: true },
   imageUrl: { type: Function, required: true },
+  /** Busca uma publicação inteira pelo id e devolve o DTO dela; a lista vem sem o corpo. */
+  loadPost: { type: Function, default: null },
+  /** Acrescenta a próxima página de publicações a `page.posts`. */
+  loadMore: { type: Function, default: null },
 });
 
 const VARIANTS = { CLASSIC: 'classic', BOLD: 'bold', MINIMAL: 'minimal' };
+/* O que o servidor põe no fim de um excerto que cortou: é por ele que se sabe que sobrou texto. */
+const ELLIPSIS = '…';
 
 const expanded = ref([]);
+/* Corpo por id, buscado uma vez e guardado aqui em vez de escrito de volta na prop. */
+const bodies = reactive({});
+const loadingMore = ref(false);
 
 const variant = computed(() => VARIANTS[props.page.template] || 'classic');
+
+const posts = computed(() => props.page.posts || []);
+
+const hasMorePosts = computed(() =>
+  !!props.loadMore && posts.value.length < (props.page.postCount || 0));
 
 const monogram = computed(() => {
   const words = String(props.page.teamName || '').trim().split(/\s+/).filter(Boolean);
@@ -233,17 +262,61 @@ const instagramLabel = computed(() => {
   }
 });
 
-/** A post with a summary opens on the summary; the body comes with "ler mais". */
-function showsBody(post) {
-  return !post.summary || expanded.value.includes(post.postId);
+function opened(post) {
+  return expanded.value.includes(post.postId);
 }
 
-function toggle(postId) {
-  const index = expanded.value.indexOf(postId);
+/*
+ * Se ainda há texto que a lista não mostrou. O excerto terminado em reticências é um corpo cortado, e
+ * um resumo esconde o corpo inteiro atrás de si; sem nenhum dos dois o que está na tela já é a
+ * publicação toda, e um "Ler mais" ali só busca de volta o mesmo texto — que era o que este arquivo
+ * fazia antes de a lista parar de mandar o corpo, e sem botão nenhum.
+ */
+function hasMore(post) {
+  return !!post.excerpt && (!!post.summary || post.excerpt.endsWith(ELLIPSIS));
+}
+
+/** O corpo já buscado, ou o que a própria lista trouxe quando ela traz corpo (pré-visualização). */
+function bodyOf(post) {
+  return bodies[post.postId] ?? post.body ?? null;
+}
+
+/**
+ * Abre e fecha uma publicação, buscando o corpo na primeira vez que ela abre.
+ *
+ * <p>Sem `loadPost` — uma pré-visualização, por exemplo — o que já veio na lista é tudo que existe, e
+ * o começo do texto fica no lugar do corpo em vez de a publicação ficar carregando para sempre.</p>
+ */
+async function toggle(post) {
+  const index = expanded.value.indexOf(post.postId);
   if (index >= 0) {
     expanded.value.splice(index, 1);
-  } else {
-    expanded.value.push(postId);
+    return;
+  }
+  expanded.value.push(post.postId);
+  if (bodyOf(post) !== null) return;
+  if (!props.loadPost) {
+    bodies[post.postId] = post.excerpt;
+    return;
+  }
+  try {
+    const full = await props.loadPost(post.postId);
+    bodies[post.postId] = (full && full.body) || post.excerpt;
+  } catch (error) {
+    //Uma página pública não tem toast: o texto fica no que a lista já trouxe
+    bodies[post.postId] = post.excerpt;
+  }
+}
+
+async function more() {
+  if (loadingMore.value) return;
+  loadingMore.value = true;
+  try {
+    await props.loadMore();
+  } catch (error) {
+    //Outra vez sem toast: o botão continua ali, e apertar de novo é a tentativa seguinte
+  } finally {
+    loadingMore.value = false;
   }
 }
 
