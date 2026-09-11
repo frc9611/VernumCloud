@@ -172,13 +172,17 @@
           </div>
           <div v-if="people.length > 1" class="vc-field" style="margin: 0; min-width: 220px">
             <label class="vc-label" for="person">Pessoa</label>
-            <select id="person" class="vc-select" v-model="personFilter">
+            <select id="person" class="vc-select" v-model="personFilter" @change="reloadEntries">
               <option value="">Todas que você acompanha</option>
               <option v-for="person in people" :key="person.userId" :value="person.userId">
-                {{ person.userName }}
+                {{ person.name }}
               </option>
             </select>
           </div>
+          <span class="vc-spacer"></span>
+          <span class="vc-chip" style="align-self: flex-end">
+            {{ entries.length }} de {{ entriesTotal }} estada(s)
+          </span>
         </div>
 
         <div class="vc-table-wrap">
@@ -190,7 +194,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="stay in visibleEntries" :key="stay.attendanceId">
+              <tr v-for="stay in entries" :key="stay.attendanceId">
                 <td><PersonLink :user-id="stay.userId" :name="stay.userName" /></td>
                 <td>{{ formatDateTime(stay.startTime) }}</td>
                 <td>
@@ -207,12 +211,20 @@
               </tr>
             </tbody>
           </table>
-          <EmptyState v-if="!visibleEntries.length" title="Nenhuma estada no período">
+          <EmptyState v-if="!entries.length" title="Nenhuma estada no período">
             Ajuste as datas ou espere alguém marcar presença no quiosque.
           </EmptyState>
         </div>
+        <div v-if="entries.length < entriesTotal" class="vc-row">
+          <button class="vc-btn vc-btn--ghost" type="button" :disabled="loadingMore" @click="loadMoreEntries">
+            Carregar mais
+          </button>
+        </div>
         <p class="vc-faint" style="margin: 0">
           Uma estada conta para o dia em que começou, mesmo quando atravessa a meia-noite.
+          <template v-if="entriesPage > 0">
+            A atualização automática fica em espera enquanto você lê mais de uma página.
+          </template>
         </p>
       </template>
     </div>
@@ -275,7 +287,16 @@ const scope = ref({ board: 'SELF', logs: 'SELF', divisions: [], canRegister: fal
 const me = ref({ inRoom: false, since: null, secondsInRoom: 0, totalSeconds: 0, tenants: [] });
 const now = ref([]);
 const ranking = ref([]);
+/*
+ * The history is a page now: `entries` is what has been loaded so far, `entriesTotal` how many stays
+ * the window really holds, and `entriesPage` the last page asked for.
+ */
 const entries = ref([]);
+const entriesTotal = ref(0);
+const entriesPage = ref(0);
+const loadingMore = ref(false);
+/* Who the caller may read the register of, from the team's memberships — not from the rows that came. */
+const people = ref([]);
 /*
  * Whether the ranking shows whoever conducts the team. Off by default and remembered per browser: the
  * server hides the staff unless asked, and the 60 s refresh has to keep asking the same thing.
@@ -334,25 +355,21 @@ const lastUpdatedLabel = computed(() =>
   lastUpdated.value ? `Atualizado às ${lastUpdated.value}` : '',
 );
 
-/* The person filter only offers who the server actually answered about. */
-const people = computed(() => {
-  const seen = new Map();
-  entries.value.forEach((stay) => {
-    if (stay.userId && !seen.has(stay.userId)) {
-      seen.set(stay.userId, { userId: stay.userId, userName: stay.userName });
-    }
-  });
-  return [...seen.values()].sort((a, b) => (a.userName || '').localeCompare(b.userName || ''));
-});
-
-const visibleEntries = computed(() =>
-  personFilter.value ? entries.value.filter((stay) => stay.userId === personFilter.value) : entries.value,
-);
-
 onMounted(() => {
   load();
-  timer = setInterval(load, REFRESH_MS);
+  timer = setInterval(tick, REFRESH_MS);
 });
+
+/*
+ * The automatic refresh reads the first page again, and holds off entirely once somebody has asked for
+ * more than one. Reloading from page 0 under a person who pressed "Carregar mais" three times would
+ * take back what they asked for, without them touching anything; waiting until they scroll back to the
+ * top costs one stale minute and surprises nobody.
+ */
+function tick() {
+  if (entriesPage.value > 0) return;
+  load();
+}
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
@@ -378,27 +395,67 @@ async function load() {
   const tenantId = auth.activeTenantId;
   const params = { from: period.from, to: period.to };
   try {
-    const [scopeResponse, meResponse] = await Promise.all([
+    const [scopeResponse, meResponse, peopleResponse] = await Promise.all([
       attendanceApi.scope(tenantId),
       attendanceApi.me(),
+      attendanceApi.people(tenantId),
     ]);
     scope.value = scopeResponse.data;
     me.value = meResponse.data;
+    people.value = peopleResponse.data || [];
+    /* Changing teams leaves the filter pointing at somebody who is not in this one, and the server
+       would refuse the history of a stranger; it is dropped before the history is asked for. */
+    if (personFilter.value && !people.value.some((person) => person.userId === personFilter.value)) {
+      personFilter.value = '';
+    }
 
-    const [nowResponse, rankingResponse, entriesResponse] = await Promise.all([
+    const [nowResponse, rankingResponse] = await Promise.all([
       attendanceApi.now(tenantId),
       /* Only the ranking is a frequency analysis; the history keeps showing everybody's stays */
       attendanceApi.ranking(tenantId, { ...params, includeStaff: includeStaff.value }),
-      attendanceApi.entries(tenantId, params),
     ]);
     now.value = nowResponse.data;
     ranking.value = rankingResponse.data;
-    entries.value = entriesResponse.data;
+    await loadEntries(0);
     lastUpdated.value = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar a presença'));
   } finally {
     loading.value = false;
+  }
+}
+
+/* One page of the history. Page 0 replaces what is on the screen; anything after it is appended. */
+async function loadEntries(page) {
+  const { data } = await attendanceApi.entries(auth.activeTenantId, {
+    from: period.from,
+    to: period.to,
+    userId: personFilter.value || undefined,
+    page,
+  });
+  entries.value = page === 0 ? (data.items || []) : [...entries.value, ...(data.items || [])];
+  entriesTotal.value = data.totalElements || 0;
+  entriesPage.value = data.page || 0;
+}
+
+/* The history from the top again: what the person filter goes back to. */
+async function reloadEntries() {
+  try {
+    await loadEntries(0);
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar o histórico'));
+  }
+}
+
+async function loadMoreEntries() {
+  if (loadingMore.value) return;
+  loadingMore.value = true;
+  try {
+    await loadEntries(entriesPage.value + 1);
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar o histórico'));
+  } finally {
+    loadingMore.value = false;
   }
 }
 

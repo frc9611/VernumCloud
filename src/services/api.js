@@ -351,8 +351,18 @@ export const attendance = {
   now: (tenantId) => http.get(`/tenants/${tenantId}/attendance/now`),
   ranking: (tenantId, params) =>
     http.get(`/tenants/${tenantId}/attendance/ranking`, { params: params || {} }),
+  /*
+   * The stays of a period, paged: { items, page, size, totalElements, totalPages }. Params: userId,
+   * from, to, page, size. The period is pushed down to SQL, so a team with years of presence answers
+   * the window and not its whole history.
+   */
   entries: (tenantId, params) =>
     http.get(`/tenants/${tenantId}/attendance/entries`, { params: params || {} }),
+  /*
+   * Who the caller may read the register of. The dropdown used to be built from the rows that came
+   * back, which stops being the truth the moment the rows are a page.
+   */
+  people: (tenantId) => http.get(`/tenants/${tenantId}/attendance/people`),
   close: (attendanceId, endTime) =>
     http.post(`/attendance/${attendanceId}/close`, null, { params: endTime ? { endTime } : {} }),
 };
