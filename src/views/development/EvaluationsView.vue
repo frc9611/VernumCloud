@@ -14,11 +14,21 @@
         nota. A pessoa lê as que foram compartilhadas com ela; ler as da equipe inteira pede permissão.
       </AlertBanner>
 
+      <PanelCard v-if="showTrend" title="Evolução" icon="chart" muted>
+        <TrendChart :series="trend?.series || []" :title="trendTitle" />
+        <p class="vc-faint" style="font-size: 0.76rem; margin: 10px 0 0">
+          Um ponto por dia em que alguém foi avaliado, com a média das avaliações daquele dia que você
+          alcança — a mesma régua da lista abaixo, nunca uma a mais.
+        </p>
+      </PanelCard>
+
       <div class="vc-row" style="flex-wrap: wrap">
         <select v-if="scope?.reach !== 'SELF'" class="vc-select" style="max-width: 260px"
                 v-model="filterUser" @change="load">
           <option value="">Todas as pessoas</option>
-          <option v-for="person in people" :key="person" :value="person">{{ person }}</option>
+          <option v-for="person in people" :key="person.userId" :value="person.userId">
+            {{ person.name }}
+          </option>
         </select>
         <span class="vc-spacer"></span>
       </div>
@@ -68,28 +78,61 @@ import AlertBanner from '@/components/AlertBanner.vue';
 import PersonLink from '@/components/PersonLink.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import TrendChart from '@/components/TrendChart.vue';
 import { authStore } from '@/store/auth.js';
 import { development } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
+import { toDateInputValue } from '@/services/time.js';
 
 /*
- * The history of the evaluation cycles the reader may see.
+ * The history of the evaluation cycles the reader may see, and the curve of the same thing.
  *
- * The filter is by name and not by id because the list already carries the names it can show, and
- * asking the server for the members would need a permission this screen deliberately does not
- * require — a person with no permission at all still opens this and reads their own.
+ * The people in the filter come from the evaluations that came back, not from the members of the
+ * team: this screen asks for no permission on purpose, and somebody with none still opens it to read
+ * their own. They are keyed by userId — the chart asks the server for one person, and two people
+ * called "João Silva" would otherwise share a line.
  */
 const auth = authStore();
 const toast = useToast();
 
+/* A year, not the 180 days the route defaults to: a cycle happens a few times a season, and half a
+ * season can easily hold a single point — which is not a curve and the chart would say so. */
+const TREND_DAYS = 365;
+
 const evaluations = ref([]);
 const scope = ref(null);
 const filterUser = ref('');
+const trend = ref(null);
+/* Starts hidden and stays hidden when the call fails, so the card never flashes "sem registros
+ * suficientes" while the answer is still in the air — see loadTrend */
+const showTrend = ref(false);
 
-const people = computed(() =>
-  [...new Set(all.value.map((evaluation) => evaluation.subject.name))].sort((a, b) => a.localeCompare(b)),
-);
 const all = ref([]);
+const people = computed(() => {
+  const named = new Map();
+  for (const evaluation of all.value) {
+    named.set(evaluation.subject.userId, evaluation.subject.name);
+  }
+  return [...named]
+    .map(([userId, name]) => ({ userId, name }))
+    .sort((first, second) => first.name.localeCompare(second.name));
+});
+
+/*
+ * With a person chosen the server names the curve after them, so the card just borrows the name.
+ *
+ * Without one the server calls it "da equipe", which is only true for a reader who reaches the whole
+ * team: the very same answer, given to somebody who leads one division, is the average of that branch
+ * and of nothing else. So the reach from /development/scope goes into the title — this is the one
+ * number on the screen that must never claim to count more than it counted.
+ */
+const trendTitle = computed(() => {
+  const label = trend.value?.series?.[0]?.label;
+  if (!label) return '';
+  if (filterUser.value) return 'Autonomia de ' + label;
+  if (!scope.value || scope.value.reach === 'TENANT' || !scope.value.reachLabel) return label;
+  return 'Autonomia média — ' + scope.value.reachLabel;
+});
 
 onMounted(load);
 watch(() => auth.activeTenantId, load);
@@ -104,10 +147,37 @@ async function load() {
     scope.value = scopeAnswer.data;
     all.value = list.data;
     evaluations.value = filterUser.value
-      ? list.data.filter((evaluation) => evaluation.subject.name === filterUser.value)
+      ? list.data.filter((evaluation) => evaluation.subject.userId === filterUser.value)
       : list.data;
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar as avaliações'));
+  }
+  await loadTrend();
+}
+
+/*
+ * The curve, asked for apart from the list so the page paints without waiting on it.
+ *
+ * A failure here hides the card and raises nothing, the way a secondary call does elsewhere in the
+ * dashboard: the 403 of somebody who does not reach this team has already been answered by the list,
+ * and a second red box says the same thing twice. The other case it swallows is a person who was
+ * evaluated and then left the team — the list still shows their cycles, the server refuses to chart
+ * somebody who is no longer a member, and the card simply is not there.
+ */
+async function loadTrend() {
+  if (!auth.activeTenantId) return;
+  const since = new Date();
+  since.setDate(since.getDate() - TREND_DAYS); //Not a subtraction in milliseconds: DST
+  try {
+    const { data } = await development.evaluationTrend(auth.activeTenantId, {
+      userId: filterUser.value || undefined,
+      from: toDateInputValue(since),
+    });
+    trend.value = data;
+    showTrend.value = true;
+  } catch (error) {
+    trend.value = null;
+    showTrend.value = false;
   }
 }
 

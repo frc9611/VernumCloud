@@ -25,6 +25,11 @@
   --vc-surface-muted: #f4f4f6;
   --vc-border: #e4e4e8;
   --vc-border-strong: #d3d3d9;
+  /*
+   * Grid of a chart. Not --vc-border: a grid line has to sit BEHIND the curve drawn over it, so it is
+   * a step quieter than the line that closes a card. The dark palettes move it the other way.
+   */
+  --vc-chart-grid: #ececf0;
 
   /* Text */
   --vc-text: #1f1f24;
@@ -97,6 +102,10 @@
   --vc-info-bg: #1c2a3d;
   --vc-info-text: #8fb6e6;
   --vc-info-border: #2f4a6e;
+
+  /* A grid line on a dark surface has to be LIGHTER than the surface to exist at all, so it cannot
+     be derived from the light value: it is lifted off the surface instead of laid onto it */
+  --vc-chart-grid: #32323b;
 
   /* A shadow on a dark page needs far more ink to be seen at all */
   --vc-backdrop: rgba(0, 0, 0, 0.62);
@@ -1284,8 +1293,83 @@ button.vc-metric:hover {
 }
 .vc-switch__toggle:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/*
+ * Evolution chart, drawn by components/TrendChart.vue.
+ *
+ * The <svg> carries a fixed viewBox and the browser scales it, text and all, to the width of the card.
+ * That is the whole trade: no JavaScript measuring anything, but the axis type grows on a wide screen
+ * and shrinks on a narrow one — which is why the breakpoint at the bottom of this file gives the axis
+ * more user units on a phone instead of leaving it at six physical pixels.
+ */
+.vc-chart {
+  display: grid;
+  gap: 8px;
+}
+/* Two curves that share the days but not the axis are two charts, and they need air between them */
+.vc-chart + .vc-chart {
+  margin-top: 16px;
+}
+.vc-chart__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--vc-text-muted);
+}
+.vc-chart__empty {
+  margin: 0;
+  font-size: 0.82rem;
+}
+.vc-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.vc-chart__grid line {
+  stroke: var(--vc-chart-grid);
+  stroke-width: 1;
+}
+.vc-chart__axis {
+  fill: var(--vc-text-faint);
+  font-size: 10px; /* user units of the viewBox, not screen pixels */
+  font-variant-numeric: tabular-nums;
+}
+.vc-chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The halo is the surface itself, so two dots that land on the same day still read as two */
+.vc-chart__dot {
+  stroke: var(--vc-surface);
+  stroke-width: 1.2;
+}
+.vc-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--vc-text-muted);
+}
+.vc-chart__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vc-chart__swatch {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 3px;
+}
+
 @media (max-width: 720px) {
   .vc-kanban { grid-template-columns: repeat(6, minmax(180px, 180px)); }
   .vc-scored { grid-template-columns: 1fr auto; }
   .vc-scored .vc-bar { grid-column: 1 / -1; }
+  /* The chart is scaled down to about 0.6 here, so 15 user units is what lands near 9px on a phone */
+  .vc-chart__axis { font-size: 15px; }
 }

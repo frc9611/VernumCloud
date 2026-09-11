@@ -56,6 +56,36 @@
         </template>
       </PanelCard>
 
+      <!-- ---------------------------------------------------------- evolution -->
+      <PanelCard v-if="showEvolution" title="Evolução" icon="chart" muted>
+        <div class="vc-row" style="flex-wrap: wrap; margin-bottom: 12px">
+          <select class="vc-select" style="max-width: 190px" v-model.number="windowDays"
+                  aria-label="Período do gráfico" @change="loadEvolution">
+            <option :value="90">Últimos 90 dias</option>
+            <option :value="180">Últimos 180 dias</option>
+            <option :value="365">Último ano</option>
+          </select>
+          <button v-if="areaSeries.length" type="button"
+                  :class="['vc-chip', 'vc-chip--button', byArea ? 'vc-chip--purple' : '']"
+                  :aria-pressed="byArea ? 'true' : 'false'" @click="byArea = !byArea">
+            por área
+          </button>
+          <span class="vc-spacer"></span>
+        </div>
+
+        <TrendChart :series="reliabilitySeries"
+                    :title="byArea ? 'Confiabilidade da equipe e das áreas' : 'Confiabilidade da equipe'" />
+        <!-- Points live in their own chart: they share the days but not the axis, and a run worth 210
+             drawn against a scale that ends at 100 would leave the reliability as a flat line -->
+        <TrendChart v-if="pointsSeries.length" :series="pointsSeries" title="Pontos por dia" />
+
+        <p class="vc-faint" style="font-size: 0.76rem; margin: 12px 0 0">
+          A nota de cada área e a prontidão são sobrescritas quando alguém digita a próxima, então não
+          têm história para desenhar. O que tem é o que foi medido: cada ponto é o dia inteiro somado e
+          depois dividido, como a confiabilidade lá em cima.
+        </p>
+      </PanelCard>
+
       <!-- -------------------------------------------------------------- areas -->
       <SectionTitle :lead="isMissions ? 'Rubricas' : 'Readiness por'"
                     :title="isMissions ? 'da Temporada' : 'Subsistema'">
@@ -306,6 +336,7 @@ import PanelCard from '@/components/PanelCard.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
+import TrendChart from '@/components/TrendChart.vue';
 import { authStore } from '@/store/auth.js';
 import { performance as performanceApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
@@ -322,6 +353,13 @@ const auth = authStore();
 const toast = useToast();
 
 const module = ref(null);
+const evolution = ref(null);
+/* The card appears only once a curve has actually come back: it starts hidden so the screen never
+ * flashes "sem registros suficientes" while the call is still in the air, and goes back to hidden
+ * when the call fails — see loadEvolution */
+const showEvolution = ref(false);
+const windowDays = ref(180);
+const byArea = ref(false);
 const areaModal = ref(false);
 const runModal = ref(false);
 const readinessModal = ref(false);
@@ -333,6 +371,19 @@ const readinessForm = reactive({ readinessScore: null, autonomy: null, deliveryR
   nextMilestone: '', status: 'YELLOW', priorities: ['', '', ''] });
 
 const canManage = computed(() => auth.can('PERFORMANCE_MANAGE'));
+const seriesOf = (test) => (evolution.value?.series || []).filter((one) => test(one.key));
+const teamSeries = computed(() => seriesOf((key) => key === 'team'));
+const areaSeries = computed(() => seriesOf((key) => key.startsWith('area:')));
+/* Only when something actually scored: a league of missions always answers this series, and an
+ * empty second chart repeating "sem registros" under the first one says nothing twice. */
+const pointsSeries = computed(() =>
+  seriesOf((key) => key === 'points').filter((one) => (one.points || []).length > 0));
+/*
+ * The team alone by default. Eight subsystems at once is a plate of spaghetti nobody reads, so the
+ * areas are one click away instead of one glance away — and the button only exists when there are any.
+ */
+const reliabilitySeries = computed(() =>
+  (byArea.value ? [...teamSeries.value, ...areaSeries.value] : teamSeries.value));
 const isMissions = computed(() => module.value?.performanceStyle === 'MISSIONS');
 const areaMax = computed(() => (areaForm.kind === 'RUBRIC' ? 4 : 100));
 
@@ -346,6 +397,31 @@ async function load() {
     module.value = data;
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar a performance'));
+  }
+  await loadEvolution();
+}
+
+/*
+ * The curve, asked for separately from the module so the page paints without waiting on it.
+ *
+ * A failure here hides the card instead of raising a toast: this is the secondary call of the screen,
+ * the way the apps list is on the API keys screen. The case that matters is the 403 of somebody who
+ * opened the page through another route and does not read this team's performance — being told twice
+ * helps nobody, and a chart that nobody asked for is not worth a red box over the page.
+ */
+async function loadEvolution() {
+  if (!auth.activeTenantId) return;
+  const since = new Date();
+  since.setDate(since.getDate() - windowDays.value); //Not a subtraction in milliseconds: DST
+  try {
+    const { data } = await performanceApi.evolution(auth.activeTenantId, {
+      from: toDateInputValue(since),
+    });
+    evolution.value = data;
+    showEvolution.value = true;
+  } catch (error) {
+    evolution.value = null;
+    showEvolution.value = false;
   }
 }
 

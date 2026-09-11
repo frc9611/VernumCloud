@@ -162,6 +162,12 @@ export const development = {
 
   evaluations: (tenantId, params) =>
     http.get(`/tenants/${tenantId}/evaluations`, { params: params || {} }),
+  /*
+   * Autonomy over time, bucketed by the server. Without userId it is the average of the team on each
+   * date somebody was evaluated; with one, it is that person's own line. Params: userId, from, to.
+   */
+  evaluationTrend: (tenantId, params) =>
+    http.get(`/tenants/${tenantId}/evaluations/evolution`, { params: params || {} }),
   evaluate: (tenantId, body) => http.post(`/tenants/${tenantId}/evaluations`, body),
   removeEvaluation: (evaluationId) => http.delete(`/evaluations/${evaluationId}`),
 
@@ -181,6 +187,13 @@ export const performance = {
   removeArea: (areaId) => http.delete(`/performance/areas/${areaId}`),
   createRun: (tenantId, body) => http.post(`/tenants/${tenantId}/performance/runs`, body),
   removeRun: (runId) => http.delete(`/performance/runs/${runId}`),
+
+  /*
+   * The curve the module cannot show: reliability over time, per team and per area, plus the points of
+   * each run for a team that scores missions. Bucketed by run date on the server. Params: from, to.
+   */
+  evolution: (tenantId, params) =>
+    http.get(`/tenants/${tenantId}/performance/evolution`, { params: params || {} }),
 
   readiness: (tenantId) => http.get(`/tenants/${tenantId}/readiness`),
   updateReadiness: (tenantId, body) => http.put(`/tenants/${tenantId}/readiness`, body),
