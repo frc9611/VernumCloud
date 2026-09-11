@@ -2,6 +2,8 @@
   <section class="vc-stack">
     <SectionTitle lead="Mural" title="de Avisos">
       <template #actions>
+        <!-- O total é o da consulta inteira, não o das páginas já carregadas. -->
+        <span v-if="total" class="vc-chip">{{ total }} {{ total === 1 ? 'aviso' : 'avisos' }}</span>
         <button
           v-if="scopes.length"
           class="vc-btn vc-btn--small"
@@ -107,6 +109,15 @@
           class="vc-announcement__comment"
         >
           <span class="vc-announcement__author"><PersonLink :user-id="comment.authorId" :name="comment.authorName" /></span>
+          <!--
+            Num aviso da plataforma a conversa mistura equipes, e de qual delas partiu a fala é
+            metade do sentido dela. Num aviso da equipe a resposta é sempre a mesma e o chip só
+            repetiria o cabeçalho.
+          -->
+          <span
+            v-if="item.scope === 'GENERAL' && comment.tenantName"
+            class="vc-chip comment__team"
+          >{{ comment.tenantName }}</span>
           <span class="vc-faint">{{ formatWhen(comment.createdAt) }}</span>
           <button
             v-if="comment.canDelete"
@@ -137,6 +148,15 @@
         </div>
       </div>
     </article>
+
+    <div v-if="board.length < total" class="vc-row" style="justify-content: center">
+      <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" :disabled="loadingMore"
+              @click="loadMore">
+        <AppIcon name="chevronDown" :size="15" />
+        {{ loadingMore ? 'Carregando...' : 'Ver mais' }}
+      </button>
+      <span class="vc-faint">{{ board.length }} de {{ total }}</span>
+    </div>
   </section>
 </template>
 
@@ -170,9 +190,16 @@ const toast = useToast();
 const LIMIT = 255;
 const COMMENT_LIMIT = 1500;
 
+/* Quantos avisos cada página traz. É o padrão do servidor, escrito aqui para o "Ver mais" saber
+   contar as páginas que já pediu. */
+const PAGE_SIZE = 20;
+
 const board = ref([]);
+const total = ref(0);
+const page = ref(0);
 const scopes = ref([]);
 const loading = ref(true);
+const loadingMore = ref(false);
 const composing = ref(false);
 const sending = ref(false);
 const draft = reactive({ target: '', title: '', content: '' });
@@ -197,15 +224,18 @@ const scopeHint = computed(() => {
 onMounted(load);
 watch(() => auth.activeTenantId, load);
 
+/* Volta para a primeira página: é o que publicar, apagar e trocar de equipe fazem. */
 async function load() {
   if (!auth.activeTenantId) return;
   loading.value = true;
   try {
     const [boardResponse, scopesResponse] = await Promise.all([
-      announcementsApi.list(auth.activeTenantId),
+      announcementsApi.list(auth.activeTenantId, { page: 0, size: PAGE_SIZE }),
       announcementsApi.scopes(auth.activeTenantId),
     ]);
-    board.value = boardResponse.data;
+    page.value = 0;
+    board.value = boardResponse.data.items;
+    total.value = boardResponse.data.totalElements;
     scopes.value = scopesResponse.data;
     if (!draft.target && scopes.value.length) {
       draft.target = optionKey(scopes.value[0]);
@@ -214,6 +244,37 @@ async function load() {
     toast.error(apiMessage(error, 'Erro ao carregar o mural'));
   } finally {
     loading.value = false;
+  }
+}
+
+/*
+ * A próxima página entra no fim da lista, e não no lugar dela: o mural é lido de cima para baixo, e
+ * trocar o que está na tela por outra página faria quem está lendo perder o lugar.
+ *
+ * O que já está na tela sai da resposta pelo id. Um aviso publicado entre uma página e a seguinte
+ * empurra todas as linhas uma casa para baixo, e sem isso a última da página anterior voltaria — com
+ * a mesma chave, que o `v-for` recusa.
+ */
+async function loadMore() {
+  if (!auth.activeTenantId || loadingMore.value) return;
+  loadingMore.value = true;
+  /* De qual equipe esta página foi pedida: trocar de equipe no meio do caminho recarrega o mural, e
+     sem isto a página que ainda estava vindo entraria no fim do mural da outra. */
+  const asked = auth.activeTenantId;
+  try {
+    const { data } = await announcementsApi.list(asked, {
+      page: page.value + 1,
+      size: PAGE_SIZE,
+    });
+    if (asked !== auth.activeTenantId) return;
+    page.value = data.page;
+    total.value = data.totalElements;
+    const known = new Set(board.value.map((one) => one.announcementId));
+    board.value = [...board.value, ...data.items.filter((one) => !known.has(one.announcementId))];
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar mais avisos'));
+  } finally {
+    loadingMore.value = false;
   }
 }
 
@@ -293,7 +354,9 @@ async function sendComment(item) {
   const content = (drafts[id] || '').trim();
   if (!content) return;
   try {
-    const { data } = await announcementsApi.comment(id, { content });
+    /* A equipe aberta vai no corpo: num aviso da plataforma é ela que diz de onde partiu a fala, e
+       é quem modera o comentário depois. */
+    const { data } = await announcementsApi.comment(id, { content, tenantId: auth.activeTenantId });
     comments[id] = [...(comments[id] || []), data];
     drafts[id] = '';
     item.commentCount = (item.commentCount || 0) + 1;
@@ -346,4 +409,9 @@ function formatWhen(value) {
 
 .reaction__symbol { font-size: 14px; }
 .reaction__count { font-size: 11px; font-weight: 600; }
+
+/* A equipe de onde partiu a fala fica ao lado do nome, e menor que ele: é contexto, não o assunto. */
+.comment__team {
+  font-size: 11px;
+}
 </style>

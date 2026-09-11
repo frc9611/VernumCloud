@@ -225,14 +225,23 @@ export const announcements = {
   /* Reage, ou desfaz reagindo igual de novo. Devolve a contagem inteira do aviso. */
   react: (announcementId, kind) =>
     http.post(`/announcements/${announcementId}/reactions`, null, { params: { kind } }),
-  /* The board of a team: the platform announcements, the team ones and the divisions of the reader. */
-  list: (tenantId) => http.get(`/tenants/${tenantId}/announcements`),
+  /*
+   * The board of a team: the platform announcements, the team ones and the divisions of the reader.
+   * Paged — { items, page, size, totalElements, totalPages } — because a board that answered the
+   * newest fifty and stopped had no way to show the fifty-first. Params: page, size.
+   */
+  list: (tenantId, params) => http.get(`/tenants/${tenantId}/announcements`, { params: params || {} }),
   /* Which reaches this person may publish to — the server decides, leading a division is not a permission. */
   scopes: (tenantId) => http.get(`/tenants/${tenantId}/announcements/scopes`),
   create: (tenantId, body) => http.post(`/tenants/${tenantId}/announcements`, body),
   remove: (announcementId) => http.delete(`/announcements/${announcementId}`),
 
   comments: (announcementId) => http.get(`/announcements/${announcementId}/comments`),
+  /*
+   * The body carries the open team as `tenantId`. On a team announcement the server already knows it
+   * and ignores what was sent; on a platform one it is the only way to know where the comment came
+   * from, and that is who gets to moderate it.
+   */
   comment: (announcementId, body) => http.post(`/announcements/${announcementId}/comments`, body),
   removeComment: (commentId) => http.delete(`/announcementComments/${commentId}`),
 };
