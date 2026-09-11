@@ -249,10 +249,18 @@ async function load() {
   } catch (error) {
     apps.value = [];
   }
-  //The person's open demandas across every team; only the ones assigned to them belong on the home
+  /*
+   * The person's open demandas across every team; only the ones assigned to them belong on the home.
+   * Both cuts are the query's now — the route answers a page, and picking the assigned ones out of a
+   * page would show the page minus whatever was somebody else's.
+   *
+   * The page is bigger than the eight rows the panel draws on purpose: the panel counts what it is
+   * given ("N aberta(s)", "e mais N"), so a page of eight would make it say eight to somebody who owes
+   * thirty and never offer the board. This is the route's own default size.
+   */
   try {
-    const { data } = await tasksApi.mine({ open: true });
-    myTasks.value = (data || []).filter((task) => task.assignedToMe);
+    const { data } = await tasksApi.mine({ open: true, assignedToMe: true, size: 50 });
+    myTasks.value = data.items || [];
   } catch (error) {
     myTasks.value = [];
   }

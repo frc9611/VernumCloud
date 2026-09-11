@@ -350,15 +350,35 @@ async function load() {
   loadTasks();
 }
 
+/*
+ * As demandas da equipe, só para o seletor do cronômetro.
+ *
+ * O quadro responde por coluna, então as colunas são remendadas numa lista só e reordenadas como o
+ * quadro: agrupar por situação aqui não diria nada a quem está escolhendo o que a televisão conta. Cem
+ * cartões por coluna é generoso para um `<select>` — quem tiver mais que isso escolhe pelas mais
+ * recentes de cada coluna, o que é melhor que um seletor que nem abre.
+ */
 async function loadTasks() {
   if (!auth.activeTenantId || !auth.featureOn('TASKS')) return;
   try {
-    const { data } = await tasksApi.list(auth.activeTenantId);
-    tasks.value = data;
+    const { data } = await tasksApi.list(auth.activeTenantId, { size: 100 });
+    tasks.value = (data.columns || [])
+      .flatMap((column) => column.items)
+      .sort(byDeadline);
   } catch (error) {
     //The countdown still works with a free label: the demanda only lends it a name
     tasks.value = [];
   }
+}
+
+/* A ordem do quadro: prazo crescente, sem prazo primeiro, e a mais nova desempatando. */
+function byDeadline(one, other) {
+  if (one.dueDate !== other.dueDate) {
+    if (!one.dueDate) return -1;
+    if (!other.dueDate) return 1;
+    return one.dueDate < other.dueDate ? -1 : 1;
+  }
+  return other.taskId - one.taskId;
 }
 
 /** Takes the wall as the server answered it and resets the form to it. */

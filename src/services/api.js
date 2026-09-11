@@ -115,6 +115,11 @@ export const features = {
 /* ------------------------------------------------------- board of the team */
 
 export const tasks = {
+  /*
+   * The board of a team, already split into the six columns the kanban draws, each column carrying
+   * its TRUE total next to the cards that came. Params: divisionId, mine, search, size (cards per
+   * column), and status + page to ask for more of one column — the answer then has that column only.
+   */
   list: (tenantId, params) => http.get(`/tenants/${tenantId}/tasks`, { params: params || {} }),
   create: (tenantId, body) => http.post(`/tenants/${tenantId}/tasks`, body),
   get: (taskId) => http.get(`/tasks/${taskId}`),
@@ -123,9 +128,13 @@ export const tasks = {
   /* Notifies whoever the demanda is on and answers the text, for e-mail or WhatsApp. */
   remind: (taskId) => http.post(`/tasks/${taskId}/reminder`),
   /*
-   * The board of every team the person is in, in one call, each task carrying the team it belongs
+   * The demandas of every team the person is in, in one call, each task carrying the team it belongs
    * to (tenantName, tenantColor, teamNumber) and the flags assignedToMe / inMyDivisions, so the
-   * screen filters without asking again. Params: status, open (booleans as strings).
+   * screen filters without asking again.
+   *
+   * A page and not a board: this is a survey across teams, ordered by deadline, and the caller decides
+   * how much of it to show. Params: status, open, assignedToMe, inMyDivisions, search, page, size.
+   * Answers { items, page, size, totalElements, totalPages }.
    */
   mine: (params) => http.get('/tasks/mine', { params: params || {} }),
 };

@@ -34,14 +34,14 @@
           </span>
         </template>
         <template v-else>
-          <select class="vc-select" style="max-width: 220px" v-model="filters.divisionId" @change="load">
+          <select class="vc-select" style="max-width: 220px" v-model="filters.divisionId" @change="reload">
             <option value="">Todas as divisões</option>
             <option v-for="division in divisionList" :key="division.divisionId" :value="division.divisionId">
               {{ division.visibleName }}
             </option>
           </select>
           <label class="vc-checkbox">
-            <input type="checkbox" v-model="filters.mine" @change="load" />
+            <input type="checkbox" v-model="filters.mine" @change="reload" />
             Só as minhas
           </label>
         </template>
@@ -49,12 +49,12 @@
         <div class="vc-input-group" style="max-width: 260px">
           <input class="vc-input" type="search" placeholder="Buscar demanda..." v-model="search" />
         </div>
-        <span class="vc-chip">{{ visible.length }} demanda(s)</span>
+        <span class="vc-chip">{{ countLabel }}</span>
       </div>
 
       <div class="vc-kanban">
         <section
-          v-for="column in columns"
+          v-for="column in kanban"
           :key="column.key"
           :class="['vc-kanban__col', { 'is-drop-target': dropTarget === column.key }]"
           @dragover="onDragOver($event, column.key)"
@@ -63,10 +63,11 @@
         >
           <h3 class="vc-kanban__title">
             <span>{{ column.label }}</span>
-            <span class="vc-kanban__count">{{ inColumn(column.key).length }}</span>
+            <!-- The column's true size, which is not the number of cards under it -->
+            <span class="vc-kanban__count">{{ column.total }}</span>
           </h3>
           <button
-            v-for="task in inColumn(column.key)"
+            v-for="task in column.items"
             :key="task.taskId"
             type="button"
             :class="[
@@ -93,16 +94,41 @@
               <span v-if="task.divisionName" class="vc-chip">{{ task.divisionName }}</span>
             </span>
           </button>
-          <p v-if="!inColumn(column.key).length" class="vc-faint" style="font-size: 0.78rem; margin: 0">
+          <p v-if="!column.items.length" class="vc-faint" style="font-size: 0.78rem; margin: 0">
             Nada aqui.
           </p>
+          <!--
+            Só no quadro de uma equipe: lá a coluna é uma página do servidor. No quadro de todas as
+            equipes a coluna é um corte do que já veio, e quem pede mais é o botão embaixo do quadro.
+          -->
+          <button v-if="column.rest" class="vc-btn vc-btn--ghost vc-btn--small" type="button"
+                  :disabled="loadingMore === column.key" @click="loadMoreOf(column)">
+            Ver mais ({{ column.rest }})
+          </button>
         </section>
       </div>
 
-      <EmptyState v-if="!tasks.length" :title="allTeams ? 'Nenhuma demanda nas suas equipes' : 'Nenhuma demanda ainda'">
-        {{ auth.can('TASK_MANAGE')
-          ? 'Uma demanda é o que a equipe deve, com prazo e com um critério de conclusão que não deixa dúvida.'
-          : 'Quem conduz a equipe registra as demandas aqui.' }}
+      <div v-if="allTeams && tasks.length < total" class="vc-row vc-row--between">
+        <span class="vc-faint">{{ tasks.length }} de {{ total }} demandas carregadas.</span>
+        <button class="vc-btn vc-btn--ghost" type="button" :disabled="loadingMore === 'all'"
+                @click="loadMoreMine">
+          Carregar mais
+        </button>
+      </div>
+
+      <!--
+        O vazio agora tem duas causas: não há demanda nenhuma, ou os filtros não acharam nada. Desde que
+        a busca virou do servidor, o quadro vazio de uma busca é indistinguível de um quadro vazio.
+      -->
+      <EmptyState v-if="!total" :title="emptyTitle">
+        <template v-if="filtering">
+          Limpe a busca e os filtros para ver o quadro inteiro.
+        </template>
+        <template v-else>
+          {{ auth.can('TASK_MANAGE')
+            ? 'Uma demanda é o que a equipe deve, com prazo e com um critério de conclusão que não deixa dúvida.'
+            : 'Quem conduz a equipe registra as demandas aqui.' }}
+        </template>
       </EmptyState>
     </div>
 
@@ -252,7 +278,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import ModalDialog from '@/components/ModalDialog.vue';
 import PersonLink from '@/components/PersonLink.vue';
@@ -267,13 +293,18 @@ import { apiMessage } from '@/services/http.js';
  *
  * The columns are the six situations the server knows, in the order work moves through them, and
  * "Bloqueada" sits at the end because it is not a stage — it is the state that asks for a decision.
- * The search filters what is already loaded: a team's board is small and a round trip per keystroke
- * would be slower than the browser.
+ *
+ * The board of one team is answered column by column: each column arrives with its own slice of cards
+ * and its own true total, so the counter says how much the team owes and not how much came down the
+ * wire, and "Ver mais" asks the server for the next page of that one column. The search and the filters
+ * are the server's too — they are clauses of the query, not a pass over the cards already here, because
+ * filtering a page and calling it the answer is how a board quietly starts lying.
  *
  * Somebody in more than one team can widen the board to every team at once. The cards then come from
- * /tasks/mine, each carrying its team and two flags the person filters by, and every action on a card
- * is gated by the permission on that card's own team — not by the team currently open. Creating stays
- * in the open team, because a new demanda has to belong to exactly one.
+ * /tasks/mine as one flat page — a survey across teams, not a surface to work on — split into columns
+ * here; each carries its team and two flags, which are also filters of the query. Every action on a card
+ * is gated by the permission on that card's own team, not by the team currently open. Creating stays in
+ * the open team, because a new demanda has to belong to exactly one.
  */
 const auth = authStore();
 const toast = useToast();
@@ -288,10 +319,21 @@ const columns = [
 ];
 const ADVANCE = ['BACKLOG', 'PLANNED', 'DOING', 'VALIDATION', 'DONE'];
 
+/* Cards per column on the team board, and per page on the survey across teams. */
+const PAGE_SIZE = 50;
+/* A round trip per keystroke is a round trip per keystroke; the server answers the pause, not the key. */
+const SEARCH_DELAY = 300;
+
 /* Remembered in the browser only: it is a way of looking, not a fact about the person. */
 const SCOPE_KEY = 'vernum.tasks.allTeams';
 
+/* The flat page of /tasks/mine (all teams) and the columns of /tenants/{id}/tasks (one team). */
 const tasks = ref([]);
+const boardColumns = ref([]);
+const total = ref(0);
+const minePage = ref(0);
+/* Which "ver mais" is in flight: a column's status, or 'all' for the survey across teams. */
+const loadingMore = ref(null);
 const members = ref([]);
 const divisionList = ref([]);
 /* Whose members and divisions the form is showing; the edit of another team's card swaps them. */
@@ -310,27 +352,53 @@ const allTeams = computed(() => multiTeam.value && allTeamsPref.value);
 const dragging = ref(null);
 const dropTarget = ref(null);
 
-const visible = computed(() => {
-  const term = search.value.trim().toLowerCase();
-  return tasks.value.filter((task) => {
-    if (allTeams.value) {
-      if (filters.assignedToMe && !task.assignedToMe) return false;
-      if (filters.inMyDivisions && !task.inMyDivisions) return false;
-    }
-    if (!term) return true;
-    return [task.title, task.ownerLabel, task.definitionOfDone, task.divisionName, task.tenantName]
-      .filter(Boolean)
-      .some((field) => field.toLowerCase().includes(term));
+/*
+ * The six sections the kanban draws. On one team's board they are what the server answered, `rest`
+ * being how many cards of that column are still there to ask for; on the board of every team they are
+ * the flat page split by status, and `rest` is empty because a column there is not a page of its own.
+ */
+const kanban = computed(() => {
+  if (!allTeams.value) {
+    return boardColumns.value.map((column) => ({
+      key: column.status,
+      label: column.label,
+      items: column.items,
+      total: column.total,
+      rest: column.items.length < column.total ? column.total - column.items.length : 0,
+    }));
+  }
+  return columns.map((column) => {
+    const items = tasks.value.filter((task) => task.status === column.key);
+    return { key: column.key, label: column.label, items, total: items.length, rest: 0 };
   });
 });
 
-function inColumn(status) {
-  return visible.value.filter((task) => task.status === status);
-}
+const countLabel = computed(() => (allTeams.value
+  ? `${tasks.value.length} de ${total.value} demanda(s)`
+  : `${total.value} demanda(s)`));
+
+/* Whether anything is narrowing the board, which is what tells an empty board from an empty search. */
+const filtering = computed(() => !!search.value.trim() || (allTeams.value
+  ? filters.assignedToMe || filters.inMyDivisions
+  : !!filters.divisionId || filters.mine));
+
+const emptyTitle = computed(() => {
+  if (filtering.value) return 'Nada com esses filtros';
+  return allTeams.value ? 'Nenhuma demanda nas suas equipes' : 'Nenhuma demanda ainda';
+});
+
+let searchTimer = null;
 
 onMounted(load);
+onUnmounted(() => clearTimeout(searchTimer));
 watch(() => auth.activeTenantId, load);
 watch(allTeams, load);
+watch(search, () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(reload, SEARCH_DELAY);
+});
+/* The two flags of the survey are query clauses now, so ticking one asks the server again. */
+watch(() => [filters.assignedToMe, filters.inMyDivisions], reload);
 
 function blank() {
   return {
@@ -368,21 +436,91 @@ function canManage(task) {
 
 async function load() {
   if (!auth.activeTenantId) return;
+  await reload();
+  await loadPeople(auth.activeTenantId);
+}
+
+/* The board from the first page again: what every filter, every search and every edit goes back to. */
+async function reload() {
+  if (!auth.activeTenantId) return;
   try {
     if (allTeams.value) {
-      const { data } = await tasksApi.mine();
-      tasks.value = data;
+      const { data } = await tasksApi.mine({ ...mineParams(), page: 0, size: PAGE_SIZE });
+      tasks.value = data.items || [];
+      total.value = data.totalElements || 0;
+      minePage.value = 0;
+      //Nothing of the other board survives the switch: a stale column would still answer a dropped card
+      boardColumns.value = [];
     } else {
-      const params = {};
-      if (filters.divisionId) params.divisionId = filters.divisionId;
-      if (filters.mine) params.mine = true;
-      const { data } = await tasksApi.list(auth.activeTenantId, params);
-      tasks.value = data;
+      const { data } = await tasksApi.list(auth.activeTenantId, { ...boardParams(), size: PAGE_SIZE });
+      //`page` per column, because each one is asked for on its own from here on
+      boardColumns.value = (data.columns || []).map((column) => ({ ...column, page: 0 }));
+      total.value = data.totalElements || 0;
+      tasks.value = [];
     }
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar as demandas'));
   }
-  await loadPeople(auth.activeTenantId);
+}
+
+/* What narrows the board of one team, and what narrows the survey across every team. */
+function boardParams() {
+  const params = {};
+  if (filters.divisionId) params.divisionId = filters.divisionId;
+  if (filters.mine) params.mine = true;
+  if (search.value.trim()) params.search = search.value.trim();
+  return params;
+}
+
+function mineParams() {
+  const params = {};
+  if (filters.assignedToMe) params.assignedToMe = true;
+  if (filters.inMyDivisions) params.inMyDivisions = true;
+  if (search.value.trim()) params.search = search.value.trim();
+  return params;
+}
+
+/*
+ * The next page of one column, appended to it. The answer carries that column alone — that is what
+ * `status` does to the route — so the other five stay exactly as they are.
+ */
+async function loadMoreOf(column) {
+  const source = boardColumns.value.find((item) => item.status === column.key);
+  if (!source || loadingMore.value) return;
+  loadingMore.value = column.key;
+  try {
+    const next = source.page + 1;
+    const { data } = await tasksApi.list(auth.activeTenantId, {
+      ...boardParams(), status: column.key, page: next, size: PAGE_SIZE,
+    });
+    const answered = (data.columns || [])[0];
+    if (answered) {
+      source.items = [...source.items, ...answered.items];
+      source.total = answered.total;
+      source.page = next;
+    }
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar mais demandas'));
+  } finally {
+    loadingMore.value = null;
+  }
+}
+
+/* The next page of the survey across teams, appended to the flat list the columns are cut from. */
+async function loadMoreMine() {
+  if (loadingMore.value) return;
+  loadingMore.value = 'all';
+  try {
+    const next = minePage.value + 1;
+    const { data } = await tasksApi.mine({ ...mineParams(), page: next, size: PAGE_SIZE });
+    tasks.value = [...tasks.value, ...(data.items || [])];
+    total.value = data.totalElements || 0;
+    minePage.value = next;
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao carregar mais demandas'));
+  } finally {
+    loadingMore.value = null;
+  }
 }
 
 /* The members and divisions of one team: the form's choices and the single-team division filter. */
@@ -476,19 +614,57 @@ async function save() {
 /*
  * Moves the card on the screen first and asks the server afterwards: the board should show what the
  * hand just did. When the server refuses, the card goes back and the reason lands in the toast.
+ *
+ * On one team's board the columns come from the server, so moving a card is taking it out of one array
+ * and putting it in another — changing only `task.status` would leave it sitting in the column it came
+ * from. That board is read again afterwards because the totals of both columns changed, and a total is
+ * the one thing on this screen that has to be the server's.
+ *
+ * The survey across every team is not read again, and must not be: there the columns are cut from the
+ * flat list by `task.status`, so the card has already moved, and going back to page 0 would throw away
+ * every "Carregar mais" the person pressed as the price of dragging one card.
  */
 async function moveTo(task, status) {
   const before = task.status;
-  task.status = status;
+  applyStatus(task, status);
   try {
     const { data } = await tasksApi.update(task.taskId, { status });
+    //The card the hand is still on gets the server's own words, before the board is read again
     Object.assign(task, { status: data.status, statusLabel: data.statusLabel, updatedAt: data.updatedAt });
+    if (!allTeams.value) await reload();
     return true;
   } catch (error) {
-    task.status = before;
+    applyStatus(task, before);
     toast.error(apiMessage(error, 'Erro ao mover a demanda'));
     return false;
   }
+}
+
+/* Puts a card in the column of a status, on whichever of the two boards is on the screen. */
+function applyStatus(task, status) {
+  const from = boardColumns.value.find((column) => column.items.some((item) => item.taskId === task.taskId));
+  task.status = status;
+  //On the board of every team the split is computed from task.status, so there is nothing to move
+  if (!from) return;
+  const to = boardColumns.value.find((column) => column.status === status);
+  from.items = from.items.filter((item) => item.taskId !== task.taskId);
+  from.total = Math.max(0, from.total - 1);
+  if (to) {
+    to.items = [task, ...to.items];
+    to.total += 1;
+  }
+}
+
+/* The card behind a dragged id, on whichever of the two boards is on the screen. */
+function findTask(taskId) {
+  if (allTeams.value) {
+    return tasks.value.find((item) => item.taskId === taskId);
+  }
+  for (const column of boardColumns.value) {
+    const found = column.items.find((item) => item.taskId === taskId);
+    if (found) return found;
+  }
+  return null;
 }
 
 /* Moves one step along the normal path. "Bloqueada" is left out: that is a decision, not a step. */
@@ -536,7 +712,7 @@ async function onDrop(event, status) {
   const taskId = carried ? Number(carried) : dragging.value;
   dragging.value = null;
   dropTarget.value = null;
-  const task = tasks.value.find((item) => item.taskId === taskId);
+  const task = findTask(taskId);
   if (!task || task.status === status || !canManage(task)) return;
   await moveTo(task, status);
 }
