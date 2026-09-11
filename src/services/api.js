@@ -395,6 +395,11 @@ export const rfid = {
   myTags: () => http.get('/rfidTags/me'),
   removeTag: (tagId) => http.delete(`/rfidTags/${tagId}`),
   teamTags: (tenantId) => http.get(`/tenants/${tenantId}/rfidTags`),
+  /*
+   * The readers that answer for this team and when each was last heard from. A kiosk on a wall has no
+   * way to say it fell; the only proof it is alive is the last card somebody passed on it.
+   */
+  readers: (tenantId) => http.get(`/tenants/${tenantId}/rfid/readers`),
 };
 
 /* --------------------------------------------------------------------- trips */
