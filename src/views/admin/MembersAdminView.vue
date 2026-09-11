@@ -113,10 +113,7 @@
 
       <div v-for="group in permissionGroups" :key="group.scope" class="vc-stack" style="gap: 8px">
         <strong class="vc-small">{{ group.title }}</strong>
-        <p v-if="group.scope === 'PLATFORM' && !editingPermissions.tenant.systemTenant" class="vc-faint" style="margin: 0">
-          Só existem na equipe administradora.
-        </p>
-        <div v-else class="permission-grid">
+        <div class="permission-grid">
           <label
             v-for="permission in group.items"
             :key="permission.name"
@@ -179,9 +176,12 @@ const invite = reactive({ userId: '', role: 'MEMBER' });
 const editingPermissions = ref(null);
 const selectedPermissions = ref([]);
 
+/*
+ * Only the permissions of a team. As da plataforma — criar, alterar e ver todas as equipes — não são
+ * de equipe nenhuma: são da pessoa, e se concedem em Usuários da plataforma.
+ */
 const permissionGroups = computed(() => [
   { scope: 'TENANT', title: 'Permissões da equipe', items: permissions.value.filter((item) => item.scope === 'TENANT') },
-  { scope: 'PLATFORM', title: 'Permissões da plataforma', items: permissions.value.filter((item) => item.scope === 'PLATFORM') },
 ]);
 
 const filtered = computed(() => {

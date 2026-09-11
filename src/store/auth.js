@@ -25,6 +25,8 @@ export const authStore = defineStore('auth', () => {
   const memberships = ref([]);
   const platformPermissions = ref([]);
   const platformAdmin = ref(false);
+  //Whether this person can hand the platform permissions to somebody else, which the admin team says
+  const canGrantPlatform = ref(false);
   const activeTenantId = ref(readStoredTenantId());
   const isAuth = ref(!!localStorage.getItem(TOKEN_KEY));
   const ready = ref(false);
@@ -76,7 +78,7 @@ export const authStore = defineStore('auth', () => {
     return permissions.some((permission) => can(permission));
   }
 
-  /** Whether the user has a permission over the platform, granted by the admin tenant. */
+  /** Whether the user has a permission over the platform. Granted to the person, in no team. */
   function canPlatform(permission) {
     return platformPermissions.value.includes(permission);
   }
@@ -131,6 +133,7 @@ export const authStore = defineStore('auth', () => {
     memberships.value = me.memberships || [];
     platformPermissions.value = me.platformPermissions || [];
     platformAdmin.value = !!me.platformAdmin;
+    canGrantPlatform.value = !!me.canGrantPlatform;
 
     //A team that is gone, or was never chosen, must not stay selected
     if (activeTenantId.value && !membershipOn(activeTenantId.value)) {
@@ -185,6 +188,7 @@ export const authStore = defineStore('auth', () => {
     memberships.value = [];
     platformPermissions.value = [];
     platformAdmin.value = false;
+    canGrantPlatform.value = false;
     isAuth.value = false;
     if (redirect) {
       router.push({ name: 'login' });
@@ -197,6 +201,7 @@ export const authStore = defineStore('auth', () => {
     memberships,
     platformPermissions,
     platformAdmin,
+    canGrantPlatform,
     activeTenantId,
     isAuth,
     ready,

@@ -81,6 +81,16 @@ export const platform = {
   setActive: (userId, active) => http.put(`/platform/users/${userId}/active`, { active }),
   deleteUser: (userId) => http.delete(`/platform/users/${userId}`),
 
+  /*
+   * What one person may do over the platform. The grant is of the person and of nothing else: it
+   * needs no membership anywhere, which is why somebody in no team at all can hold it. Reading needs
+   * TENANT_VIEW_ALL; writing needs PERMISSION_MANAGE inside the administrator team, and nobody hands
+   * out what they do not hold themselves.
+   */
+  permissions: (userId) => http.get(`/platform/users/${userId}/permissions`),
+  setPermissions: (userId, permissions) =>
+    http.put(`/platform/users/${userId}/permissions`, { permissions }),
+
   members: (tenantId) => http.get(`/platform/tenants/${tenantId}/members`),
   addMember: (tenantId, body) => http.post(`/platform/tenants/${tenantId}/members`, body),
   updateMember: (tenantId, userId, body) => http.put(`/platform/tenants/${tenantId}/members/${userId}`, body),

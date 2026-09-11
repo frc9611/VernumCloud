@@ -63,7 +63,7 @@
                     senha provisória
                   </span>
                   <span v-if="isPlatformAdmin(row)" class="vc-chip vc-chip--danger"
-                        title="Membro da equipe administradora.">
+                        :title="platformTitle(row)">
                     plataforma
                   </span>
                 </div>
@@ -106,7 +106,8 @@
               {{ isActive(selected.user) ? 'Ativo' : 'Desativado' }}
             </span>
             <span v-if="selected.user.mustChangePassword" class="vc-chip vc-chip--warning">senha provisória</span>
-            <span v-if="isPlatformAdmin(selected)" class="vc-chip vc-chip--danger">administra a plataforma</span>
+            <span v-if="isPlatformAdmin(selected)" class="vc-chip vc-chip--danger"
+                  :title="platformTitle(selected)">acesso à plataforma</span>
             <span v-if="isMe(selected.user)" class="vc-chip">você</span>
           </div>
           <p class="vc-faint users__details">
@@ -194,7 +195,8 @@
             </option>
           </select>
           <span v-if="addingToSystem" class="vc-warning-text vc-small">
-            A equipe administradora concede permissões sobre a plataforma inteira.
+            Entrar na equipe administradora não concede acesso à plataforma: isso se dá abaixo, em
+            "Acesso à plataforma".
           </span>
         </div>
         <div class="vc-field">
@@ -244,6 +246,39 @@
       <EmptyState v-else title="Sem equipe">
         Essa conta existe, mas não está em equipe nenhuma — quem entra assim cai na sala de espera.
       </EmptyState>
+
+      <div class="vc-divider"></div>
+
+      <SectionTitle lead="Acesso à" title="plataforma" />
+      <p class="vc-faint users__platform-hint">
+        Isso não é de equipe nenhuma: vale para a pessoa, em qualquer lugar, e pode ser dado a quem não
+        está em equipe alguma. Quem concede só entrega o que tem.
+      </p>
+
+      <div class="users__platform">
+        <label v-for="permission in platformCatalog" :key="permission.name" class="users__platform-item">
+          <input type="checkbox" :value="permission.name" v-model="platformForm"
+                 :disabled="!canGrantPlatform || isMe(selected.user) || busy" />
+          <span>
+            <strong>{{ permission.label }}</strong>
+            <span class="vc-faint">{{ permission.name }}</span>
+          </span>
+        </label>
+      </div>
+      <p v-if="isMe(selected.user)" class="vc-faint vc-small">
+        Ninguém altera o próprio acesso à plataforma: a permissão que sairia é a que o devolveria.
+      </p>
+      <p v-else-if="!canGrantPlatform" class="vc-faint vc-small">
+        Só quem gerencia permissões na equipe administradora concede esse acesso.
+      </p>
+      <div v-else-if="platformDirty" class="vc-row users__platform-actions">
+        <button class="vc-btn vc-btn--ghost vc-btn--small" type="button" @click="resetPlatformForm">
+          Desfazer
+        </button>
+        <button class="vc-btn vc-btn--small" type="button" :disabled="busy" @click="savePlatform">
+          Salvar acesso
+        </button>
+      </div>
 
       <template #footer>
         <button class="vc-btn vc-btn--ghost" type="button" @click="close">Fechar</button>
@@ -323,6 +358,8 @@ const filter = ref(route.query.filtro === 'senha' ? 'password' : 'all');
 
 const roles = ref([]);
 const teams = ref([]);
+const platformCatalog = ref([]);
+const platformForm = ref([]);
 
 const selected = ref(null);
 const busy = ref(false);
@@ -333,6 +370,12 @@ const addForm = reactive({ tenantId: '', role: 'MEMBER' });
 const reset = ref(null);
 
 const canManage = computed(() => auth.canPlatform('TENANT_UPDATE'));
+//Handing out the platform access is a different gate from using it: the administrator team answers it
+const canGrantPlatform = computed(() => auth.canGrantPlatform);
+const platformDirty = computed(() => {
+  const before = [...(selected.value?.platformPermissions || [])].sort().join(',');
+  return before !== [...platformForm.value].sort().join(',');
+});
 
 const filtered = computed(() => list.value.filter((row) => matches(row, filter.value)));
 const counts = computed(() => {
@@ -390,12 +433,16 @@ async function load() {
 
 async function loadCatalogs() {
   try {
-    const [roleList, teamList] = await Promise.all([catalogs.membershipRoles(), tenants.list()]);
+    const [roleList, teamList, permissionList] = await Promise.all([
+      catalogs.membershipRoles(), tenants.list(), catalogs.permissions(),
+    ]);
     roles.value = roleList.data;
     teams.value = teamList.data;
+    platformCatalog.value = permissionList.data.filter((permission) => permission.scope === 'PLATFORM');
   } catch (error) {
     roles.value = [];
     teams.value = [];
+    platformCatalog.value = [];
   }
 }
 
@@ -420,8 +467,13 @@ function isMe(user) {
   return user.userId === auth.user?.userId;
 }
 
+/* Administrating the platform is holding one of its permissions — not being in the admin team. */
 function isPlatformAdmin(row) {
-  return row.memberships.some((membership) => membership.systemTenant && membership.active);
+  return !!row.platformPermissions?.length;
+}
+
+function platformTitle(row) {
+  return 'Na plataforma: ' + (row.platformPermissions || []).join(', ');
 }
 
 function dimmed(membership) {
@@ -492,12 +544,33 @@ function open(row) {
   selected.value = row;
   editing.value = false;
   adding.value = false;
+  resetPlatformForm();
 }
 
 function close() {
   selected.value = null;
   editing.value = false;
   adding.value = false;
+  platformForm.value = [];
+}
+
+function resetPlatformForm() {
+  platformForm.value = [...(selected.value?.platformPermissions || [])];
+}
+
+async function savePlatform() {
+  const user = selected.value.user;
+  busy.value = true;
+  try {
+    await platform.setPermissions(user.userId, [...platformForm.value]);
+    toast.success('Acesso à plataforma atualizado.');
+    await refreshAfter(user.userId);
+    resetPlatformForm();
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao alterar o acesso à plataforma'));
+  } finally {
+    busy.value = false;
+  }
 }
 
 function startEdit() {
@@ -825,6 +898,41 @@ tr.is-inactive td {
   padding-top: 4px;
   padding-bottom: 4px;
   font-size: 0.85rem;
+}
+
+.users__platform-hint {
+  margin: -4px 0 10px;
+}
+
+.users__platform {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.users__platform-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface-muted);
+}
+
+.users__platform-item span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.users__platform-item .vc-faint {
+  font-size: 0.75rem;
+}
+
+.users__platform-actions {
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .users__password {
