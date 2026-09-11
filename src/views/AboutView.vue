@@ -19,6 +19,12 @@
             <tr><th>Timezone</th><td class="vc-mono">{{ info.timezone }}</td></tr>
             <tr><th>Java</th><td class="vc-mono">{{ info.javaVersion }}</td></tr>
             <tr><th>Versão</th><td class="vc-mono">{{ info.vernumVersion }}</td></tr>
+            <!--
+              Qual réplica respondeu. O servidor roda com mais de uma, e o cabeçalho X-Vernum-Instance
+              diz o mesmo em toda resposta — esta linha é a versão que alguém consegue ler e copiar
+              para um chamado sem abrir o devtools.
+            -->
+            <tr><th>Instância</th><td class="vc-mono">{{ info.instance }}</td></tr>
           </tbody>
         </table>
       </div>
