@@ -7,7 +7,8 @@
         <label class="profile__change">
           <AppIcon name="camera" :size="15" />
           Alterar
-          <input type="file" accept="image/*" @change="uploadPicture" />
+          <!-- A mesma lista fechada do servidor: SVG fica de fora, seria script servido da origem da API -->
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="uploadPicture" />
         </label>
       </div>
     </div>
