@@ -569,11 +569,11 @@ export const publicPage = {
 /* ---------------------------------------------------------------- live wall */
 
 /*
- * The television in the room: the kanban, the notices, who is in and a countdown, repainted in real
- * time. `snapshot` is what the screen on the wall reads — no token of a person, because a television
- * never logs in — and it answers the same 404 for an unknown address, a wall switched off and a team
- * that turned the feature off. Everything the screen shows afterwards arrives on its own through the
- * SSE stream at `/public/wall/{token}/stream`, which does not go through axios and so is not here.
+ * The television in the room: the kanban, the notices, who is in and a countdown. `snapshot` is what
+ * the screen on the wall reads — no token of a person, because a television never logs in — and it
+ * answers the same 404 for an unknown address, a wall switched off and a team that turned the feature
+ * off. É a única rota que a TV usa, e ela a chama de 5 em 5 segundos: cada resposta é o mural inteiro
+ * e substitui a tela, então não há nada acumulado entre uma pergunta e a seguinte.
  *
  * The rest is for whoever runs the room, and asks for WALL_MANAGE.
  */

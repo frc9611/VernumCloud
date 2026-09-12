@@ -19,7 +19,8 @@
         <span class="wall__bar-spacer"></span>
         <span :class="['wall__link', live ? 'is-live' : 'is-down']">
           <span class="wall__dot"></span>
-          {{ live ? 'ao vivo' : 'reconectando' }}
+          <!-- Não existe conexão para reconectar: ou a última pergunta voltou, ou não voltou -->
+          {{ live ? 'ao vivo' : 'sem resposta' }}
         </span>
         <!-- Only when the television is not on UTC-3: the clock beside it is this computer's, not Brasília's -->
         <span v-if="zoneNote" class="wall__zone">Horários {{ zoneNote }}</span>
@@ -204,17 +205,15 @@ import { formatAgo, formatDateTime, formatTime, parseServer, zoneNotice } from '
  *   - Nothing here may scroll. Every list is cut to what fits and says "+N", and every size is a
  *     clamp() on vw/vmin, so the same layout fills a 1080p television and a 4K one without the
  *     text turning into ants on the second.
- *   - The stream is expected to drop. A dead EventSource is reopened with a growing wait and, while
- *     it is down, the snapshot is polled, so a proxy that closed an idle connection at three in the
- *     morning costs a few seconds of staleness and not a black screen.
+ *   - A tela pergunta, ninguém empurra. De 5 em 5 segundos ela pede o mural inteiro e desenha o que
+ *     vier. Não há conexão para cair, nem reconexão para acertar: uma resposta que falhou custa 5
+ *     segundos do quadro anterior, e a seguinte já conserta. É por isso que o pior caso desta tela é
+ *     "atrasada", nunca "parada".
  *   - Time is counted here, not asked for. The server sends the target and its own clock; the skew
  *     between the two is measured once per snapshot and the seconds tick locally, so a television
  *     whose clock is ten minutes off still shows the right countdown.
  */
 const route = useRoute();
-
-/* EventSource does not go through axios, so the base URL is built by hand — same value as http.js */
-const API_BASE = process.env.VUE_APP_API_URL || 'https://vernumserver-prod.onrender.com';
 
 /* Wide blocks stack down the middle, narrow ones down the side; `panels` decides which and in
    which order, and the filters below keep that order inside each column. */
@@ -225,9 +224,15 @@ const DEFAULT_PANELS = ['countdown', 'kanban', 'announcements', 'updates', 'room
 /* Text reflows on its own — "há 9 min" becomes "há 10 min" and a line wraps — so the fit is retaken */
 const REMEASURE = 60000;
 
-const RECONNECT_START = 2000;
-const RECONNECT_MAX = 30000;
-const POLL_WHILE_DOWN = 15000;
+/*
+ * De quanto em quanto tempo a televisão pergunta.
+ *
+ * Cinco segundos é o atraso máximo de uma mudança na tela, e num mural de parede ninguém percebe a
+ * diferença para instantâneo: o cronômetro conta sozinho entre uma resposta e outra, que é a única
+ * coisa na tela que se mexe sem alguém mexer. O custo do outro lado é uma montagem de quadro por
+ * televisão a cada 5 s, e o quadro é uma consulta por painel, toda por equipe e toda com teto.
+ */
+const POLL_MS = 5000;
 
 const UPDATE_ICONS = {
   TASK_DONE: 'check',
@@ -263,12 +268,10 @@ const serverNow = computed(() => nowMs.value + clockSkew.value);
 const countdownSeen = ref(0);
 let lastTarget = null;
 
-let source = null;
 let tick = null;
 let remeasure = null;
-let reconnectTimer = null;
 let pollTimer = null;
-let reconnectDelay = RECONNECT_START;
+let polling = false;
 const originalTitle = document.title;
 
 onMounted(() => {
@@ -310,18 +313,34 @@ watch(() => route.params.token, () => {
 
 /* --------------------------------------------------------------------- the feed */
 
+/*
+ * Um ciclo só, que se reagenda sozinho.
+ *
+ * `setTimeout` encadeado e não `setInterval`: com intervalo fixo, uma resposta que demorasse mais que
+ * os 5 segundos deixaria a próxima pergunta sair por cima da anterior, e numa rede ruim a televisão
+ * empilharia pedidos justamente quando o servidor está com dificuldade. Assim a conta é sempre
+ * "5 segundos depois da última resposta", e existe no máximo uma pergunta em voo.
+ */
 function start() {
-  reconnectDelay = RECONNECT_START;
-  loadSnapshot();
-  openStream();
+  stopFeed();
+  polling = true;
+  poll();
 }
 
 function stopFeed() {
-  closeStream();
-  clearTimeout(reconnectTimer);
-  clearInterval(pollTimer);
-  reconnectTimer = null;
+  polling = false;
+  clearTimeout(pollTimer);
   pollTimer = null;
+}
+
+async function poll() {
+  if (!polling) return;
+  await loadSnapshot();
+  //Só depois que a anterior voltou, e só se a tela ainda estiver aqui: sem esta segunda checagem uma
+  //resposta que chegasse depois do onUnmounted reagendaria o ciclo numa tela que não existe mais
+  if (polling) {
+    pollTimer = setTimeout(poll, POLL_MS);
+  }
 }
 
 async function loadSnapshot() {
@@ -330,6 +349,7 @@ async function loadSnapshot() {
   try {
     const { data } = await wall.snapshot(token);
     apply(data);
+    live.value = true;
   } catch (error) {
     /*
      * A 404 is the wall itself: an address that leads nowhere, a wall switched off, a team that
@@ -337,65 +357,11 @@ async function loadSnapshot() {
      * screen clears. Anything else is the road between here and the server, and the room keeps
      * reading the last board it was given while the connection comes back.
      */
+    live.value = false;
     if (error?.response?.status === 404) {
       snapshot.value = null;
       notFound.value = true;
     }
-  }
-}
-
-function openStream() {
-  const token = route.params.token;
-  if (!token || typeof EventSource === 'undefined') return;
-  closeStream();
-  source = new EventSource(`${API_BASE}/public/wall/${encodeURIComponent(token)}/stream`);
-
-  source.onopen = () => {
-    live.value = true;
-    reconnectDelay = RECONNECT_START;
-    clearInterval(pollTimer);
-    pollTimer = null;
-  };
-  source.addEventListener('snapshot', (message) => readMessage(message));
-  //Defensive: a snapshot arriving unnamed still repaints the wall, a ping never does
-  source.onmessage = (message) => readMessage(message);
-  source.onerror = () => dropped();
-}
-
-function readMessage(message) {
-  try {
-    const data = JSON.parse(message.data);
-    /*
-     * `serverTime` is the tell that this is a real board and not a keep alive: every snapshot
-     * carries it, and the screen needs it anyway to set its clock against the server's. Guarding on
-     * a field the payload does not actually have would drop every frame in silence — the wall would
-     * sit there showing the board it was given when it was switched on, looking perfectly alive
-     * because the countdown ticks on its own.
-     */
-    if (data && data.serverTime) {
-      apply(data);
-    }
-  } catch (error) {
-    //A keep alive, or half a frame: the next snapshot fixes the screen
-  }
-}
-
-/** The stream died. Reopen it with a growing wait, and poll the snapshot until it is back. */
-function dropped() {
-  live.value = false;
-  closeStream();
-  if (!pollTimer) {
-    pollTimer = setInterval(loadSnapshot, POLL_WHILE_DOWN);
-  }
-  clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(openStream, reconnectDelay);
-  reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX);
-}
-
-function closeStream() {
-  if (source) {
-    source.close();
-    source = null;
   }
 }
 
