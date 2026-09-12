@@ -15,10 +15,34 @@ export const BADGE_ICON_BY_KIND = {
   AWARD_INDIVIDUAL: 'award',
   ALUMNI: 'history',
   CUSTOM: 'badge',
+  MILESTONE: 'target',
 };
 
-/** The order the badge groups are shown in: what was won first, what was attended next. */
-export const BADGE_KIND_ORDER = ['AWARD_INDIVIDUAL', 'AWARD_TEAM', 'EVENT', 'ALUMNI', 'CUSTOM'];
+/**
+ * The order the badge groups are shown in: what was won first, what was attended next, and last the
+ * marcos — the ones nobody handed out.
+ */
+export const BADGE_KIND_ORDER = ['AWARD_INDIVIDUAL', 'AWARD_TEAM', 'EVENT', 'ALUMNI', 'CUSTOM', 'MILESTONE'];
+
+/**
+ * Heading of a badge group when the server's `kindLabel` does not read as one. The label is written
+ * for a single badge ("Marco · CyberRain" under a chip), and a heading counts them.
+ */
+export const BADGE_GROUP_LABEL = {
+  MILESTONE: 'Marcos',
+};
+
+/**
+ * True for a badge the person crossed a number to get, as opposed to one somebody decided to grant.
+ *
+ * It is what the screen turns down: a marco is drawn small, flat and muted next to a badge the team
+ * handed out, because a badge somebody looked at a person and decided to give is worth more than one
+ * a nightly job counted. Participations and prizes are generated too, but a team registered those —
+ * they stay as loud as the rest.
+ */
+export function isAutomaticBadge(badge) {
+  return badge.kind === 'MILESTONE';
+}
 
 /** Icons somebody may pick for a badge granted by hand. All exist in AppIcon. */
 export const BADGE_ICON_CHOICES = [

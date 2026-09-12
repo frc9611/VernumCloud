@@ -63,6 +63,7 @@
             :badges="profile.badges"
             :owner="profile.canEditProfile"
             :customizing="customizing"
+            :milestones="milestoneProgress"
             :team-color-of="teamColorOf"
             @toggle-highlight="toggleHighlight"
             @toggle-hidden="hideBadge"
@@ -107,7 +108,7 @@ import ProfileHeader from '@/components/people/ProfileHeader.vue';
 import ProfileHistory from '@/components/people/ProfileHistory.vue';
 import ProfileTeams from '@/components/people/ProfileTeams.vue';
 import { authStore } from '@/store/auth.js';
-import { people } from '@/services/api.js';
+import { milestones, people } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 import { SECTION_LABELS, resolveSectionOrder } from '@/components/people/profileText.js';
 
@@ -129,6 +130,7 @@ const auth = authStore();
 const toast = useToast();
 
 const profile = ref(null);
+const milestoneProgress = ref([]);
 const loading = ref(false);
 const busy = ref(false);
 const customizing = ref(false);
@@ -154,11 +156,34 @@ async function load() {
   try {
     const { data } = await people.profile(userId);
     profile.value = data;
+    loadMilestones(userId);
   } catch (error) {
     //404 and 403 read the same to whoever is looking: there is nothing to show here
     profile.value = null;
+    milestoneProgress.value = [];
   } finally {
     loading.value = false;
+  }
+}
+
+/*
+ * Where the person stands in the marcos of the team the reader has open — the only team whose
+ * numbers both of them share. Never awaited by `load` and never toasted: it is the "faltam 3
+ * demandas" line under the marcos, and a profile that opened fine must not look broken because the
+ * reader has no MEMBER_VIEW in that team.
+ */
+async function loadMilestones(userId) {
+  milestoneProgress.value = [];
+  const tenantId = auth.activeTenantId;
+  if (!tenantId || !(profile.value?.memberships || []).some((membership) => membership.tenantId === tenantId)) {
+    return;
+  }
+  try {
+    const { data } = await milestones.of(tenantId, userId);
+    //A stale answer of a profile the reader already left behind is worse than no line at all
+    if (route.params.id === userId) milestoneProgress.value = data || [];
+  } catch (error) {
+    if (route.params.id === userId) milestoneProgress.value = [];
   }
 }
 

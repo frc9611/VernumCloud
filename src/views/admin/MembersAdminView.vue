@@ -4,6 +4,16 @@
       <div class="vc-row vc-row--between">
         <h1 class="vc-title vc-title--underlined">Membros de {{ auth.activeTenantName }}</h1>
         <div class="vc-row">
+          <button
+            v-if="auth.can('MEMBER_UPDATE')"
+            class="vc-btn vc-btn--ghost"
+            type="button"
+            :disabled="recalculating"
+            title="Concede agora os marcos que as pessoas já alcançaram, sem esperar a varredura da madrugada"
+            @click="recalculateMilestones"
+          >
+            {{ recalculating ? 'Apurando...' : 'Apurar marcos' }}
+          </button>
           <router-link v-if="auth.can('MEMBER_INVITE')" class="vc-btn vc-btn--ghost" :to="{ name: 'createUser' }">
             Cadastrar novo usuário
           </router-link>
@@ -151,7 +161,7 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import PersonLink from '@/components/PersonLink.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { authStore } from '@/store/auth.js';
-import { catalogs, tenants } from '@/services/api.js';
+import { catalogs, milestones, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
 /*
@@ -175,6 +185,27 @@ const invite = reactive({ userId: '', role: 'MEMBER' });
 
 const editingPermissions = ref(null);
 const selectedPermissions = ref([]);
+
+const recalculating = ref(false);
+
+/*
+ * Concede na hora os marcos que as pessoas já alcançaram, em vez de esperar a varredura da
+ * madrugada. Idempotente no servidor, então apertar duas vezes não concede nada duas vezes — e é
+ * por isso que o botão pode ficar à vista de quem administra a equipe sem pedir confirmação.
+ */
+async function recalculateMilestones() {
+  recalculating.value = true;
+  try {
+    const { data } = await milestones.recalculate(auth.activeTenantId);
+    const granted = data?.granted || 0;
+    if (granted) toast.success(granted === 1 ? '1 marco concedido.' : granted + ' marcos concedidos.');
+    else toast.info('Nenhum marco novo: todo mundo já tem o que alcançou.');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Não foi possível apurar os marcos.'));
+  } finally {
+    recalculating.value = false;
+  }
+}
 
 /*
  * Only the permissions of a team. As da plataforma — criar, alterar e ver todas as equipes — não são

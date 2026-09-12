@@ -73,6 +73,7 @@
           :key="badge.badgeId"
           :badge="badge"
           :color="colorOf(badge)"
+          :quiet="isAutomaticBadge(badge)"
           large
         />
       </div>
@@ -164,7 +165,7 @@ import ModalDialog from '@/components/ModalDialog.vue';
 import PersonLink from '@/components/PersonLink.vue';
 import { people, users } from '@/services/api.js';
 import BadgeChip from './BadgeChip.vue';
-import { badgeColor, defaultHighlight, headlineChips, profileAccent } from './profileText.js';
+import { badgeColor, defaultHighlight, headlineChips, isAutomaticBadge, profileAccent } from './profileText.js';
 
 /*
  * The top of the profile: a banner tinted with the person's first team, the picture overlapping it,
