@@ -2,7 +2,7 @@
   <component
     :is="clickable ? 'button' : 'span'"
     :type="clickable ? 'button' : null"
-    :class="['badge-chip', large ? 'badge-chip--large' : '', clickable ? 'badge-chip--button' : '']"
+    :class="['badge-chip', large ? 'badge-chip--large' : '', clickable ? 'badge-chip--button' : '', quiet ? 'badge-chip--quiet' : '']"
     :style="{ '--badge-color': color, '--badge-text-color': badge.textColor || 'inherit', '--badge-bg': badge.backgroundColor || 'var(--vc-surface)' }"
     :title="badge.description || badge.kindLabel"
   >
@@ -26,12 +26,17 @@ import { badgeFrameClass, badgeIcon } from './profileText.js';
  * resolved by whoever renders the page (badge colour → issuing team → accent), because only the
  * profile knows every team's colour. The colour is data, so it goes inline through a CSS variable
  * and the rest of the look stays on tokens, readable in the three palettes.
+ *
+ * `quiet` is the marco: the chip keeps its shape and loses its weight — tinted circle instead of a
+ * filled one, muted text — so a badge somebody granted never sits at the same volume as one a
+ * nightly job counted out.
  */
 const props = defineProps({
   badge: { type: Object, required: true },
   color: { type: String, default: 'var(--vc-purple)' },
   large: { type: Boolean, default: false },
   clickable: { type: Boolean, default: false },
+  quiet: { type: Boolean, default: false },
 });
 
 const icon = computed(() => badgeIcon(props.badge));
@@ -61,6 +66,21 @@ const subtitle = computed(() => {
 
 .badge-chip--button {
   cursor: pointer;
+}
+
+.badge-chip--quiet {
+  background: var(--vc-surface-muted);
+  border-color: var(--vc-border);
+}
+
+.badge-chip--quiet .badge-chip__icon {
+  background: color-mix(in srgb, var(--badge-color) 20%, transparent);
+  color: var(--badge-color);
+}
+
+.badge-chip--quiet .badge-chip__title {
+  font-weight: 500;
+  color: var(--vc-text-muted);
 }
 
 .badge-chip--button:hover {
