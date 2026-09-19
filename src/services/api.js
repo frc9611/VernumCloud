@@ -659,10 +659,27 @@ export const meetings = {
   toTask: (tenantId, actionId) => http.post(`/tenants/${tenantId}/meetings/actions/${actionId}/task`),
 };
 
-/* O calendário único. Só leitura: a data se muda na tela de origem de cada coisa. */
+/*
+ * O calendário da pessoa: reuniões, viagens, eventos, prazos de demanda e processos seletivos de
+ * todas as equipes dela numa chamada só. Cada item diz de que equipe é (tenantId, tenantName,
+ * tenantColor) e traz `mine`, que separa o que liga a pessoa diretamente àquilo — a demanda que é
+ * dela, a reunião para a qual foi chamada, a viagem para a qual foi convidada — do que ela vê por
+ * ser da equipe ou da divisão.
+ *
+ * Nenhuma rota daqui leva o id da equipe, contra a regra do topo do arquivo, e é de propósito: não
+ * existe equipe aberta nesta tela. Quem recorta é o servidor, origem por origem dentro de cada
+ * equipe da pessoa.
+ *
+ * E o calendário deixou de ser só leitura: a assinatura .ics se administra aqui. `feed` a devolve,
+ * criando-a desligada na primeira vez; `saveFeed` é um patch, o que não vai fica como estava; e
+ * `rotateFeed` troca o token e liga o feed de uma vez — o endereço antigo passa a 404 na hora, então
+ * todo calendário já assinado nele para de atualizar sem avisar ninguém.
+ */
 export const calendar = {
-  between: (tenantId, from, to) =>
-    http.get(`/tenants/${tenantId}/calendar`, { params: { from, to } }),
+  mine: (from, to) => http.get('/me/calendar', { params: { from, to } }),
+  feed: () => http.get('/me/calendar/feed'),
+  saveFeed: (payload) => http.put('/me/calendar/feed', payload),
+  rotateFeed: () => http.post('/me/calendar/feed/token'),
 };
 
 export const wiki = {

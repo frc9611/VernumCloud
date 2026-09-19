@@ -179,14 +179,15 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     /*
-     * Sem `permission` nem `feature`: o calendário é de quem é da equipe, e o que ele mostra depende
-     * do que cada origem deixa passar. Exigir uma permissão aqui esconderia a tela de quem tem direito
-     * a metade dela.
+     * Sem `tenant`, sem `permission` e sem `feature` — agora de verdade: o calendário é da pessoa e
+     * não da equipe. Ele junta todas as equipes dela de uma vez, então não há equipe aberta que faça
+     * sentido exigir, e o que aparece já vem recortado do servidor, origem por origem dentro de cada
+     * equipe. Exigir uma permissão aqui esconderia a tela de quem tem direito a metade dela.
      */
     path: '/calendario',
     name: 'calendar',
     component: () => import(/* webpackChunkName: "meetings" */ '../views/calendar/CalendarView.vue'),
-    meta: { auth: true, tenant: true, permission: 'MEMBER_VIEW' }
+    meta: { auth: true }
   },
 
   /* ------------------------------------------------- base de conhecimento */
@@ -460,9 +461,13 @@ router.beforeEach(async (to, from, next) => {
    * 'trip' is on the list because somebody can be invited to a trip without being in any team of the
    * platform — a guest from a partner school. Sending them to the waiting screen would make the
    * invitation they were notified about unreachable.
+   *
+   * 'calendar' is there for the same guest, and because the header shows its link to everybody: the
+   * calendar is the person's and not a team's, so it still has the trips they were invited to. Empty
+   * for most people with no team, which is a better answer than a redirect they did not ask for.
    */
   if (auth.hasNoTenant && to.name !== 'waiting' && to.name !== 'profile'
-      && to.name !== 'myApplications' && to.name !== 'trip') {
+      && to.name !== 'myApplications' && to.name !== 'trip' && to.name !== 'calendar') {
     return next({ name: 'waiting' });
   }
 

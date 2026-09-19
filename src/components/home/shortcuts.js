@@ -36,9 +36,10 @@ export const SHORTCUTS = [
     when: (auth) => auth.featureOn('RECOGNITION') && auth.can('KUDO_VIEW'),
   },
   {
+    /* For everybody: the calendar is the person's, it spans every team of theirs and needs none open. */
     key: 'calendar', label: 'Calendário', icon: 'calendar', to: { name: 'calendar' },
-    hint: 'Reuniões, viagens, eventos e prazos da equipe num lugar só.',
-    when: (auth) => auth.can('MEMBER_VIEW'),
+    hint: 'Reuniões, viagens, eventos e prazos de todas as suas equipes num lugar só.',
+    when: () => true,
   },
   {
     key: 'meetings', label: 'Reuniões', icon: 'comment', to: { name: 'meetings' },

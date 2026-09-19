@@ -47,6 +47,7 @@
 
         <router-link v-if="showAdminPanel" :to="{ name: 'admin' }" class="vc-header__link">Admin</router-link>
         <router-link :to="{ name: 'home' }" class="vc-header__link">Dashboard</router-link>
+        <router-link :to="{ name: 'calendar' }" class="vc-header__link">Calendário</router-link>
         <router-link v-if="auth.activeTenantId && auth.featureOn('CLOUD')" :to="{ name: 'cloud' }"
                      class="vc-header__link">Arquivos</router-link>
         <router-link :to="{ name: 'profile' }" class="vc-header__link">Perfil</router-link>
@@ -121,7 +122,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from './VernumLogo.vue';
 import AppIcon from './AppIcon.vue';
@@ -133,6 +134,7 @@ const auth = authStore();
 const notifications = notificationStore();
 const prefs = preferencesStore();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 
 const menuOpen = ref(false);
@@ -253,6 +255,13 @@ watch(
   () => auth.isAuth,
   (value) => (value ? notifications.startPolling() : notifications.reset()),
 );
+
+/*
+ * On a phone the nav is a dropdown that nothing but the burger closes. Tapping a link navigates
+ * underneath it and the menu stays over the screen the person just asked for, so the navigation
+ * itself closes it.
+ */
+watch(() => route.fullPath, () => (menuOpen.value = false));
 </script>
 
 <style scoped>
