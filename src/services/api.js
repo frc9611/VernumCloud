@@ -689,6 +689,20 @@ export const calendar = {
  * `links` é a história inteira, que só a tela de competição abre. `suggestions` é a única chamada
  * daqui que faz o servidor sair para a internet, e por isso ela é de quem gerencia, não de quem lê.
  */
+/*
+ * As chaves com que a plataforma fala com as ligas externas.
+ *
+ * Nenhuma destas rotas devolve uma chave — nem a que a grava. O que volta é a impressão digital e o
+ * comprimento, que é o suficiente para conferir que é a chave certa sem entregar pedaço nenhum.
+ */
+export const platformCredentials = {
+  list: () => http.get('/platform/credentials'),
+  save: (kind, body) => http.put(`/platform/credentials/${kind}`, body),
+  remove: (kind) => http.delete(`/platform/credentials/${kind}`),
+  /* Responde 200 mesmo quando a liga recusa: quem decide a cor do toast é o `ok` do corpo. */
+  test: (kind, body) => http.post(`/platform/credentials/${kind}/test`, body || {}),
+};
+
 export const competition = {
   showing: (tenantId) => http.get(`/tenants/${tenantId}/competition`),
   links: (tenantId, season) => http.get(`/tenants/${tenantId}/competition/links`, { params: { season } }),

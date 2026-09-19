@@ -147,6 +147,14 @@ const platformCards = computed(() => {
       to: { name: 'adminUsers' },
     });
   }
+  if (auth.canPlatform('PLATFORM_CREDENTIAL_MANAGE')) {
+    cards.push({
+      label: 'Credenciais da plataforma',
+      icon: 'key',
+      hint: 'As chaves com que a plataforma fala com as ligas: The Blue Alliance, Nexus e FTC.',
+      to: { name: 'adminCredentials' },
+    });
+  }
   if (auth.canPlatform('ARENA_ACCESS')) {
     cards.push({
       label: 'Arena Master',
