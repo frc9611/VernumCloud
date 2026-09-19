@@ -108,7 +108,13 @@
           <!-- ------------------------------------------------------------ the room -->
           <section class="vc-card">
             <div class="vc-card__header vc-card__header--muted">Onde a equipe se encontra</div>
-            <div class="vc-card__body">
+            <div class="vc-card__body vc-stack">
+              <p class="vc-small vc-muted signup__hint">
+                A <strong>sala</strong> é a localização da equipe: o lugar físico onde vocês se
+                encontram. Várias equipes podem dividir a mesma, e é por ela que a presença sabe que
+                uma pessoa não está em dois lugares ao mesmo tempo.
+              </p>
+
               <div class="signup__room">
                 <label class="vc-checkbox">
                   <input v-model="roomMode" type="radio" value="existing" :disabled="!options.rooms.length">
@@ -129,7 +135,7 @@
                 </label>
                 <div v-if="roomMode === 'new'" class="signup__room-open">
                   <input v-model="form.requestedRoomName" class="vc-input" maxlength="80"
-                         placeholder="Nome da sala">
+                         placeholder="ex: Escola XYZ - Joinville">
                   <p class="vc-small vc-muted signup__hint">
                     A sala é criada junto com a equipe, se o pedido for aprovado.
                   </p>
