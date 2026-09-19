@@ -74,6 +74,21 @@
         <router-link :to="{ name: 'waiting' }">Ver processos seletivos abertos</router-link>.
       </p>
 
+      <!--
+        Quem está aqui é quem conhece a próxima equipe: a segunda equipe da escola, a equipe de um
+        amigo. O pedido passa pela análise da plataforma, e o botão diz isso para ninguém apertar
+        esperando uma equipe pronta do outro lado.
+      -->
+      <div class="profile__new-team">
+        <router-link class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'teamSignup' }">
+          <AppIcon name="flag" :size="14" />
+          Cadastrar uma equipe nova
+        </router-link>
+        <p class="vc-small vc-muted profile__new-team-hint">
+          A solicitação passa pela análise da administração. Aprovada, você fica responsável por ela.
+        </p>
+      </div>
+
       <!-- ------------------------------------------------------ personal data -->
       <SectionTitle lead="Dados" title="Importantes" />
 
@@ -358,6 +373,18 @@ async function copy(value) {
 </script>
 
 <style scoped>
+.profile__new-team {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.profile__new-team-hint {
+  margin: 0;
+}
+
 .profile__cards {
   display: flex;
   flex-direction: column;
