@@ -243,6 +243,18 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
   },
   {
+    /*
+     * The queue of teams asking to exist. Reading it is `TENANT_VIEW_ALL`, like the rest of the
+     * platform screens; deciding is `TENANT_CREATE`, which the screen checks on the buttons — the
+     * read permission is the weaker of the two, and a reviewer holding only it would otherwise press
+     * approve and get a 403 back.
+     */
+    path: '/admin/solicitacoes-de-equipe',
+    name: 'adminTeamSignups',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/TeamSignupRequestsView.vue'),
+    meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
+  },
+  {
     /* Rooms cross teams that may have different owners, so managing the list is platform business. */
     path: '/admin/salas',
     name: 'adminRooms',
@@ -388,6 +400,17 @@ const routes: Array<RouteRecordRaw> = [
     path: '/candidatar/:token',
     name: 'apply',
     component: () => import(/* webpackChunkName: "public" */ '../views/public/ApplyView.vue'),
+    meta: { bare: true, footer: true }
+  },
+  {
+    /*
+     * A team asking to exist. Deliberately without `auth`: whoever opens it has no account and no
+     * team, which is the whole reason they are here. A visitor who happens to be logged in keeps
+     * their account — the server ties the request to the token instead of making a second one.
+     */
+    path: '/cadastrar-equipe',
+    name: 'teamSignup',
+    component: () => import(/* webpackChunkName: "public" */ '../views/public/TeamSignupView.vue'),
     meta: { bare: true, footer: true }
   },
   {

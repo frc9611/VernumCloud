@@ -511,6 +511,22 @@ export const publicRecruitment = {
   prefill: () => http.get('/public/recruitment/prefill'),
 };
 
+/*
+ * A team asking to exist. The two reads below are the two sides of the same row: `mine` is what
+ * whoever asked sees on the waiting screen, and the rest is the queue of the system tenant.
+ */
+export const teamSignup = {
+  options: () => http.get('/public/teamSignup/options'),
+  submit: (body) => http.post('/public/teamSignup', body),
+  mine: () => http.get('/me/teamSignupRequests'),
+};
+
+export const teamSignupRequests = {
+  list: (status) => http.get('/platform/teamSignupRequests', { params: status ? { status } : {} }),
+  approve: (requestId, body) => http.post(`/platform/teamSignupRequests/${requestId}/approve`, body),
+  reject: (requestId, body) => http.post(`/platform/teamSignupRequests/${requestId}/reject`, body),
+};
+
 /* ---------------------------------------------------------------- team page */
 
 /** PNG, JPEG, WebP or GIF up to 5 MB, in the multipart field the server expects. */
@@ -806,6 +822,8 @@ export default {
   notifications,
   recruitment,
   publicRecruitment,
+  teamSignup,
+  teamSignupRequests,
   page,
   publicPage,
   wall,
