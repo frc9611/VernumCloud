@@ -103,6 +103,16 @@ export const SHORTCUTS = [
     when: () => true,
   },
   {
+    /*
+     * Also for everybody, and on purpose: whoever is already inside is exactly who knows another team
+     * that should be here — a second team of the same school, the team of a friend. Asking from an
+     * account that exists skips the sign up half of the form.
+     */
+    key: 'teamSignup', label: 'Cadastrar uma equipe', icon: 'flag', to: { name: 'teamSignup' },
+    hint: 'Pedir para a plataforma criar uma equipe nova. Passa pela análise da administração.',
+    when: () => true,
+  },
+  {
     key: 'events', label: 'Eventos e premiações', icon: 'award', to: { name: 'adminEvents' },
     hint: 'Competições, oficinas e ações: quem foi e o que a equipe trouxe de volta.',
     when: (auth) => auth.featureOn('EVENTS') && auth.can('EVENT_VIEW'),

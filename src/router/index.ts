@@ -411,13 +411,17 @@ const routes: Array<RouteRecordRaw> = [
   {
     /*
      * A team asking to exist. Deliberately without `auth`: whoever opens it has no account and no
-     * team, which is the whole reason they are here. A visitor who happens to be logged in keeps
-     * their account — the server ties the request to the token instead of making a second one.
+     * team, which is the whole reason they are here. Somebody who is logged in keeps their account —
+     * the server ties the request to the token instead of making a second one.
+     *
+     * Not `bare` either, for the same reason `openProcesses` is not: the header only draws for a
+     * logged user, so a member reaches this from inside the dashboard and still has a way back,
+     * while a visitor gets the plain public page.
      */
     path: '/cadastrar-equipe',
     name: 'teamSignup',
     component: () => import(/* webpackChunkName: "public" */ '../views/public/TeamSignupView.vue'),
-    meta: { bare: true, footer: true }
+    meta: { footer: true }
   },
   {
     path: '/minhas-candidaturas',

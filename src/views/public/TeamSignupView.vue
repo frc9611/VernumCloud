@@ -1,9 +1,11 @@
 <template>
   <main class="signup">
-    <div class="signup__brand">
+    <!-- A logged member already has the header above; two brands stacked is one too many. -->
+    <div v-if="!auth.isAuth" class="signup__brand">
       <VernumLogo :size="42" :with-wordmark="false" />
-      <h1 class="signup__wordmark">Cadastrar minha <strong>equipe</strong></h1>
+      <h1 class="signup__wordmark">Cadastrar uma <strong>equipe</strong></h1>
     </div>
+    <h1 v-else class="vc-title vc-title--underlined signup__title">Cadastrar uma equipe</h1>
 
     <p v-if="loading" class="vc-faint">Carregando...</p>
 
@@ -21,8 +23,14 @@
 
       <template v-else>
         <p class="vc-muted signup__lead">
-          Preencha os dados e a plataforma analisa o pedido. Você já sai daqui com uma conta e
-          acompanha a resposta por ela.
+          <template v-if="auth.isAuth">
+            Preencha os dados e a plataforma analisa o pedido. Aprovada, a equipe entra na sua conta e
+            você é a pessoa responsável por ela.
+          </template>
+          <template v-else>
+            Preencha os dados e a plataforma analisa o pedido. Você já sai daqui com uma conta e
+            acompanha a resposta por ela.
+          </template>
         </p>
 
         <form class="signup__form vc-stack" @submit.prevent="submit">
@@ -58,14 +66,41 @@
                 </div>
               </div>
 
-              <div class="vc-field">
-                <label class="vc-label" for="profile">O que a equipe vai usar</label>
-                <select id="profile" v-model="form.featureProfile" class="vc-select">
-                  <option v-for="profile in options.featureProfiles" :key="profile.name" :value="profile.name">
-                    {{ profile.label }}
-                  </option>
-                </select>
-                <p class="vc-small vc-muted signup__hint">{{ profileHint }}</p>
+            </div>
+          </section>
+
+          <!-- -------------------------------------------------------- what it uses -->
+          <section class="vc-card">
+            <div class="vc-card__header vc-card__header--muted">
+              O que a equipe vai usar
+              <span class="vc-card__icon">{{ onCount }} de {{ options.features.length }}</span>
+            </div>
+            <div class="vc-card__body vc-stack">
+              <p class="vc-small vc-muted signup__hint">
+                Comece por um conjunto pronto e ajuste o que quiser. Nada aqui é definitivo: a equipe
+                liga e desliga tudo isso depois, em Recursos da equipe.
+              </p>
+
+              <div class="vc-row signup__presets">
+                <button v-for="profile in options.featureProfiles" :key="profile.name" type="button"
+                        :class="['vc-chip', 'vc-chip--button', { 'vc-chip--purple': matchesPreset(profile) }]"
+                        :title="profile.description" @click="applyPreset(profile)">
+                  {{ profile.label }}
+                </button>
+              </div>
+
+              <div v-for="feature in options.features" :key="feature.name" class="vc-switch">
+                <div class="vc-switch__body">
+                  <strong>{{ feature.label }}</strong>
+                  <p>{{ feature.description }}</p>
+                </div>
+                <button type="button"
+                        :class="['vc-switch__toggle', enabled[feature.name] ? 'is-on' : '']"
+                        :aria-pressed="enabled[feature.name] ? 'true' : 'false'"
+                        @click="enabled[feature.name] = !enabled[feature.name]">
+                  <AppIcon :name="enabled[feature.name] ? 'toggleOn' : 'toggleOff'" :size="18" />
+                  {{ enabled[feature.name] ? 'Ligado' : 'Desligado' }}
+                </button>
               </div>
             </div>
           </section>
@@ -150,7 +185,7 @@
           </section>
 
           <div class="vc-row">
-            <router-link class="vc-btn vc-btn--ghost" :to="{ name: 'login' }">
+            <router-link class="vc-btn vc-btn--ghost" :to="{ name: backTarget }">
               {{ auth.isAuth ? 'Voltar' : 'Já tenho conta' }}
             </router-link>
             <span class="vc-spacer"></span>
@@ -167,6 +202,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import AlertBanner from '@/components/AlertBanner.vue';
+import AppIcon from '@/components/AppIcon.vue';
 import VernumLogo from '@/components/VernumLogo.vue';
 import { teamSignup } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
@@ -191,15 +227,16 @@ const sent = ref(false);
 const sentUsername = ref('');
 const accountCreated = ref(false);
 
-const options = reactive({ categories: [], featureProfiles: [], rooms: [] });
+const options = reactive({ categories: [], featureProfiles: [], features: [], rooms: [] });
 const roomMode = ref('new');
+/* One entry per feature the server offers — what is not offered is never asked for. */
+const enabled = reactive({});
 
 const form = reactive({
   visibleName: '',
   teamNumber: '',
   color: '#8864AE',
   competitionCategory: '',
-  featureProfile: 'COMPLETE',
   roomId: null,
   requestedRoomName: '',
   message: '',
@@ -209,10 +246,26 @@ const form = reactive({
   email: '',
 });
 
-const profileHint = computed(() => {
-  const chosen = options.featureProfiles.find((profile) => profile.name === form.featureProfile);
-  return chosen ? chosen.description : 'Dá para mudar depois, a qualquer momento.';
+const onCount = computed(() => options.features.filter((feature) => enabled[feature.name]).length);
+
+/* Somebody logged in but with no team belongs on the waiting screen, not on a dashboard they have none of. */
+const backTarget = computed(() => {
+  if (!auth.isAuth) return 'login';
+  return auth.memberships.length ? 'home' : 'waiting';
 });
+
+/** True when the switches say exactly what this preset says, so the chip can show which one is on. */
+function matchesPreset(profile) {
+  return options.features.every(
+    (feature) => !!enabled[feature.name] === profile.features.includes(feature.name),
+  );
+}
+
+function applyPreset(profile) {
+  for (const feature of options.features) {
+    enabled[feature.name] = profile.features.includes(feature.name);
+  }
+}
 
 //The two ways of answering the room exclude each other, and the server refuses both at once
 watch(roomMode, (mode) => {
@@ -225,7 +278,10 @@ onMounted(async () => {
     const { data } = await teamSignup.options();
     options.categories = data.categories || [];
     options.featureProfiles = data.featureProfiles || [];
+    options.features = data.features || [];
     options.rooms = data.rooms || [];
+    //Everything on is what a team created by hand gets, so it is where this form starts too
+    for (const feature of options.features) enabled[feature.name] = true;
     if (options.rooms.length) roomMode.value = 'existing';
   } catch (error) {
     toast.error(apiMessage(error, 'Não foi possível carregar o formulário.'));
@@ -242,7 +298,7 @@ async function submit() {
       teamNumber: form.teamNumber || null,
       color: form.color || null,
       competitionCategory: form.competitionCategory,
-      featureProfile: form.featureProfile || null,
+      features: Object.fromEntries(options.features.map((f) => [f.name, !!enabled[f.name]])),
       roomId: roomMode.value === 'existing' ? form.roomId : null,
       requestedRoomName: roomMode.value === 'new' ? form.requestedRoomName : null,
       message: form.message || null,
@@ -299,6 +355,11 @@ async function submit() {
   text-align: center;
 }
 
+.signup__title {
+  align-self: stretch;
+  margin: 0;
+}
+
 .signup__form {
   width: 100%;
 }
@@ -321,6 +382,10 @@ async function submit() {
 
 .signup__hint {
   margin: 6px 0 0;
+}
+
+.signup__presets {
+  flex-wrap: wrap;
 }
 
 @media (max-width: 620px) {

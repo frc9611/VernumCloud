@@ -10,8 +10,9 @@
 <body>
   <div class="mk-appbar"><span class="mk-logo"></span><b>Vernum</b>
     <span class="vc-chip vc-chip--danger" style="margin-left:auto">Administração Vernum</span></div>
-  <p class="mk-note">Mockup 6 — o modal da decisão. Os campos vêm preenchidos com o que foi pedido e dá para
-    corrigir antes de criar: o endereço é público e nunca é remendado sozinho.</p>
+  <p class="mk-note">Mockup 6 — o modal da decisão. Tudo vem preenchido com o que foi pedido e dá para
+    corrigir antes de criar — inclusive o <b>nome da equipe</b> e o <b>nome da sala a criar</b>. Os
+    recursos ficam recolhidos: são dezoito, e empurrariam o resto para fora da tela.</p>
 
   <div class="vc-modal-backdrop" style="position:static; padding:28px 20px">
     <div class="vc-modal vc-modal--wide">
@@ -27,6 +28,11 @@
           <div class="vc-callout">
             <strong>Recado de quem pediu</strong>
             <p style="margin:4px 0 0">Escola Técnica Estadual, 20 alunos, primeira temporada na FRC.</p>
+          </div>
+
+          <div class="vc-field">
+            <label class="vc-label">Nome da equipe</label>
+            <input class="vc-input" value="Cyber Rain">
           </div>
 
           <div class="pair">
@@ -47,22 +53,37 @@
               <select class="vc-select"><option>FLL Challenge</option><option>FTC</option><option selected>FRC</option></select>
             </div>
             <div class="vc-field">
-              <label class="vc-label">Recursos</label>
-              <select class="vc-select"><option>Completo</option><option selected>Competição</option><option>Mentoria</option><option>Essencial</option></select>
+              <label class="vc-label">Sala</label>
+              <select class="vc-select">
+                <option selected>Criar uma sala nova</option>
+                <option>Sala São Paulo</option>
+                <option>Sala Rio de Janeiro</option>
+                <option>Sem sala</option>
+              </select>
             </div>
           </div>
 
           <div class="vc-field">
-            <label class="vc-label">Sala</label>
-            <select class="vc-select">
-              <option selected>Criar "Sala Campinas"</option>
-              <option>Sala São Paulo</option>
-              <option>Sala Rio de Janeiro</option>
-              <option>Sem sala</option>
-            </select>
+            <label class="vc-label">Nome da sala a criar</label>
+            <input class="vc-input" value="Sala Campinas">
             <p class="vc-small vc-muted" style="margin:6px 0 0">
-              A equipe pediu uma sala nova. Uma sala com esse nome ainda não existe.
+              Uma sala com esse nome ainda não existe e será criada junto com a equipe.
             </p>
+          </div>
+
+          <div class="vc-card">
+            <div class="vc-card__header vc-card__header--muted">
+              Recursos<span class="vc-card__icon">16 de 18 ligados</span>
+            </div>
+            <div class="vc-card__body">
+              <div class="vc-row">
+                <p class="vc-small vc-muted" style="margin:0">
+                  O que a equipe pediu. A tag RFID nunca entra por aqui — liga depois, na equipe.
+                </p>
+                <span class="vc-spacer"></span>
+                <span class="vc-btn vc-btn--ghost vc-btn--small">Ajustar</span>
+              </div>
+            </div>
           </div>
 
           <div class="vc-field">
