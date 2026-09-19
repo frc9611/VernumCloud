@@ -70,6 +70,36 @@
               <p class="panel__more">{{ hiddenRace ? '+' + hiddenRace : '' }}</p>
             </section>
 
+            <!-- ----------------------------------------------------------- competition -->
+            <section v-else-if="panel === 'competition' && snapshot.competition" class="panel panel--comp">
+              <h2 class="panel__title">
+                <AppIcon name="flag" :size="18" />Próxima partida
+                <span class="comp__where">{{ competitionWhere }}</span>
+              </h2>
+              <div class="comp">
+                <div>
+                  <p class="comp__when">{{ competitionCountdown }}</p>
+                  <p class="comp__what">{{ competitionSubtitle }}</p>
+                </div>
+                <div v-if="snapshot.competition.ourAlliance" class="comp__sides">
+                  <div :class="['cside', compSideClass(snapshot.competition.ourAlliance), 'is-ours']">
+                    <span class="cside__label">{{ compSideLabel(snapshot.competition.ourAlliance) }}</span>
+                    <span class="cside__teams">
+                      <span class="is-us">{{ snapshot.competition.ourNumber }}</span>
+                      <span v-for="mate in snapshot.competition.partners" :key="mate">{{ mate }}</span>
+                    </span>
+                  </div>
+                  <div v-if="snapshot.competition.opponents && snapshot.competition.opponents.length"
+                       :class="['cside', compSideClass(compOtherSide)]">
+                    <span class="cside__label">{{ compSideLabel(compOtherSide) }}</span>
+                    <span class="cside__teams">
+                      <span v-for="rival in snapshot.competition.opponents" :key="rival">{{ rival }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <!-- ---------------------------------------------------------------- kanban -->
             <section v-else-if="panel === 'kanban'" class="panel panel--kanban">
               <div class="kanban" :style="{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(0, 1fr))` }">
@@ -217,7 +247,7 @@ const route = useRoute();
 
 /* Wide blocks stack down the middle, narrow ones down the side; `panels` decides which and in
    which order, and the filters below keep that order inside each column. */
-const WIDE_PANELS = ['countdown', 'race', 'kanban', 'stats'];
+const WIDE_PANELS = ['countdown', 'race', 'competition', 'kanban', 'stats'];
 const NARROW_PANELS = ['announcements', 'updates', 'room'];
 const DEFAULT_PANELS = ['countdown', 'kanban', 'announcements', 'updates', 'room', 'stats'];
 
@@ -531,6 +561,59 @@ const targetText = computed(() => {
   const target = countdown.value?.target;
   if (!target) return '';
   return formatDateTime(target);
+});
+
+/* ------------------------------------------------------------- the competition */
+
+const COMP_SIDES = { RED: 'Vermelha', BLUE: 'Azul' };
+
+const compOtherSide = computed(() =>
+  (snapshot.value?.competition?.ourAlliance === 'RED' ? 'BLUE' : 'RED'));
+
+function compSideLabel(side) {
+  return COMP_SIDES[side] || '';
+}
+
+function compSideClass(side) {
+  return side === 'RED' ? 'cside--red' : 'cside--blue';
+}
+
+/* Com um evento só o nome dele é ruído: quem está na sala sabe em qual torneio a equipe está. */
+const competitionWhere = computed(() => {
+  const row = snapshot.value?.competition;
+  if (!row) return '';
+  return [row.eventName, row.venueLabel].filter(Boolean).join(' · ');
+});
+
+/*
+ * Quanto falta, contado contra o relógio do servidor e não o da televisão — a mesma correção que o
+ * cronômetro grande já faz, e pela mesma razão: a máquina pendurada na parede pode estar dez minutos
+ * errada e ninguém nunca vai conferir.
+ */
+const competitionCountdown = computed(() => {
+  const row = snapshot.value?.competition;
+  if (!row) return '';
+  if (row.played) return `${row.ourScore ?? '—'} × ${row.theirScore ?? '—'}`;
+  const target = row.scheduledAt ? parseServer(row.scheduledAt) : null;
+  if (!target) return 'sem horário';
+  const seconds = Math.round((target.getTime() - serverNow.value) / 1000);
+  if (seconds <= 0) return 'AGORA';
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+});
+
+const competitionSubtitle = computed(() => {
+  const row = snapshot.value?.competition;
+  if (!row) return '';
+  const parts = [];
+  if (row.displayName) parts.push(row.displayName);
+  if (row.scheduledAt) parts.push(formatTime(row.scheduledAt));
+  if (row.rankPosition) parts.push(`${row.rankPosition}º lugar`);
+  return parts.join(' · ');
 });
 
 /* ---------------------------------------------------------------- the live event */
@@ -974,6 +1057,95 @@ function agoText(value) {
 .lane.is-leader .lane__score b {
   color: var(--vc-text);
   font-size: 1.8em;
+}
+
+/* ----------------------------------------------------------------- competition */
+
+.panel--comp {
+  flex: none;
+  border-color: var(--vc-purple-border);
+}
+
+.comp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(14px, 1.6vw, 40px);
+  align-items: center;
+}
+
+.comp__where {
+  margin-left: auto;
+  font-size: clamp(11px, 0.95vw, 24px);
+  color: var(--vc-text-faint);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.comp__when {
+  margin: 0;
+  font-size: clamp(34px, 4.6vw, 176px);
+  font-weight: 700;
+  line-height: 0.95;
+}
+
+.comp__what {
+  margin: 0.25em 0 0;
+  color: var(--vc-text-muted);
+  font-size: clamp(13px, 1.25vw, 32px);
+}
+
+.comp__sides {
+  display: grid;
+  gap: clamp(6px, 0.7vh, 18px);
+}
+
+.cside {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 0.8vw, 20px);
+  padding: clamp(6px, 0.7vh, 18px) clamp(10px, 1vw, 26px);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface-muted);
+  font-size: clamp(18px, 2.1vw, 80px);
+  font-weight: 700;
+}
+
+.cside--red {
+  box-shadow: inset clamp(4px, 0.4vw, 10px) 0 0 #e04a43;
+}
+
+.cside--blue {
+  box-shadow: inset clamp(4px, 0.4vw, 10px) 0 0 #4a86e8;
+}
+
+/*
+ * "É a nossa" aqui NÃO pode ser --vc-purple-soft, que é o realce da mesma faixa no dashboard: esse
+ * token nunca é redefinido no tema escuro, continua quase branco, e numa televisão vira um bloco
+ * ofuscante do outro lado da sala. Apareceu no mockup, antes de existir código.
+ */
+.cside.is-ours {
+  outline: clamp(2px, 0.18vw, 5px) solid var(--vc-purple);
+  outline-offset: calc(-1 * clamp(2px, 0.18vw, 5px));
+}
+
+.cside__label {
+  flex: none;
+  /* Largura fixa e não em em: a fonte do rótulo é menor que a dos números, e 5em encostava neles */
+  width: clamp(64px, 6.5vw, 240px);
+  font-size: clamp(10px, 0.85vw, 22px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vc-text-muted);
+}
+
+.cside__teams {
+  display: flex;
+  gap: 0.6em;
+}
+
+.cside .is-us {
+  color: var(--vc-purple);
 }
 
 /* --------------------------------------------------------------------- kanban */
