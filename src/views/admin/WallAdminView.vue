@@ -260,6 +260,11 @@ const PANELS = [
     label: 'Corrida entre divisões',
     hint: 'uma faixa por divisão, com o que cada uma concluiu dentro da janela',
   },
+  {
+    value: 'competition',
+    label: 'Próxima partida',
+    hint: 'o horário, a mesa e a aliança da próxima partida da equipe; some sozinho fora da competição',
+  },
   { value: 'kanban', label: 'Quadro de demandas', hint: 'uma coluna por status' },
   { value: 'announcements', label: 'Avisos', hint: 'os avisos mais recentes da equipe' },
   { value: 'updates', label: 'Atualizações', hint: 'a linha do tempo do que acabou de acontecer' },
