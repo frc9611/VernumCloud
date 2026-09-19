@@ -167,6 +167,8 @@ let insideClick = false;
  */
 const GUARDS = {
   PESSOA: () => auth.can('MEMBER_VIEW'),
+  // Room-mates ride on the permission that already opens the room to other teams' names.
+  PESSOA_SALA: () => auth.can('MEMBER_VIEW') && auth.can('ATTENDANCE_VIEW') && auth.featureOn('ATTENDANCE'),
   DEMANDA: () => auth.can('TASK_VIEW') && auth.featureOn('TASKS'),
   DIVISAO: () => auth.can('DIVISION_VIEW'),
   PROCESSO: () => auth.can('RECRUITMENT_VIEW') && auth.featureOn('RECRUITMENT'),
