@@ -108,6 +108,11 @@ export const SHORTCUTS = [
     when: (auth) => auth.featureOn('EVENTS') && auth.can('EVENT_VIEW'),
   },
   {
+    key: 'competition', label: 'Competição', icon: 'flag', to: { name: 'competition' },
+    hint: 'O cronograma, o placar e a classificação da equipe — e o histórico das temporadas.',
+    when: (auth) => auth.featureOn('COMPETITION') && auth.can('COMPETITION_VIEW'),
+  },
+  {
     key: 'landingPage', label: 'Página pública', icon: 'globe', to: { name: 'adminPage' },
     hint: 'A página da equipe na internet: modelo, apresentação, contato e publicações.',
     when: (auth) => auth.featureOn('LANDING_PAGE') && auth.can('PAGE_MANAGE'),
