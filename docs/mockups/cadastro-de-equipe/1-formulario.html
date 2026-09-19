@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — cadastrar minha equipe</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <link rel="stylesheet" href="_shell.css">
+  <link rel="stylesheet" href="_signup.css">
+</head>
+<body>
+  <p class="mk-note">Mockup 1 — <b>/cadastrar-equipe</b>, sem login. Sala escolhida entre as que existem.
+    A lista de competições traz <b>só</b> FLL Challenge, FTC e FRC.</p>
+
+  <div class="mk-wrap mk-wrap--form">
+    <div class="signup__brand"><span class="signup__brand-mark"></span><b>Vernum</b></div>
+
+    <div class="vc-stack">
+      <h1 class="vc-title vc-title--underlined">Cadastrar minha equipe</h1>
+      <p class="vc-muted" style="margin:0">
+        Preencha os dados e a plataforma analisa o pedido. Você já sai daqui com uma conta e acompanha
+        a resposta por ela.
+      </p>
+
+      <!-- ----------------------------------------------------------------- a equipe -->
+      <div class="vc-card">
+        <div class="vc-card__header">A equipe</div>
+        <div class="vc-card__body vc-stack">
+          <div class="pair">
+            <div class="vc-field">
+              <label class="vc-label">Nome da equipe</label>
+              <input class="vc-input" value="Cyber Rain">
+            </div>
+            <div class="vc-field">
+              <label class="vc-label">Número</label>
+              <input class="vc-input" value="9611" placeholder="opcional">
+            </div>
+          </div>
+          <div class="pair">
+            <div class="vc-field">
+              <label class="vc-label">Competição</label>
+              <select class="vc-select">
+                <option>FLL Challenge</option>
+                <option>FTC</option>
+                <option selected>FRC</option>
+              </select>
+            </div>
+            <div class="vc-field">
+              <label class="vc-label">Cor da equipe</label>
+              <input class="vc-input" type="color" value="#3366cc">
+            </div>
+          </div>
+          <div class="vc-field">
+            <label class="vc-label">O que a equipe vai usar</label>
+            <select class="vc-select">
+              <option>Completo — tudo ligado</option>
+              <option selected>Competição — a temporada</option>
+              <option>Mentoria — foco nas pessoas</option>
+              <option>Essencial — o mínimo</option>
+            </select>
+            <p class="vc-small vc-muted" style="margin:6px 0 0">Dá para mudar depois, a qualquer momento.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- --------------------------------------------------------------------- sala -->
+      <div class="vc-card">
+        <div class="vc-card__header vc-card__header--muted">Onde a equipe se encontra</div>
+        <div class="vc-card__body">
+          <div class="room__choice">
+            <label class="vc-checkbox"><input type="radio" name="room" checked> Uma sala que já existe</label>
+            <div class="room__open">
+              <select class="vc-select">
+                <option selected>Sala São Paulo</option>
+                <option>Sala Rio de Janeiro</option>
+              </select>
+            </div>
+            <label class="vc-checkbox"><input type="radio" name="room"> Pedir uma sala nova</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------------------------------------------------------- sua conta -->
+      <div class="vc-card">
+        <div class="vc-card__header vc-card__header--muted">Você</div>
+        <div class="vc-card__body vc-stack">
+          <p class="vc-small vc-muted" style="margin:0">
+            Aprovada a equipe, esta conta é a administradora dela.
+          </p>
+          <div class="pair">
+            <div class="vc-field"><label class="vc-label">Seu nome</label><input class="vc-input" value="Ana Souza"></div>
+            <div class="vc-field"><label class="vc-label">E-mail</label><input class="vc-input" value="ana@escola.br"></div>
+          </div>
+          <div class="pair">
+            <div class="vc-field"><label class="vc-label">Nome de acesso</label><input class="vc-input" value="ana.souza"></div>
+            <div class="vc-field"><label class="vc-label">Senha</label><input class="vc-input" type="password" value="12345678"></div>
+          </div>
+          <div class="vc-field">
+            <label class="vc-label">Recado para quem analisa</label>
+            <textarea class="vc-textarea" rows="3">Escola Técnica Estadual, 20 alunos, primeira temporada na FRC.</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="vc-row">
+        <a class="vc-btn vc-btn--ghost">Já tenho conta</a>
+        <span class="vc-spacer"></span>
+        <button class="vc-btn">Enviar solicitação</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

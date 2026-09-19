@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="admin">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — fila de solicitações</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <link rel="stylesheet" href="_shell.css">
+  <link rel="stylesheet" href="_signup.css">
+</head>
+<body>
+  <div class="mk-appbar"><span class="mk-logo"></span><b>Vernum</b>
+    <span class="vc-chip vc-chip--danger" style="margin-left:auto">Administração Vernum</span></div>
+  <p class="mk-note">Mockup 5 — <b>/admin/solicitacoes-de-equipe</b>, na paleta da administração. Ler pede
+    <code>TENANT_VIEW_ALL</code>; os botões de decidir pedem <code>TENANT_CREATE</code>.</p>
+
+  <div class="mk-wrap mk-wrap--wide">
+    <div class="vc-stack">
+      <h2 class="vc-section-title">
+        <strong>Solicitações de equipe</strong>
+        <span class="vc-spacer"></span>
+        <span class="vc-chip vc-chip--warning">2 em análise</span>
+      </h2>
+
+      <div class="vc-tabs">
+        <a class="vc-tab is-active">Em análise</a>
+        <a class="vc-tab">Aprovadas</a>
+        <a class="vc-tab">Recusadas</a>
+        <a class="vc-tab">Todas</a>
+      </div>
+
+      <!-- ------------------------------------------------- uma pedindo sala nova -->
+      <div class="vc-card">
+        <div class="vc-card__body">
+          <div class="request">
+            <div class="vc-stack" style="gap:8px">
+              <strong>Cyber Rain <span class="vc-faint">#9611</span></strong>
+              <div class="request__facts">
+                <span class="vc-chip vc-chip--warning">Em análise</span>
+                <span class="vc-chip">FRC</span>
+                <span class="vc-chip vc-chip--info">Sala nova: Sala Campinas</span>
+                <span class="vc-chip">Competição</span>
+                <span class="vc-chip">cyber-rain</span>
+              </div>
+              <p class="vc-small vc-muted" style="margin:0">
+                Ana Souza · ana@escola.br · enviada há 2 dias
+              </p>
+              <p class="vc-small" style="margin:0">
+                “Escola Técnica Estadual, 20 alunos, primeira temporada na FRC.”
+              </p>
+            </div>
+            <div class="vc-stack" style="gap:6px">
+              <button class="vc-btn vc-btn--small">Analisar</button>
+              <button class="vc-btn vc-btn--ghost vc-btn--small">Ver a pessoa</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------- outra, com o endereço tomado -->
+      <div class="vc-card">
+        <div class="vc-card__body">
+          <div class="request">
+            <div class="vc-stack" style="gap:8px">
+              <strong>Robotec</strong>
+              <div class="request__facts">
+                <span class="vc-chip vc-chip--warning">Em análise</span>
+                <span class="vc-chip">FLL Challenge</span>
+                <span class="vc-chip">Sala São Paulo</span>
+                <span class="vc-chip vc-chip--danger">endereço robotec já usado</span>
+              </div>
+              <p class="vc-small vc-muted" style="margin:0">Caio Lima · enviada há 5 horas</p>
+            </div>
+            <div class="vc-stack" style="gap:6px">
+              <button class="vc-btn vc-btn--small">Analisar</button>
+              <button class="vc-btn vc-btn--ghost vc-btn--small">Ver a pessoa</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- -------------------------------------------------------- uma ja decidida -->
+      <div class="vc-card">
+        <div class="vc-card__body">
+          <div class="request">
+            <div class="vc-stack" style="gap:8px">
+              <strong>Tech Lions <span class="vc-faint">#4321</span></strong>
+              <div class="request__facts">
+                <span class="vc-chip vc-chip--success">Aprovada</span>
+                <span class="vc-chip">FTC</span>
+                <span class="vc-chip">Sala Rio de Janeiro</span>
+              </div>
+              <p class="vc-small vc-muted" style="margin:0">
+                Decidida por Administrador do Sistema · 14 de setembro de 2026
+              </p>
+            </div>
+            <div class="vc-stack" style="gap:6px">
+              <a class="vc-btn vc-btn--ghost vc-btn--small">Abrir a equipe</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
