@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — aba Competição (dois eventos)</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <link rel="stylesheet" href="_shell.css">
+  <link rel="stylesheet" href="_comp.css">
+</head>
+<body>
+  <div class="mk-appbar"><span class="mk-logo"></span><b>Vernum</b>
+    <span class="vc-chip vc-chip--purple" style="margin-left:auto">Cyber Rain · #9611</span></div>
+  <p class="mk-note">Mockup 2 — <b>dois</b> eventos em cartaz. A aba passa a se chamar "Competição" e a
+    próxima partida do topo é a mais próxima <b>entre os dois</b>, nomeando de qual evento ela é.</p>
+
+  <div class="mk-wrap">
+    <div class="vc-tabs">
+      <a class="vc-tab">Home</a>
+      <a class="vc-tab">Central de Comando</a>
+      <a class="vc-tab">Apps</a>
+      <a class="vc-tab is-active">Competição</a>
+      <span class="vc-tabs-context"><span class="vc-chip vc-chip--success">2 acontecendo</span></span>
+    </div>
+
+    <div class="vc-stack">
+      <!-- A faixa de cima nao pertence a evento nenhum: ela responde "o que e a proxima coisa". -->
+      <div class="vc-card">
+        <div class="vc-card__header">Próxima partida<span class="vc-card__icon">Regional Sudeste · Mesa 2</span></div>
+        <div class="vc-card__body">
+          <div class="next">
+            <p class="next__when">em 18 min<small>Classificatória 12 · 14:35</small></p>
+            <div class="alliance">
+              <div class="side side--red is-ours">
+                <span class="side__label">Vermelha</span>
+                <span class="side__teams"><span class="team is-us">9611</span><span class="team">1234</span><span class="team">5678</span></span>
+              </div>
+              <div class="side side--blue">
+                <span class="side__label">Azul</span>
+                <span class="side__teams"><span class="team">4321</span><span class="team">8765</span><span class="team">2468</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------------------------------- evento 1 -->
+      <h2 class="vc-section-title">
+        <strong>Regional Sudeste 2026</strong>
+        <span class="vc-spacer"></span>
+        <span class="vc-chip vc-chip--success">acontecendo agora</span>
+        <span class="vc-chip">7º lugar · 4V 2D</span>
+      </h2>
+      <div class="vc-card">
+        <div class="vc-table-wrap">
+          <table class="vc-table">
+            <thead><tr><th>Partida</th><th>Horário</th><th>Mesa</th><th>Aliança</th><th>Placar</th><th>Resultado</th></tr></thead>
+            <tbody>
+              <tr><td>Classificatória 12</td><td>14:35</td><td>Mesa 2</td><td>Vermelha</td><td class="vc-faint">—</td><td class="vc-faint">a jogar</td></tr>
+              <tr><td>Classificatória 9</td><td>11:20</td><td>Mesa 1</td><td>Azul</td><td class="result">72 × 86</td><td class="result result--loss">derrota</td></tr>
+              <tr><td>Classificatória 7</td><td>10:05</td><td>Mesa 2</td><td>Vermelha</td><td class="result">86 × 72</td><td class="result result--win">vitória</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ------------------------------------------------------------------- evento 2 -->
+      <h2 class="vc-section-title">
+        <strong>Torneio FLL Vale do Paraíba</strong>
+        <span class="vc-spacer"></span>
+        <span class="vc-chip vc-chip--success">acontecendo agora</span>
+        <span class="vc-chip">3º lugar</span>
+      </h2>
+      <div class="vc-card">
+        <div class="vc-table-wrap">
+          <!-- Liga sem alianca: a coluna sai da tabela em vez de vir vazia. -->
+          <table class="vc-table">
+            <thead><tr><th>Rodada</th><th>Horário</th><th>Mesa</th><th>Pontos</th></tr></thead>
+            <tbody>
+              <tr><td>Rodada 3</td><td>15:10</td><td>Mesa A</td><td class="vc-faint">a jogar</td></tr>
+              <tr><td>Rodada 2</td><td>12:40</td><td>Mesa B</td><td class="result">315</td></tr>
+              <tr><td>Rodada 1</td><td>09:50</td><td>Mesa A</td><td class="result">280</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

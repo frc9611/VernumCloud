@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — seção de competição na Home</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <link rel="stylesheet" href="_shell.css">
+  <link rel="stylesheet" href="_comp.css">
+  <style>
+    /* Na Home a competicao e uma faixa, nao uma tela: uma linha que responde "e agora?" e sai da frente. */
+    .home-comp { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .home-comp__when { font-size: 1.5rem; font-weight: 700; line-height: 1; white-space: nowrap; }
+    .home-comp__what { color: var(--vc-text-muted); font-size: 0.85rem; }
+    .home-comp .vc-spacer { flex: 1; }
+    .ghost { border: 1px dashed var(--vc-border-strong); border-radius: var(--vc-radius);
+             padding: 22px; text-align: center; color: var(--vc-text-faint); background: var(--vc-surface); }
+  </style>
+</head>
+<body>
+  <div class="mk-appbar"><span class="mk-logo"></span><b>Vernum</b>
+    <span class="vc-chip vc-chip--purple" style="margin-left:auto">Cyber Rain · #9611</span></div>
+  <p class="mk-note">Mockup 5 — a seção na Home. Só entra na lista de seções quando há algo em cartaz, do
+    mesmo jeito que "processos seletivos" e "pedidos de acesso" já fazem; fora disso a Home é a de hoje.</p>
+
+  <div class="mk-wrap">
+    <div class="vc-tabs">
+      <a class="vc-tab is-active">Home</a>
+      <a class="vc-tab">Central de Comando</a>
+      <a class="vc-tab">Apps</a>
+      <a class="vc-tab">Regional Sudeste</a>
+    </div>
+
+    <div class="vc-stack">
+      <div class="ghost">boas-vindas</div>
+
+      <h2 class="vc-section-title"><strong>Competição</strong>
+        <span class="vc-spacer"></span>
+        <span class="vc-chip vc-chip--success">acontecendo agora</span></h2>
+
+      <div class="vc-card">
+        <div class="vc-card__body">
+          <div class="home-comp">
+            <span>
+              <span class="home-comp__when">em 18 min</span><br>
+              <span class="home-comp__what">Classificatória 12 · Mesa 2 · Regional Sudeste</span>
+            </span>
+            <span class="alliance" style="min-width:0">
+              <span class="side side--red is-ours">
+                <span class="side__label">Vermelha</span>
+                <span class="side__teams"><span class="team is-us">9611</span><span class="team">1234</span><span class="team">5678</span></span>
+              </span>
+            </span>
+            <span class="vc-spacer"></span>
+            <a class="vc-btn vc-btn--outline vc-btn--small">Ver a competição</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="ghost">atalhos</div>
+      <div class="ghost">minhas demandas</div>
+    </div>
+  </div>
+</body>
+</html>
