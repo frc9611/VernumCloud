@@ -40,7 +40,7 @@
                 <span v-else-if="request.requestedRoomName" class="vc-chip vc-chip--info">
                   Sala nova: {{ request.requestedRoomName }}
                 </span>
-                <span v-if="request.featureProfile" class="vc-chip">{{ profileLabel(request) }}</span>
+                <span class="vc-chip">{{ request.featureProfileLabel }}</span>
                 <span class="vc-chip">{{ request.slug }}</span>
               </div>
 
@@ -90,6 +90,11 @@
           <p style="margin: 4px 0 0">{{ editing.message }}</p>
         </div>
 
+        <div class="vc-field">
+          <label class="vc-label" for="name">Nome da equipe</label>
+          <input id="name" v-model="decision.visibleName" class="vc-input" maxlength="120">
+        </div>
+
         <div class="request__pair">
           <div class="vc-field">
             <label class="vc-label" for="slug">Endereço da equipe</label>
@@ -112,28 +117,61 @@
             </select>
           </div>
           <div class="vc-field">
-            <label class="vc-label" for="prof">Recursos</label>
-            <select id="prof" v-model="decision.featureProfile" class="vc-select">
-              <option value="">Tudo ligado</option>
-              <option v-for="profile in profiles" :key="profile.name" :value="profile.name">
-                {{ profile.label }}
-              </option>
+            <label class="vc-label" for="room">Sala</label>
+            <select id="room" v-model="roomChoice" class="vc-select">
+              <option v-if="editing.requestedRoomName" value="new">Criar uma sala nova</option>
+              <option v-for="room in rooms" :key="room.roomId" :value="String(room.roomId)">{{ room.name }}</option>
+              <option value="none">Sem sala</option>
             </select>
           </div>
         </div>
 
-        <div class="vc-field">
-          <label class="vc-label" for="room">Sala</label>
-          <select id="room" v-model="roomChoice" class="vc-select">
-            <option v-if="editing.requestedRoomName" value="new">
-              Criar "{{ editing.requestedRoomName }}"
-            </option>
-            <option v-for="room in rooms" :key="room.roomId" :value="String(room.roomId)">{{ room.name }}</option>
-            <option value="none">Sem sala</option>
-          </select>
-          <p v-if="editing.requestedRoomName" class="vc-small vc-muted" style="margin: 6px 0 0">
-            A equipe pediu uma sala nova. Escolher uma da lista deixa a sala pedida de lado.
+        <div v-if="roomChoice === 'new'" class="vc-field">
+          <label class="vc-label" for="roomName">Nome da sala a criar</label>
+          <input id="roomName" v-model="decision.roomName" class="vc-input" maxlength="80">
+          <p class="vc-small vc-muted" style="margin: 6px 0 0">
+            {{ roomNameHint }}
           </p>
+        </div>
+
+        <div class="vc-card">
+          <div class="vc-card__header vc-card__header--muted">
+            Recursos
+            <span class="vc-card__icon">{{ onCount }} de {{ features.length }} ligados</span>
+          </div>
+          <div class="vc-card__body vc-stack">
+            <div class="vc-row">
+              <p class="vc-small vc-muted" style="margin: 0">
+                O que a equipe pediu. A tag RFID nunca entra por aqui — liga depois, na equipe.
+              </p>
+              <span class="vc-spacer"></span>
+              <button class="vc-btn vc-btn--ghost vc-btn--small" type="button"
+                      @click="showFeatures = !showFeatures">
+                {{ showFeatures ? 'Recolher' : 'Ajustar' }}
+              </button>
+            </div>
+
+            <div v-if="showFeatures" class="vc-row request__presets">
+              <button v-for="profile in profiles" :key="profile.name" type="button"
+                      :class="['vc-chip', 'vc-chip--button', { 'vc-chip--purple': matchesPreset(profile) }]"
+                      :title="profile.description" @click="applyPreset(profile)">
+                {{ profile.label }}
+              </button>
+            </div>
+            <div v-for="feature in showFeatures ? features : []" :key="feature.name" class="vc-switch">
+              <div class="vc-switch__body">
+                <strong>{{ feature.label }}</strong>
+                <p>{{ feature.description }}</p>
+              </div>
+              <button type="button"
+                      :class="['vc-switch__toggle', enabled[feature.name] ? 'is-on' : '']"
+                      :aria-pressed="enabled[feature.name] ? 'true' : 'false'"
+                      @click="enabled[feature.name] = !enabled[feature.name]">
+                <AppIcon :name="enabled[feature.name] ? 'toggleOn' : 'toggleOff'" :size="18" />
+                {{ enabled[feature.name] ? 'Ligado' : 'Desligado' }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="vc-field">
@@ -162,7 +200,8 @@ import SectionTitle from '@/components/SectionTitle.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import PersonLink from '@/components/PersonLink.vue';
-import { catalogs, rooms as roomsApi, teamSignupRequests } from '@/services/api.js';
+import AppIcon from '@/components/AppIcon.vue';
+import { rooms as roomsApi, teamSignup, teamSignupRequests } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 import { authStore } from '@/store/auth.js';
 
@@ -193,11 +232,18 @@ const filter = ref('PENDING');
 const requests = ref([]);
 const categories = ref([]);
 const profiles = ref([]);
+const features = ref([]);
 const rooms = ref([]);
 
 const editing = ref(null);
 const roomChoice = ref('none');
-const decision = reactive({ slug: '', teamNumber: '', competitionCategory: '', featureProfile: '', note: '' });
+const enabled = reactive({});
+/* The switches start folded: the reviewer came to decide, and eighteen of them push the name,
+   the address and the room off the screen. */
+const showFeatures = ref(false);
+const decision = reactive({
+  visibleName: '', slug: '', teamNumber: '', competitionCategory: '', roomName: '', note: '',
+});
 
 const canDecide = computed(() => auth.canPlatform('TENANT_CREATE'));
 const pendingCount = computed(() => requests.value.filter((item) => item.status === 'PENDING').length);
@@ -206,15 +252,17 @@ onMounted(async () => {
   await Promise.all([load(), loadCatalogs()]);
 });
 
+/*
+ * The same options the public form drew. Reading them from there and not from the full catalogs is
+ * the point: the reviewer is deciding a request, and offering a switch the form never offered would
+ * be answering a question nobody asked — the reader on the wall is turned on in the team itself.
+ */
 async function loadCatalogs() {
   try {
-    const [categoryList, profileList, roomList] = await Promise.all([
-      catalogs.competitionCategories(),
-      catalogs.featureProfiles(),
-      roomsApi.list(),
-    ]);
-    categories.value = categoryList.data;
-    profiles.value = profileList.data.filter((profile) => profile.name !== 'CUSTOM');
+    const [optionList, roomList] = await Promise.all([teamSignup.options(), roomsApi.list()]);
+    categories.value = optionList.data.categories;
+    profiles.value = optionList.data.featureProfiles;
+    features.value = optionList.data.features;
     rooms.value = roomList.data;
   } catch (error) {
     toast.error(apiMessage(error, 'Não foi possível carregar as listas.'));
@@ -241,14 +289,41 @@ function select(key) {
 
 function open(request) {
   editing.value = request;
+  decision.visibleName = request.visibleName || '';
   decision.slug = request.slug || '';
   decision.teamNumber = request.teamNumber || '';
   decision.competitionCategory = request.competitionCategory || '';
-  decision.featureProfile = request.featureProfile || '';
+  decision.roomName = request.requestedRoomName || '';
   decision.note = '';
+  showFeatures.value = false;
+  for (const feature of features.value) {
+    enabled[feature.name] = (request.features || []).includes(feature.name);
+  }
   if (request.requestedRoomName) roomChoice.value = 'new';
   else if (request.roomId) roomChoice.value = String(request.roomId);
   else roomChoice.value = 'none';
+}
+
+const onCount = computed(() => features.value.filter((feature) => enabled[feature.name]).length);
+
+const roomNameHint = computed(() => {
+  const name = (decision.roomName || '').trim().toLowerCase();
+  const twin = rooms.value.find((room) => room.name.trim().toLowerCase() === name);
+  return twin
+    ? `Já existe "${twin.name}". A equipe entra nela em vez de uma sala nova ser criada.`
+    : 'Uma sala com esse nome ainda não existe e será criada junto com a equipe.';
+});
+
+function matchesPreset(profile) {
+  return features.value.every(
+    (feature) => !!enabled[feature.name] === profile.features.includes(feature.name),
+  );
+}
+
+function applyPreset(profile) {
+  for (const feature of features.value) {
+    enabled[feature.name] = profile.features.includes(feature.name);
+  }
 }
 
 /*
@@ -256,7 +331,7 @@ function open(request) {
  * sends a zero, which is how the rest of the API says "no room".
  */
 function roomBody() {
-  if (roomChoice.value === 'new') return { roomName: editing.value.requestedRoomName };
+  if (roomChoice.value === 'new') return { roomName: decision.roomName };
   if (roomChoice.value === 'none') return { roomId: 0 };
   return { roomId: Number(roomChoice.value) };
 }
@@ -266,10 +341,11 @@ async function approve() {
   try {
     await teamSignupRequests.approve(editing.value.teamSignupRequestId, {
       note: decision.note || null,
+      visibleName: decision.visibleName || null,
       slug: decision.slug || null,
       teamNumber: decision.teamNumber || null,
       competitionCategory: decision.competitionCategory || null,
-      featureProfile: decision.featureProfile || null,
+      features: Object.fromEntries(features.value.map((f) => [f.name, !!enabled[f.name]])),
       ...roomBody(),
     });
     toast.success('Equipe criada.');
@@ -306,11 +382,6 @@ function chipFor(request) {
   return 'vc-chip--warning';
 }
 
-function profileLabel(request) {
-  const found = profiles.value.find((profile) => profile.name === request.featureProfile);
-  return found ? found.label : request.featureProfile;
-}
-
 function formatDate(value) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
@@ -334,6 +405,10 @@ function formatDate(value) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.request__presets {
+  flex-wrap: wrap;
 }
 
 @media (max-width: 620px) {
