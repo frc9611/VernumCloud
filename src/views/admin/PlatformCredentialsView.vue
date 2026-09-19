@@ -46,11 +46,6 @@
 
           <!-- O formulário só abre quando alguém pede: a chave não é algo que se edita sem querer -->
           <div v-if="editing === row.kind" class="vc-stack editor">
-            <div v-if="row.usesUsername" class="vc-field">
-              <label class="vc-label" :for="`user-${row.kind}`">Usuário</label>
-              <input :id="`user-${row.kind}`" class="vc-input" type="text" v-model="form.username"
-                     maxlength="120" autocomplete="off" />
-            </div>
             <div class="vc-field">
               <label class="vc-label" :for="`key-${row.kind}`">Chave</label>
               <input :id="`key-${row.kind}`" class="vc-input vc-mono" type="password"
@@ -115,7 +110,7 @@ const rows = ref([]);
 const loading = ref(true);
 const busy = ref(false);
 const editing = ref(null);
-const form = reactive({ secret: '', username: '' });
+const form = reactive({ secret: '' });
 
 onMounted(load);
 
@@ -133,17 +128,13 @@ async function load() {
 
 function openEditor(row) {
   form.secret = '';
-  form.username = row.username || '';
   editing.value = row.kind;
 }
 
 async function save(row) {
   busy.value = true;
   try {
-    await platformCredentials.save(row.kind, {
-      secret: form.secret,
-      username: row.usesUsername ? form.username : null,
-    });
+    await platformCredentials.save(row.kind, { secret: form.secret });
     editing.value = null;
     toast.success(`Chave do ${row.label} salva!`);
     await load();
@@ -158,9 +149,7 @@ async function save(row) {
 async function test(row, dryRun) {
   busy.value = true;
   try {
-    const body = dryRun
-      ? { secret: form.secret, username: row.usesUsername ? form.username : null }
-      : undefined;
+    const body = dryRun ? { secret: form.secret } : undefined;
     const { data } = await platformCredentials.test(row.kind, body);
     if (data.ok) {
       toast.success(data.message);

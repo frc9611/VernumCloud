@@ -151,7 +151,7 @@ const platformCards = computed(() => {
     cards.push({
       label: 'Credenciais da plataforma',
       icon: 'key',
-      hint: 'As chaves com que a plataforma fala com as ligas: The Blue Alliance, Nexus e FTC.',
+      hint: 'A chave com que a plataforma lê o The Blue Alliance. O FTC vem do FTCScout, que é público.',
       to: { name: 'adminCredentials' },
     });
   }
