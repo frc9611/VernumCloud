@@ -9,6 +9,8 @@
         Administração
       </span>
 
+      <GlobalSearch v-if="auth.isAuth && auth.activeTenantId" ref="searchBox" class="vc-header__search" />
+
       <button class="vc-header__toggle" type="button" aria-label="Menu" @click.stop="menuOpen = !menuOpen">
         <AppIcon name="menu" :size="22" />
       </button>
@@ -125,6 +127,7 @@ import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import VernumLogo from './VernumLogo.vue';
 import AppIcon from './AppIcon.vue';
+import GlobalSearch from './GlobalSearch.vue';
 import { authStore } from '@/store/auth.js';
 import { notificationStore } from '@/store/notifications.js';
 import { preferencesStore } from '@/store/preferences.js';
@@ -138,6 +141,7 @@ const toast = useToast();
 const menuOpen = ref(false);
 const tenantOpen = ref(false);
 const notificationsOpen = ref(false);
+const searchBox = ref(null);
 
 /*
  * The Admin Panel link only appears when there is something to administrate. TASK_MANAGE deliberately
@@ -177,11 +181,13 @@ const visibleNotifications = computed(() => notifications.forTenant(auth.activeT
 
 /* One dropdown at a time. The click stops here so the document listener does not close it again. */
 function toggleTenants() {
+  searchBox.value?.close();
   notificationsOpen.value = false;
   tenantOpen.value = !tenantOpen.value;
 }
 
 async function toggleNotifications() {
+  searchBox.value?.close();
   tenantOpen.value = false;
   notificationsOpen.value = !notificationsOpen.value;
   if (notificationsOpen.value) {
@@ -237,6 +243,7 @@ function logout() {
 function closeDropdowns() {
   tenantOpen.value = false;
   notificationsOpen.value = false;
+  searchBox.value?.close();
 }
 
 onMounted(() => {
@@ -275,6 +282,13 @@ watch(
 
 .vc-header__brand {
   text-decoration: none;
+}
+
+/* The search box sits outside the nav on purpose: it stays reachable behind the hamburger */
+.vc-header__search {
+  flex: 1 1 320px;
+  max-width: 420px;
+  min-width: 0;
 }
 
 .vc-header__toggle {
@@ -558,6 +572,11 @@ watch(
 }
 
 @media (max-width: 900px) {
+  .vc-header__search {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
   .vc-header__toggle {
     display: block;
   }

@@ -114,6 +114,7 @@
 
 <script setup>
 import { nextTick, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import AppIcon from '@/components/AppIcon.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -136,6 +137,8 @@ import { apiMessage } from '@/services/http.js';
  * because the server generates and removes them with the rows.
  */
 const auth = authStore();
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const list = ref([]);
@@ -145,11 +148,16 @@ const creating = ref(false);
 const editing = ref(false);
 const detailRef = ref(null);
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  await openFromQuery();
+});
 watch(() => auth.activeTenantId, () => {
   event.value = null;
   load();
 });
+/* A busca do header apontando outro evento com a tela já aberta: abrir de novo é o que ela espera. */
+watch(() => route.query.evento, openFromQuery);
 
 async function load() {
   if (!auth.activeTenantId) return;
@@ -165,6 +173,23 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+/*
+ * O evento que a busca global apontou. Ele é conferido na lista que já veio antes de ser pedido, para
+ * um id que sumiu virar um aviso e não o erro de uma requisição perdida. A query sai do endereço
+ * assim que é lida, para o F5 não reabrir o evento.
+ */
+async function openFromQuery() {
+  const id = route.query.evento;
+  if (!id) return;
+  router.replace({ query: { ...route.query, evento: undefined } });
+  const target = list.value.find((item) => String(item.eventId) === String(id));
+  if (!target) {
+    toast.warning('Esse evento não está mais disponível.');
+    return;
+  }
+  await open(target.eventId);
 }
 
 async function open(eventId) {

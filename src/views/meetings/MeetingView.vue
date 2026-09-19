@@ -163,7 +163,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
@@ -209,6 +209,17 @@ onMounted(async () => {
   } catch (error) {
     members.value = [];
   }
+});
+
+/*
+ * A busca do header pode apontar outra reunião com esta na tela: só o parâmetro da rota muda e o
+ * componente é reaproveitado, então é o watch que traz a reunião nova — e fecha a edição, que é da
+ * anterior.
+ */
+watch(() => route.params.meetingId, (meetingId) => {
+  if (!meetingId) return;
+  editing.value = false;
+  load();
 });
 
 async function load() {
