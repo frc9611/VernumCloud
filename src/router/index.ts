@@ -319,6 +319,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'RFID_MANAGE', feature: 'ATTENDANCE' }
   },
   {
+    path: '/competicao',
+    name: 'competition',
+    component: () => import(/* webpackChunkName: "competition" */ '../views/competition/CompetitionView.vue'),
+    meta: { auth: true, tenant: true, permission: 'COMPETITION_VIEW', feature: 'COMPETITION' }
+  },
+  {
     path: '/admin/eventos',
     name: 'adminEvents',
     component: () => import(/* webpackChunkName: "people" */ '../views/admin/EventsAdminView.vue'),
