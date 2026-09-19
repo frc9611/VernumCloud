@@ -698,6 +698,23 @@ export const calendar = {
   rotateFeed: () => http.post('/me/calendar/feed/token'),
 };
 
+/*
+ * A competição da equipe.
+ *
+ * `showing` é o que está em cartaz hoje — é dele que vivem a aba, o mural e a tela inicial — e
+ * `links` é a história inteira, que só a tela de competição abre. `suggestions` é a única chamada
+ * daqui que faz o servidor sair para a internet, e por isso ela é de quem gerencia, não de quem lê.
+ */
+export const competition = {
+  showing: (tenantId) => http.get(`/tenants/${tenantId}/competition`),
+  links: (tenantId, season) => http.get(`/tenants/${tenantId}/competition/links`, { params: { season } }),
+  suggestions: (tenantId, season) =>
+    http.get(`/tenants/${tenantId}/competition/suggestions`, { params: { season } }),
+  link: (tenantId, body) => http.post(`/tenants/${tenantId}/competition/links`, body),
+  update: (tenantId, linkId, body) => http.put(`/tenants/${tenantId}/competition/links/${linkId}`, body),
+  unlink: (tenantId, linkId) => http.delete(`/tenants/${tenantId}/competition/links/${linkId}`),
+};
+
 export const wiki = {
   index: (tenantId) => http.get(`/tenants/${tenantId}/wiki`),
   page: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}`),

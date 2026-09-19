@@ -86,8 +86,9 @@
     <!-- ------------------------------------------------------------- apps -->
     <AppsPanel v-else-if="tab === 'apps'" :apps="apps" />
 
-    <!-- --------------------------------------------------------- scouting -->
-    <ScoutingPlaceholder v-else />
+    <!-- ------------------------------------------------------ competition -->
+    <CompetitionTab v-else-if="tab === 'competition'" :competition="competition"
+                    :team-number="auth.activeTenant?.teamNumber" />
   </main>
 </template>
 
@@ -106,20 +107,28 @@ import OpenProcessesPanel from '@/components/home/OpenProcessesPanel.vue';
 import PendingAccessRequests from '@/components/home/PendingAccessRequests.vue';
 import CommandCenter from '@/components/home/CommandCenter.vue';
 import AppsPanel from '@/components/home/AppsPanel.vue';
-import ScoutingPlaceholder from '@/components/home/ScoutingPlaceholder.vue';
+import CompetitionTab from '@/components/home/CompetitionTab.vue';
 import { authStore } from '@/store/auth.js';
 import { preferencesStore } from '@/store/preferences.js';
-import { apps as appsApi, cloud, publicRecruitment, tasks as tasksApi, teamDashboard } from '@/services/api.js';
+import {
+  apps as appsApi,
+  cloud,
+  competition as competitionApi,
+  publicRecruitment,
+  tasks as tasksApi,
+  teamDashboard,
+} from '@/services/api.js';
 import { SECTIONS, useDashboardLayout } from '@/components/home/dashboardLayout.js';
 import { SHORTCUT_DEFAULTS, availableShortcuts } from '@/components/home/shortcuts.js';
 
 /*
  * The first screen after login.
  *
- * Four tabs: Home, with the sections the person arranged; Central de Comando, for whoever conducts the
- * team; Apps; and the Scouting placeholder. What each tab shows lives in components/home/ — this view
- * only loads the data, decides which tabs and sections exist for this person today, and hands the
- * arrangement over to the layout composable, which is where the preference is read and saved.
+ * Up to four tabs: Home, with the sections the person arranged; Central de Comando, for whoever
+ * conducts the team; Apps; and Competição, which exists only while the team is actually competing.
+ * What each tab shows lives in components/home/ — this view only loads the data, decides which tabs
+ * and sections exist for this person today, and hands the arrangement over to the layout composable,
+ * which is where the preference is read and saved.
  */
 const auth = authStore();
 const prefs = preferencesStore();
@@ -129,6 +138,7 @@ const apps = ref([]);
 const dashboard = ref(null);
 const myTasks = ref([]);
 const openProcesses = ref([]);
+const competition = ref({ events: [], nextMatch: null, nextMatchEventName: null });
 
 /** Whether the organiser is open. Owned here because which sections exist depends on it. */
 const organizing = ref(false);
@@ -138,6 +148,9 @@ const dropSection = ref(null);
 /* ------------------------------------------------------------------ tabs */
 
 const CONDUCTING_ROLES = ['OWNER', 'ADMIN', 'COACH'];
+
+/** Depois disto o nome do evento empurra as outras abas para fora da tela num celular. */
+const TAB_NAME_MAX = 22;
 
 /**
  * Whether this person conducts the team: by role, or by holding any of the mentor permissions.
@@ -155,7 +168,17 @@ const tabs = computed(() => {
   const items = [{ key: 'home', label: 'Home' }];
   if (conducts.value) items.push({ key: 'command', label: 'Central de Comando' });
   if (auth.featureOn('APPS')) items.push({ key: 'apps', label: 'Apps' });
-  items.push({ key: 'scouting', label: 'Scouting', hint: 'Ainda não implementado' });
+  /*
+   * A aba da competição só existe enquanto há competição em cartaz, e por isso ela não tem estado
+   * vazio no menu: fora da temporada ela simplesmente não está lá. Com um evento ela leva o nome
+   * dele, que é como a equipe fala ("abre o Sudeste"); com dois ou mais vira o nome genérico,
+   * porque nenhum dos dois nomes seria mais verdadeiro que o outro.
+   */
+  if (competition.value.events.length === 1) {
+    items.push({ key: 'competition', label: shortEventName(competition.value.events[0].eventName) });
+  } else if (competition.value.events.length > 1) {
+    items.push({ key: 'competition', label: 'Competição' });
+  }
   return items;
 });
 
@@ -275,5 +298,18 @@ async function load() {
   } catch (error) {
     openProcesses.value = [];
   }
+  /* Sem o recurso ou sem permissão a rota responde 403, e aí a aba simplesmente não nasce. */
+  try {
+    const { data } = await competitionApi.showing(auth.activeTenantId);
+    competition.value = data;
+  } catch (error) {
+    competition.value = { events: [], nextMatch: null, nextMatchEventName: null };
+  }
+}
+
+/** O nome do evento cabe numa aba; o resto vira reticências em vez de empurrar as outras abas. */
+function shortEventName(name) {
+  if (!name) return 'Competição';
+  return name.length <= TAB_NAME_MAX ? name : `${name.slice(0, TAB_NAME_MAX - 1).trimEnd()}…`;
 }
 </script>
