@@ -759,6 +759,16 @@ export const people = {
   removeAffiliation: (affiliationId) => http.delete(`/affiliations/${affiliationId}`),
 };
 
+/* --------------------------------------------------------------------- busca */
+
+/*
+ * The header search: one route that already answers grouped and already cut down to what the
+ * person may read. The team currently open is the whole scope, so the tenant comes first.
+ */
+export const search = {
+  global: (tenantId, q) => http.get(`/tenants/${tenantId}/search`, { params: { q } }),
+};
+
 /* -------------------------------------------------------------------- events */
 
 /*
@@ -783,6 +793,7 @@ export default {
   session,
   preferences,
   people,
+  search,
   events,
   tenants,
   rooms,

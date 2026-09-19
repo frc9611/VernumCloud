@@ -53,7 +53,13 @@
       <template v-else>Quando a equipe publicar um aviso, ele aparece aqui.</template>
     </EmptyState>
 
-    <article v-for="item in board" :key="item.announcementId" class="vc-card vc-announcement">
+    <article
+      v-for="item in board"
+      :key="item.announcementId"
+      :id="'aviso-' + item.announcementId"
+      class="vc-card vc-announcement"
+      :class="{ 'is-highlighted': highlighted === item.announcementId }"
+    >
       <header class="vc-announcement__head">
         <span :class="['vc-chip', scopeChip(item.scope)]">
           <AppIcon name="megaphone" :size="13" />
@@ -161,7 +167,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import AppIcon from './AppIcon.vue';
 import PersonLink from '@/components/PersonLink.vue';
@@ -184,6 +191,8 @@ import { apiMessage } from '@/services/http.js';
  * composer from a leader or offer them a division the server would refuse.
  */
 const auth = authStore();
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 /* Same ceiling the server checks, which is the width of the column in a database that already exists. */
@@ -193,6 +202,9 @@ const COMMENT_LIMIT = 1500;
 /* Quantos avisos cada página traz. É o padrão do servidor, escrito aqui para o "Ver mais" saber
    contar as páginas que já pediu. */
 const PAGE_SIZE = 20;
+
+/* Quanto tempo o anel fica no aviso que a busca apontou: o bastante para o olho achar, e nada além. */
+const HIGHLIGHT_MS = 2500;
 
 const board = ref([]);
 const total = ref(0);
@@ -207,6 +219,9 @@ const open = reactive({});
 const comments = reactive({});
 const drafts = reactive({});
 const loadingComments = reactive({});
+/* Qual aviso está com o anel de destaque, e o relógio que o apaga. */
+const highlighted = ref(null);
+let highlightTimer = null;
 
 /** One option can be a scope or a scope plus a division, so the select needs both in its value. */
 function optionKey(option) {
@@ -221,8 +236,37 @@ const scopeHint = computed(() => {
   return `Vai para quem está em ${chosen.divisionName} e nas subdivisões dela.`;
 });
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  await highlightFromQuery();
+});
+onBeforeUnmount(() => clearTimeout(highlightTimer));
 watch(() => auth.activeTenantId, load);
+/* A busca do header apontando outro aviso com o mural já aberto: destacar de novo é o que ela espera. */
+watch(() => route.query.aviso, highlightFromQuery);
+
+/*
+ * O aviso que a busca global apontou: o mural rola até ele e o cerca com um anel por um instante.
+ *
+ * Só a primeira página é procurada — não existe rota de um aviso só, e paginar até achar pediria uma
+ * requisição por página. Fora dela o mural simplesmente abre, com um aviso de que ele não está à
+ * vista. A query sai do endereço assim que é lida, para o F5 não repetir o destaque.
+ */
+async function highlightFromQuery() {
+  const id = route.query.aviso;
+  if (!id) return;
+  router.replace({ query: { ...route.query, aviso: undefined } });
+  const target = board.value.find((one) => String(one.announcementId) === String(id));
+  if (!target) {
+    toast.warning('Esse aviso não está entre os mais recentes do mural.');
+    return;
+  }
+  highlighted.value = target.announcementId;
+  await nextTick();
+  document.getElementById(`aviso-${target.announcementId}`)?.scrollIntoView({ block: 'center' });
+  clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(() => { highlighted.value = null; }, HIGHLIGHT_MS);
+}
 
 /* Volta para a primeira página: é o que publicar, apagar e trocar de equipe fazem. */
 async function load() {
@@ -395,6 +439,12 @@ function formatWhen(value) {
 </script>
 
 <style scoped>
+/* O anel de quem veio da busca: a mesma cor do foco, porque é a mesma ideia — aqui está o que você pediu. */
+.vc-announcement.is-highlighted {
+  box-shadow: 0 0 0 3px var(--vc-focus-ring);
+  transition: box-shadow 0.2s ease;
+}
+
 .reaction {
   gap: 4px;
   font-size: 13px;

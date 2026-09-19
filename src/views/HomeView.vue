@@ -39,12 +39,12 @@
       <!-- Every movable section, in the person's order. Hidden ones only exist while organising. -->
       <template v-for="(key, index) in movableSections" :key="key">
         <HomeSection
-          v-if="organizing || !layout.hiddenSections.value.includes(key)"
+          v-if="organizing || !sectionHidden(key)"
           :section-key="key"
           :title="sectionTitle(key)"
           :organizing="organizing"
           :interactive="key === 'shortcuts'"
-          :hidden="layout.hiddenSections.value.includes(key)"
+          :hidden="sectionHidden(key)"
           :first="index === 0"
           :last="index === movableSections.length - 1"
           :dragging="draggingSection === key"
@@ -93,6 +93,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import TabBar from '@/components/TabBar.vue';
 import AlertBanner from '@/components/AlertBanner.vue';
 import AnnouncementBoard from '@/components/AnnouncementBoard.vue';
@@ -123,6 +124,7 @@ import { SHORTCUT_DEFAULTS, availableShortcuts } from '@/components/home/shortcu
  */
 const auth = authStore();
 const prefs = preferencesStore();
+const route = useRoute();
 
 const pendingAccessRequests = ref([]);
 const apps = ref([]);
@@ -203,6 +205,28 @@ const tab = computed(() => {
 
 function openTab(key) {
   layout.setTab(key);
+}
+
+/*
+ * O aviso que a busca global apontou mora numa seção da aba Home, e quem a abre pode estar com outra
+ * aba lembrada ou com o mural escondido no arranjo dela — aí o link não faria nada, nem diria por quê.
+ * Trazer a aba e revelar a seção é o que deixa o mural ler o `?aviso` e destacar o que a busca achou.
+ * A revelação dura a visita: o arranjo salvo não muda.
+ */
+const revealedSection = ref(null);
+watch(() => route.query.aviso, (announcementId) => {
+  if (!announcementId) return;
+  revealedSection.value = 'board';
+  layout.setTab('home');
+}, { immediate: true });
+
+/**
+ * Whether a section is out of sight: what the person arranged, except for the one a deep link revealed
+ * for this visit. The organiser always shows the arrangement as it is saved, so the eye never lies.
+ */
+function sectionHidden(key) {
+  if (!organizing.value && key === revealedSection.value) return false;
+  return layout.hiddenSections.value.includes(key);
 }
 
 function sectionTitle(key) {

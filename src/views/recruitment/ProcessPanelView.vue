@@ -231,7 +231,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import TabBar from '@/components/TabBar.vue';
 import PersonLink from '@/components/PersonLink.vue';
@@ -249,9 +249,10 @@ import { apiMessage } from '@/services/http.js';
  */
 const auth = authStore();
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
-const processId = route.params.id;
+const processId = computed(() => route.params.id);
 const process = ref({});
 const entries = ref([]);
 const statusFilter = ref('ALL');
@@ -276,16 +277,35 @@ const canEvaluate = computed(() => auth.can('RECRUITMENT_EVALUATE'));
 /* Turning a candidate into a member is two things at once, so it asks for both permissions. */
 const canConvert = computed(() => auth.can('RECRUITMENT_EVALUATE') && auth.can('MEMBER_INVITE'));
 
-onMounted(async () => {
-  await loadProcess();
-  await loadEntries();
-});
+onMounted(reload);
 
 watch([statusFilter, stageFilter], loadEntries);
+/*
+ * A busca do header aponta processos e candidatos de qualquer processo da equipe. Trocar só o
+ * parâmetro da rota reaproveita este componente, então o painel inteiro é recarregado quando o
+ * processo muda; quando muda só o candidato, abrir a ficha de novo é o que ela espera.
+ */
+watch([processId, () => route.query.candidato], ([id], [previousId]) => (
+  id === previousId ? openFromQuery() : reload()
+));
+
+/*
+ * Tudo o que o painel mostra de um processo. Os filtros voltam ao início porque a etapa escolhida é
+ * do processo anterior, e não existe no novo.
+ */
+async function reload() {
+  if (!processId.value) return;
+  statusFilter.value = 'ALL';
+  stageFilter.value = null;
+  selected.value = null;
+  await loadProcess();
+  await loadEntries();
+  await openFromQuery();
+}
 
 async function loadProcess() {
   try {
-    const { data } = await recruitment.process(processId);
+    const { data } = await recruitment.process(processId.value);
     process.value = data;
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao carregar processo'));
@@ -297,7 +317,7 @@ async function loadEntries() {
     const params = {};
     if (statusFilter.value !== 'ALL') params.status = statusFilter.value;
     if (stageFilter.value) params.stageId = stageFilter.value;
-    const { data } = await recruitment.entries(processId, params);
+    const { data } = await recruitment.entries(processId.value, params);
     entries.value = data;
   } catch (error) {
     entries.value = [];
@@ -306,6 +326,29 @@ async function loadEntries() {
 
 function toggleStage(stageId) {
   stageFilter.value = stageFilter.value === stageId ? null : stageId;
+}
+
+/*
+ * A candidatura que a busca global apontou. Ela sai da lista que já veio; quando não está nela o
+ * filtro volta para "todos" e a lista é pedida de novo, porque a busca acha um reprovado e a aba
+ * aberta pode ser a dos novos. A query sai do endereço assim que é lida, para o F5 não reabrir a ficha.
+ */
+async function openFromQuery() {
+  const id = route.query.candidato;
+  if (!id) return;
+  router.replace({ query: { ...route.query, candidato: undefined } });
+  const find = () => entries.value.find((one) => String(one.recruitmentEntryId) === String(id));
+  if (!find() && (statusFilter.value !== 'ALL' || stageFilter.value)) {
+    statusFilter.value = 'ALL';
+    stageFilter.value = null;
+    await loadEntries();
+  }
+  const entry = find();
+  if (!entry) {
+    toast.warning('Essa candidatura não está mais disponível.');
+    return;
+  }
+  await open(entry);
 }
 
 async function open(entry) {

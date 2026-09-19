@@ -26,7 +26,8 @@
       </div>
 
       <div class="vc-grid">
-        <PanelCard v-for="risk in risks" :key="risk.riskId" :title="risk.title" muted>
+        <PanelCard v-for="risk in risks" :key="risk.riskId" :id="'risco-' + risk.riskId"
+                   :title="risk.title" muted>
           <template #header-actions>
             <span :class="['vc-badge', badge(risk.status)]" style="margin-left: auto">
               {{ risk.statusLabel }}
@@ -123,7 +124,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
@@ -134,6 +136,8 @@ import { divisions as divisionsApi, risks as risksApi } from '@/services/api.js'
 import { apiMessage } from '@/services/http.js';
 
 const auth = authStore();
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const risks = ref([]);
@@ -144,8 +148,13 @@ const form = reactive(blank());
 
 const critical = computed(() => risks.value.filter((risk) => risk.status === 'CRITICAL'));
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  await openFromQuery();
+});
 watch(() => auth.activeTenantId, load);
+/* A busca do header apontando outro risco com a tela já aberta: abrir de novo é o que ela espera. */
+watch(() => route.query.risco, openFromQuery);
 
 function blank() {
   return {
@@ -182,6 +191,35 @@ function badge(status) {
 function openCreate() {
   Object.assign(form, blank());
   editing.value = true;
+}
+
+/*
+ * O risco que a busca global apontou. Ele sai da lista que já veio — não há rota de um risco só —, e
+ * quando não está nela o filtro de situação volta para "todas" e a lista é pedida de novo, porque a
+ * busca acha risco de qualquer situação e a tela pode estar filtrada por uma. A query sai do endereço
+ * assim que é lida, para o F5 não reabrir o formulário.
+ */
+async function openFromQuery() {
+  const id = route.query.risco;
+  if (!id) return;
+  router.replace({ query: { ...route.query, risco: undefined } });
+  const find = () => risks.value.find((one) => String(one.riskId) === String(id));
+  if (!find() && filters.status) {
+    filters.status = '';
+    await load();
+  }
+  const risk = find();
+  if (!risk) {
+    toast.warning('Esse risco não está mais disponível.');
+    return;
+  }
+  /* Quem não administra riscos nunca abre o formulário: para essa pessoa a tela rola até o cartão. */
+  if (!auth.can('RISK_MANAGE')) {
+    await nextTick();
+    document.getElementById('risco-' + risk.riskId)?.scrollIntoView({ block: 'center' });
+    return;
+  }
+  openEdit(risk);
 }
 
 function openEdit(risk) {

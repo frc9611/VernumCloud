@@ -298,6 +298,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import ModalDialog from '@/components/ModalDialog.vue';
 import PersonLink from '@/components/PersonLink.vue';
@@ -326,6 +327,8 @@ import { apiMessage } from '@/services/http.js';
  * the open team, because a new demanda has to belong to exactly one.
  */
 const auth = authStore();
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const columns = [
@@ -411,8 +414,13 @@ const emptyTitle = computed(() => {
 
 let searchTimer = null;
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  await openFromQuery();
+});
 onUnmounted(() => clearTimeout(searchTimer));
+/* A busca do header manda outra demanda estando a tela já aberta: abrir de novo é o que ela espera. */
+watch(() => route.query.demanda, openFromQuery);
 watch(() => auth.activeTenantId, load);
 watch(allTeams, load);
 watch(search, () => {
@@ -583,6 +591,23 @@ async function loadPeople(tenantId) {
 function open(task) {
   selected.value = task;
   loadMoves(task.taskId);
+}
+
+/*
+ * A demanda que a busca global apontou. O cartão vem do servidor pelo id e não do quadro que está na
+ * tela, porque ele pode estar numa coluna ainda não paginada, noutra divisão ou fora do filtro. A
+ * query sai do endereço assim que é lida: recarregar a página não deve reabrir o cartão de ontem.
+ */
+async function openFromQuery() {
+  const id = route.query.demanda;
+  if (!id) return;
+  router.replace({ query: { ...route.query, demanda: undefined } });
+  try {
+    const { data } = await tasksApi.get(Number(id));
+    open(data);
+  } catch (error) {
+    toast.warning('Essa demanda não está mais disponível.');
+  }
 }
 
 /* O histórico de um cartão. Um erro aqui esvazia a lista e não estraga o resto do cartão. */

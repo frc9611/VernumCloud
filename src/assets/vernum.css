@@ -72,6 +72,8 @@
   --vc-shadow-lg: 0 8px 24px rgba(20, 20, 30, 0.08);
 
   --vc-content-width: 980px;
+  /* Measured height of the header. Geometry, the same in every palette: read by what opens under it */
+  --vc-header-h: 66px;
 }
 
 /*
@@ -368,6 +370,23 @@ a {
 .vc-chip--button:hover {
   border-color: var(--vc-purple);
   color: var(--vc-purple);
+}
+
+/* ------------------------------------------------------------------- keys */
+
+/* A key of the keyboard written out: the hint of a shortcut, never a button to click. */
+.vc-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface-muted);
+  color: var(--vc-text-faint);
+  font-family: inherit;
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------- banners */

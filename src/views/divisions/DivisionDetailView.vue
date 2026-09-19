@@ -90,7 +90,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
@@ -106,7 +106,7 @@ const route = useRoute();
 const toast = useToast();
 const auth = authStore();
 
-const divisionId = route.params.id;
+const divisionId = computed(() => route.params.id);
 const division = ref({});
 const parentName = ref('');
 const members = ref([]);
@@ -123,10 +123,19 @@ const available = computed(() => {
 });
 
 onMounted(load);
+/*
+ * A busca do header pode apontar outra divisão com esta na tela: só o parâmetro da rota muda e o
+ * componente é reaproveitado, então é o watch que traz a divisão nova.
+ */
+watch(divisionId, (id) => id && load());
 
 async function load() {
+  if (!divisionId.value) return;
+  //The parent name and the open add modal still belong to the division that was on screen
+  parentName.value = '';
+  adding.value = false;
   try {
-    const { data } = await divisions.get(divisionId);
+    const { data } = await divisions.get(divisionId.value);
     division.value = data;
     if (data.parentDivisionId) {
       const parent = await divisions.get(data.parentDivisionId);
@@ -140,7 +149,7 @@ async function load() {
 
 async function loadMembers() {
   try {
-    const { data } = await divisions.members(divisionId);
+    const { data } = await divisions.members(divisionId.value);
     members.value = data;
   } catch (error) {
     members.value = [];
@@ -162,7 +171,7 @@ async function openAdd() {
 
 async function add() {
   try {
-    await divisions.addMember(divisionId, { ...newMember });
+    await divisions.addMember(divisionId.value, { ...newMember });
     adding.value = false;
     await loadMembers();
     toast.success('Membro adicionado à divisão!');
@@ -173,7 +182,7 @@ async function add() {
 
 async function savePosition(member, position) {
   try {
-    await divisions.updateMember(divisionId, member.userId, { position });
+    await divisions.updateMember(divisionId.value, member.userId, { position });
     toast.success('Cargo atualizado!');
   } catch (error) {
     toast.error(apiMessage(error, 'Erro ao atualizar cargo'));
@@ -182,7 +191,7 @@ async function savePosition(member, position) {
 
 async function saveLeader(member, leader) {
   try {
-    await divisions.updateMember(divisionId, member.userId, { leader });
+    await divisions.updateMember(divisionId.value, member.userId, { leader });
     member.leader = leader;
     toast.success(leader ? 'Agora lidera a divisão.' : 'Não lidera mais a divisão.');
   } catch (error) {
@@ -192,7 +201,7 @@ async function saveLeader(member, leader) {
 
 async function remove(member) {
   try {
-    await divisions.removeMember(divisionId, member.userId);
+    await divisions.removeMember(divisionId.value, member.userId);
     await loadMembers();
     toast.info('Membro removido da divisão.');
   } catch (error) {
