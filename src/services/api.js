@@ -697,6 +697,9 @@ export const competition = {
   link: (tenantId, body) => http.post(`/tenants/${tenantId}/competition/links`, body),
   update: (tenantId, linkId, body) => http.put(`/tenants/${tenantId}/competition/links/${linkId}`, body),
   unlink: (tenantId, linkId) => http.delete(`/tenants/${tenantId}/competition/links/${linkId}`),
+  /* Traz os prêmios para Eventos e Premiações. Idempotente: apertar de novo não duplica nada. */
+  importAwards: (tenantId, linkId) =>
+    http.post(`/tenants/${tenantId}/competition/links/${linkId}/import`),
 };
 
 export const wiki = {
