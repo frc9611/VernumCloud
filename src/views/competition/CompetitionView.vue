@@ -3,6 +3,7 @@
     <h1 class="vc-title vc-title--underlined">Competição</h1>
 
     <AlertBanner v-if="error" variant="danger" title="Não deu certo">{{ error }}</AlertBanner>
+    <AlertBanner v-else-if="notice" variant="success" title="Pronto">{{ notice }}</AlertBanner>
 
     <div class="vc-stack">
       <!-- ------------------------------------------------------------- em cartaz -->
@@ -25,7 +26,31 @@
             <span v-if="event.location" class="vc-chip">{{ event.location }}</span>
             <span v-if="standingOf(event)" class="vc-chip">{{ standingOf(event) }}</span>
           </div>
+          <!--
+            Os prêmios aparecem no cartão do evento porque é ali que a pergunta nasce: a equipe
+            acabou de ganhar e quer que isso vire badge nas pessoas que estavam lá.
+          -->
+          <div v-if="event.awards && event.awards.length" class="awards">
+            <div v-for="award in event.awards" :key="award.awardName + (award.personName || '')"
+                 class="vc-row award">
+              <span :class="['vc-chip', award.scope === 'TEAM' ? 'vc-chip--purple' : 'vc-chip--info']">
+                {{ award.scope === 'TEAM' ? 'Equipe' : 'Individual' }}
+              </span>
+              <span>{{ award.awardName }}<template v-if="award.personName"> — {{ award.personName }}</template></span>
+              <span class="vc-spacer"></span>
+              <span v-if="award.imported" class="vc-chip vc-chip--success">já importado</span>
+            </div>
+            <p v-if="canImport(event)" class="vc-small vc-muted">
+              Quem participou do evento a equipe escolhe depois, em Eventos e Premiações — é lá que os
+              badges são concedidos.
+            </p>
+          </div>
+
           <div v-if="canManage" class="vc-row">
+            <button v-if="canImport(event)" class="vc-btn vc-btn--small" type="button"
+                    :disabled="busy" @click="importAwards(event)">
+              Importar {{ pendingAwards(event) }} prêmio(s)
+            </button>
             <button class="vc-btn vc-btn--outline vc-btn--small" type="button"
                     :disabled="busy" @click="feature(event, !event.featured)">
               {{ event.featured ? 'Tirar do destaque' : 'Pôr em destaque' }}
@@ -122,6 +147,7 @@ const season = ref(new Date().getFullYear());
 const loadingSuggestions = ref(false);
 const busy = ref(false);
 const error = ref('');
+const notice = ref('');
 
 const canManage = computed(() => auth.can('COMPETITION_MANAGE'));
 
@@ -214,6 +240,31 @@ async function unlink(event) {
   }
 }
 
+/* Só oferece o botão quando há prêmio que ainda não veio, e só para quem também escreve em eventos. */
+function pendingAwards(event) {
+  return (event.awards || []).filter((award) => !award.imported).length;
+}
+
+function canImport(event) {
+  return canManage.value && auth.can('EVENT_MANAGE') && pendingAwards(event) > 0;
+}
+
+async function importAwards(event) {
+  busy.value = true;
+  error.value = '';
+  try {
+    const { data } = await competitionApi.importAwards(auth.activeTenantId, event.linkId);
+    notice.value = data.imported.length
+      ? `${data.imported.length} prêmio(s) em "${data.eventName}".`
+      : 'Nada novo para importar.';
+    await load();
+  } catch (failure) {
+    error.value = messageOf(failure);
+  } finally {
+    busy.value = false;
+  }
+}
+
 function datesOf(event) {
   if (!event.startsAt) return '';
   const start = formatDate(event.startsAt);
@@ -249,6 +300,15 @@ function messageOf(failure) {
 </script>
 
 <style scoped>
+.awards {
+  display: grid;
+  gap: 6px;
+}
+
+.award {
+  gap: 8px;
+}
+
 .sug {
   display: flex;
   align-items: center;
