@@ -39,7 +39,10 @@
         </div>
 
         <div class="login__actions">
-          <router-link :to="{ name: 'openProcesses' }" class="login__link">Não se candidatou?</router-link>
+          <span class="login__links">
+            <router-link :to="{ name: 'openProcesses' }" class="login__link">Não se candidatou?</router-link>
+            <router-link :to="{ name: 'teamSignup' }" class="login__link">Cadastrar minha equipe</router-link>
+          </span>
           <button class="vc-btn" type="submit" :disabled="busy">{{ busy ? 'Entrando...' : 'Entrar' }}</button>
         </div>
       </form>
@@ -219,6 +222,13 @@ function goInside() {
   justify-content: space-between;
   gap: 12px;
   margin-top: 2px;
+}
+
+.login__links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .login__link {

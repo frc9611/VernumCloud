@@ -1,0 +1,23 @@
+/*
+ * So o que e especifico destas telas e a aplicacao tambem tera: a coluna estreita do formulario
+ * publico e a grade de duas colunas dos campos. Cor, raio, sombra e espaco continuam vindo de
+ * vernum.css.
+ */
+.mk-wrap--form { max-width: 720px; }
+
+.signup__brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 0 6px;
+}
+.signup__brand-mark { width: 34px; height: 34px; border-radius: var(--vc-radius); background: var(--vc-purple); }
+.signup__brand b { font-size: 1.05rem; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 620px) { .pair { grid-template-columns: 1fr; } }
+
+/* A escolha de sala: dois caminhos que se excluem, e so um fica aberto por vez. */
+.room__choice { display: flex; flex-direction: column; gap: 8px; }
+.room__open { padding-left: 26px; }
+
+.request { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.request__facts { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="admin">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — analisar solicitação</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <link rel="stylesheet" href="_shell.css">
+  <link rel="stylesheet" href="_signup.css">
+</head>
+<body>
+  <div class="mk-appbar"><span class="mk-logo"></span><b>Vernum</b>
+    <span class="vc-chip vc-chip--danger" style="margin-left:auto">Administração Vernum</span></div>
+  <p class="mk-note">Mockup 6 — o modal da decisão. Tudo vem preenchido com o que foi pedido e dá para
+    corrigir antes de criar — inclusive o <b>nome da equipe</b> e o <b>nome da sala a criar</b>. Os
+    recursos ficam recolhidos: são dezoito, e empurrariam o resto para fora da tela.</p>
+
+  <div class="vc-modal-backdrop" style="position:static; padding:28px 20px">
+    <div class="vc-modal vc-modal--wide">
+      <header class="vc-modal__header">
+        <strong>Analisar solicitação — Cyber Rain</strong>
+      </header>
+      <div class="vc-modal__body">
+        <div class="vc-stack">
+          <p class="vc-small vc-muted" style="margin:0">
+            Pedida por <b>Ana Souza</b> (ana@escola.br) há 2 dias. Aprovada, ela vira a proprietária da equipe.
+          </p>
+
+          <div class="vc-callout">
+            <strong>Recado de quem pediu</strong>
+            <p style="margin:4px 0 0">Escola Técnica Estadual, 20 alunos, primeira temporada na FRC.</p>
+          </div>
+
+          <div class="vc-field">
+            <label class="vc-label">Nome da equipe</label>
+            <input class="vc-input" value="Cyber Rain">
+          </div>
+
+          <div class="pair">
+            <div class="vc-field">
+              <label class="vc-label">Endereço da equipe</label>
+              <input class="vc-input" value="cyber-rain">
+              <p class="vc-small vc-muted" style="margin:6px 0 0">Livre. Nunca muda depois de criada.</p>
+            </div>
+            <div class="vc-field">
+              <label class="vc-label">Número</label>
+              <input class="vc-input" value="9611">
+            </div>
+          </div>
+
+          <div class="pair">
+            <div class="vc-field">
+              <label class="vc-label">Competição</label>
+              <select class="vc-select"><option>FLL Challenge</option><option>FTC</option><option selected>FRC</option></select>
+            </div>
+            <div class="vc-field">
+              <label class="vc-label">Sala</label>
+              <select class="vc-select">
+                <option selected>Criar uma sala nova</option>
+                <option>Sala São Paulo</option>
+                <option>Sala Rio de Janeiro</option>
+                <option>Sem sala</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="vc-field">
+            <label class="vc-label">Nome da sala a criar</label>
+            <input class="vc-input" value="Sala Campinas">
+            <p class="vc-small vc-muted" style="margin:6px 0 0">
+              Uma sala com esse nome ainda não existe e será criada junto com a equipe.
+            </p>
+          </div>
+
+          <div class="vc-card">
+            <div class="vc-card__header vc-card__header--muted">
+              Recursos<span class="vc-card__icon">16 de 18 ligados</span>
+            </div>
+            <div class="vc-card__body">
+              <div class="vc-row">
+                <p class="vc-small vc-muted" style="margin:0">
+                  O que a equipe pediu. A tag RFID nunca entra por aqui — liga depois, na equipe.
+                </p>
+                <span class="vc-spacer"></span>
+                <span class="vc-btn vc-btn--ghost vc-btn--small">Ajustar</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="vc-field">
+            <label class="vc-label">Observação</label>
+            <textarea class="vc-textarea" rows="3" placeholder="O que a pessoa vai ler junto com a resposta.">Bem-vindos! Qualquer dúvida, é só chamar.</textarea>
+          </div>
+        </div>
+      </div>
+      <footer class="vc-modal__footer">
+        <button class="vc-btn vc-btn--danger">Recusar</button>
+        <span class="vc-spacer"></span>
+        <button class="vc-btn vc-btn--ghost">Cancelar</button>
+        <button class="vc-btn">Aprovar e criar a equipe</button>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

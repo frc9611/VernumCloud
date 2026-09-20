@@ -243,6 +243,18 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
   },
   {
+    /*
+     * The queue of teams asking to exist. Reading it is `TENANT_VIEW_ALL`, like the rest of the
+     * platform screens; deciding is `TENANT_CREATE`, which the screen checks on the buttons — the
+     * read permission is the weaker of the two, and a reviewer holding only it would otherwise press
+     * approve and get a 403 back.
+     */
+    path: '/admin/solicitacoes-de-equipe',
+    name: 'adminTeamSignups',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/TeamSignupRequestsView.vue'),
+    meta: { auth: true, platform: 'TENANT_VIEW_ALL' }
+  },
+  {
     /* Rooms cross teams that may have different owners, so managing the list is platform business. */
     path: '/admin/salas',
     name: 'adminRooms',
@@ -305,6 +317,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'adminRfid',
     component: () => import(/* webpackChunkName: "admin" */ '../views/admin/RfidAdminView.vue'),
     meta: { auth: true, tenant: true, permission: 'RFID_MANAGE', feature: 'ATTENDANCE' }
+  },
+  {
+    path: '/competicao',
+    name: 'competition',
+    component: () => import(/* webpackChunkName: "competition" */ '../views/competition/CompetitionView.vue'),
+    meta: { auth: true, tenant: true, permission: 'COMPETITION_VIEW', feature: 'COMPETITION' }
   },
   {
     path: '/admin/eventos',
@@ -389,6 +407,21 @@ const routes: Array<RouteRecordRaw> = [
     name: 'apply',
     component: () => import(/* webpackChunkName: "public" */ '../views/public/ApplyView.vue'),
     meta: { bare: true, footer: true }
+  },
+  {
+    /*
+     * A team asking to exist. Deliberately without `auth`: whoever opens it has no account and no
+     * team, which is the whole reason they are here. Somebody who is logged in keeps their account —
+     * the server ties the request to the token instead of making a second one.
+     *
+     * Not `bare` either, for the same reason `openProcesses` is not: the header only draws for a
+     * logged user, so a member reaches this from inside the dashboard and still has a way back,
+     * while a visitor gets the plain public page.
+     */
+    path: '/cadastrar-equipe',
+    name: 'teamSignup',
+    component: () => import(/* webpackChunkName: "public" */ '../views/public/TeamSignupView.vue'),
+    meta: { footer: true }
   },
   {
     path: '/minhas-candidaturas',

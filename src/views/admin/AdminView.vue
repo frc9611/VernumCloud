@@ -147,6 +147,14 @@ const platformCards = computed(() => {
       to: { name: 'adminUsers' },
     });
   }
+  if (auth.canPlatform('TENANT_VIEW_ALL')) {
+    cards.push({
+      label: 'Solicitações de equipe',
+      icon: 'userPlus',
+      hint: 'Equipes que se cadastraram pela página pública e esperam uma resposta. Nenhuma existe até alguém aprovar.',
+      to: { name: 'adminTeamSignups' },
+    });
+  }
   if (auth.canPlatform('ARENA_ACCESS')) {
     cards.push({
       label: 'Arena Master',
