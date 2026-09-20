@@ -809,6 +809,32 @@ export const people = {
   removeAffiliation: (affiliationId) => http.delete(`/affiliations/${affiliationId}`),
 };
 
+/*
+ * Conceder um badge a muita gente de uma vez, em nome da equipe aberta.
+ *
+ * Every call costs BADGE_GRANT inside the team — or TENANT_UPDATE on the platform, which reaches a
+ * team the caller is not in — and the administrator team answers 422 to all of them: it is not a
+ * team of people. `preview` runs the very same audience code as `grant`, so the screen shows how far
+ * the grant reaches before the click and not after it.
+ *
+ * `rerun` without a body repeats the recorte the concessão was created with, which is what answers
+ * whoever joined the team later; with `userIds` it adds people to it by hand. `update` is the
+ * correction: it rewrites título, descrição, cores e ícone in every badge the concessão already
+ * left behind, and `revoke` takes the whole thing back — badges, avisos and all.
+ */
+export const badgeCampaigns = {
+  list: (tenantId) => http.get(`/tenants/${tenantId}/badge-campaigns`),
+  preview: (tenantId, body) => http.post(`/tenants/${tenantId}/badge-campaigns/preview`, body),
+  grant: (tenantId, body) => http.post(`/tenants/${tenantId}/badge-campaigns`, body),
+  recipients: (tenantId, campaignId) =>
+    http.get(`/tenants/${tenantId}/badge-campaigns/${campaignId}/recipients`),
+  rerun: (tenantId, campaignId, body) =>
+    http.post(`/tenants/${tenantId}/badge-campaigns/${campaignId}/rerun`, body || {}),
+  update: (tenantId, campaignId, body) =>
+    http.put(`/tenants/${tenantId}/badge-campaigns/${campaignId}`, body),
+  revoke: (tenantId, campaignId) => http.delete(`/tenants/${tenantId}/badge-campaigns/${campaignId}`),
+};
+
 /* --------------------------------------------------------------------- busca */
 
 /*
@@ -843,6 +869,7 @@ export default {
   session,
   preferences,
   people,
+  badgeCampaigns,
   search,
   events,
   tenants,

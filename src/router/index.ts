@@ -337,6 +337,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'EVENT_VIEW', feature: 'EVENTS' }
   },
   {
+    /* Condecorar um grupo de uma vez: a concessão em massa e o que ainda dá para fazer com ela. */
+    path: '/admin/badges',
+    name: 'adminBadges',
+    component: () => import(/* webpackChunkName: "people" */ '../views/admin/BadgesAdminView.vue'),
+    meta: { auth: true, tenant: true, permission: 'BADGE_GRANT', feature: 'BADGES' }
+  },
+  {
     path: '/admin/processos',
     name: 'adminRecruitment',
     component: () => import(/* webpackChunkName: "recruitment" */ '../views/recruitment/ProcessesAdminView.vue'),
