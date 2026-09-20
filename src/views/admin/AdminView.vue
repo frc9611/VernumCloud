@@ -155,6 +155,14 @@ const platformCards = computed(() => {
       to: { name: 'adminTeamSignups' },
     });
   }
+  if (auth.canPlatform('PLATFORM_CREDENTIAL_MANAGE')) {
+    cards.push({
+      label: 'Credenciais da plataforma',
+      icon: 'key',
+      hint: 'A chave com que a plataforma lê o The Blue Alliance. O FTC vem do FTCScout, que é público.',
+      to: { name: 'adminCredentials' },
+    });
+  }
   if (auth.canPlatform('ARENA_ACCESS')) {
     cards.push({
       label: 'Arena Master',

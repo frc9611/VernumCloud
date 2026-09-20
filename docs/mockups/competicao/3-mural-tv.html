@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <title>Mockup — painel de competição no mural</title>
+  <link rel="stylesheet" href="../../../src/assets/vernum.css">
+  <style>
+    /*
+     * A TV: nada rola, nada e pixel fixo. Todo tamanho e clamp() em vw/vh, como o resto do mural, e
+     * o painel novo ocupa uma faixa larga entre o cronometro e o kanban.
+     */
+    html, body { margin: 0; height: 100%; }
+    .wall {
+      position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden;
+      background: radial-gradient(120% 80% at 50% -20%, var(--vc-purple-soft), transparent 60%), var(--vc-bg);
+      color: var(--vc-text); font-variant-numeric: tabular-nums;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .wall__bar { flex: none; display: flex; align-items: center; gap: clamp(8px,.8vw,20px);
+                 padding: clamp(8px,.9vh,22px) clamp(14px,1.4vw,36px);
+                 border-bottom: 1px solid var(--vc-border); font-size: clamp(13px,1.15vw,30px); }
+    .wall__number { padding: .1em .5em; border-radius: 999px; background: var(--vc-purple);
+                    color: var(--vc-on-accent); font-weight: 600; }
+    .wall__team { font-weight: 600; }
+    .wall__bar-spacer { flex: 1; }
+    .wall__clock { font-weight: 600; font-size: clamp(15px,1.5vw,38px); }
+    .wall__date { color: var(--vc-text-faint); }
+    .wall__body { flex: 1; min-height: 0; display: flex; gap: clamp(10px,1vw,26px); padding: clamp(10px,1vw,26px); }
+    .wall__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: clamp(10px,1vw,26px); }
+    .wall__aside { width: clamp(230px,23vw,620px); display: flex; flex-direction: column; gap: clamp(10px,1vw,26px); }
+    .panel { min-height: 0; border: 1px solid var(--vc-border); border-radius: var(--vc-radius-lg);
+             background: var(--vc-surface); padding: clamp(10px,1vw,28px); }
+    .panel__title { display: flex; align-items: center; gap: .45em; margin: 0 0 .5em;
+                    color: var(--vc-purple-strong); font-size: clamp(12px,1vw,26px);
+                    font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .panel--ghost { flex: 1; display: grid; place-items: center; color: var(--vc-text-faint);
+                    font-size: clamp(12px,1.1vw,28px); border-style: dashed; }
+
+    /* ------------------------------------------------------- o painel de competicao */
+    .panel--comp { flex: none; border-color: var(--vc-purple-border); }
+    .comp { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(14px,1.6vw,40px); align-items: center; }
+    .comp__when { font-size: clamp(34px,4.6vw,176px); font-weight: 700; line-height: .95; }
+    .comp__what { margin: .25em 0 0; color: var(--vc-text-muted); font-size: clamp(13px,1.25vw,32px); }
+    .comp__sides { display: grid; gap: clamp(6px,.7vh,18px); }
+    .cside { display: flex; align-items: center; gap: clamp(8px,.8vw,20px);
+             padding: clamp(6px,.7vh,18px) clamp(10px,1vw,26px);
+             border-radius: var(--vc-radius); background: var(--vc-surface-muted);
+             font-size: clamp(18px,2.1vw,80px); font-weight: 700; }
+    .cside--red  { box-shadow: inset clamp(4px,.4vw,10px) 0 0 #e04a43; }
+    .cside--blue { box-shadow: inset clamp(4px,.4vw,10px) 0 0 #4a86e8; }
+    /*
+     * "E a nossa" no escuro NAO pode ser --vc-purple-soft: esse token nunca e redefinido no tema
+     * escuro, continua quase branco e vira um bloco ofuscante numa TV. O realce e um anel roxo.
+     */
+    .cside.is-ours { outline: clamp(2px,.18vw,5px) solid var(--vc-purple);
+                     outline-offset: calc(-1 * clamp(2px,.18vw,5px)); }
+    /* Largura fixa e nao em em: a fonte do rotulo e menor que a dos numeros, entao 5em encostava. */
+    .cside__label { flex: none; width: clamp(64px,6.5vw,240px);
+                    font-size: clamp(10px,.85vw,22px); font-weight: 600; letter-spacing: .08em;
+                    text-transform: uppercase; color: var(--vc-text-muted); }
+    .cside__teams { display: flex; gap: .6em; }
+    .is-us { color: var(--vc-purple); }
+    /* O nome do evento so aparece quando ha mais de um em cartaz. */
+    .comp__event { margin-left: auto; font-size: clamp(11px,.95vw,24px); color: var(--vc-text-faint);
+                   text-transform: none; letter-spacing: 0; }
+  </style>
+</head>
+<body>
+  <div class="wall">
+    <header class="wall__bar">
+      <span class="wall__number">#9611</span>
+      <span class="wall__team">Cyber Rain</span>
+      <span class="wall__bar-spacer"></span>
+      <span class="wall__date">sábado, 14 de março</span>
+      <span class="wall__clock">14:17</span>
+    </header>
+
+    <div class="wall__body">
+      <div class="wall__main">
+        <section class="panel panel--comp">
+          <h2 class="panel__title">Próxima partida
+            <span class="comp__event">Regional Sudeste · Mesa 2</span></h2>
+          <div class="comp">
+            <div>
+              <p class="comp__when" style="margin:0">18 min</p>
+              <p class="comp__what">Classificatória 12 · 14:35</p>
+            </div>
+            <div class="comp__sides">
+              <div class="cside cside--red is-ours">
+                <span class="cside__label">Vermelha</span>
+                <span class="cside__teams"><span class="is-us">9611</span><span>1234</span><span>5678</span></span>
+              </div>
+              <div class="cside cside--blue">
+                <span class="cside__label">Azul</span>
+                <span class="cside__teams"><span>4321</span><span>8765</span><span>2468</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel--ghost">o kanban continua aqui, como hoje</section>
+      </div>
+      <aside class="wall__aside">
+        <section class="panel panel--ghost">avisos</section>
+        <section class="panel panel--ghost">quem está na sala</section>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

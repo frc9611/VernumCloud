@@ -718,6 +718,20 @@ export const competition = {
     http.post(`/tenants/${tenantId}/competition/links/${linkId}/import`),
 };
 
+/*
+ * As chaves com que a plataforma fala com as ligas externas.
+ *
+ * Nenhuma destas rotas devolve uma chave — nem a que a grava. O que volta é a impressão digital e o
+ * comprimento, que é o suficiente para conferir que é a chave certa sem entregar pedaço nenhum.
+ */
+export const platformCredentials = {
+  list: () => http.get('/platform/credentials'),
+  save: (kind, body) => http.put(`/platform/credentials/${kind}`, body),
+  remove: (kind) => http.delete(`/platform/credentials/${kind}`),
+  /* Responde 200 mesmo quando a liga recusa: quem decide a cor do toast é o `ok` do corpo. */
+  test: (kind, body) => http.post(`/platform/credentials/${kind}/test`, body || {}),
+};
+
 export const wiki = {
   index: (tenantId) => http.get(`/tenants/${tenantId}/wiki`),
   page: (tenantId, slug) => http.get(`/tenants/${tenantId}/wiki/${slug}`),

@@ -325,6 +325,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { auth: true, tenant: true, permission: 'COMPETITION_VIEW', feature: 'COMPETITION' }
   },
   {
+    path: '/admin/credenciais',
+    name: 'adminCredentials',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/PlatformCredentialsView.vue'),
+    meta: { auth: true, platform: 'PLATFORM_CREDENTIAL_MANAGE' }
+  },
+  {
     path: '/admin/eventos',
     name: 'adminEvents',
     component: () => import(/* webpackChunkName: "people" */ '../views/admin/EventsAdminView.vue'),

@@ -1,0 +1,31 @@
+/*
+ * O desenho da competicao: proxima partida, aliancas e resultado. E este arquivo que vira o
+ * <style scoped> do componente quando a tela for implementada.
+ */
+/* A proxima partida e o unico bloco desta tela com peso proprio: e o que a pessoa abre para ver. */
+.next { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.vc-card__body .next__when { font-size: 2.4rem; font-weight: 700; line-height: 1.05; color: var(--vc-text); }
+.vc-card__body .next__when small { display: block; margin-top: 4px; font-size: 0.9rem;
+ font-weight: 400; color: var(--vc-text-muted); }
+
+/* Vermelho e azul sao da liga, nao do tema: sao as unicas cores fixas em toda a tela. */
+.alliance { display: grid; gap: 8px; min-width: 300px; }
+.side {
+display: flex; align-items: center; gap: 8px;
+padding: 9px 10px 9px 16px; border-radius: var(--vc-radius);
+border: 1px solid var(--vc-border); background: var(--vc-surface-muted);
+}
+/* A faixa da alianca e desenhada por dentro, para o realce de "e a nossa" nao apaga-la. */
+.side--red  { box-shadow: inset 4px 0 0 #d8413a; }
+.side--blue { box-shadow: inset 4px 0 0 #2f6fd0; }
+.side.is-ours { background: var(--vc-purple-soft); border-color: var(--vc-purple-border); }
+.side__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+ color: var(--vc-text-muted); width: 64px; }
+.side__teams { display: flex; gap: 6px; flex-wrap: wrap; }
+.team { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 0.95rem; }
+.team.is-us { color: var(--vc-purple-strong); }
+.team.is-us::after { content: ' (nós)'; font-weight: 400; font-size: 0.78rem; color: var(--vc-text-muted); }
+
+.result { font-variant-numeric: tabular-nums; font-weight: 700; }
+.result--win  { color: var(--vc-success-text); }
+.result--loss { color: var(--vc-danger-text); }
