@@ -60,6 +60,19 @@ export const BADGE_ICON_CHOICES = [
   { value: 'globe', label: 'Globo' },
 ];
 
+/**
+ * Who a mass grant reaches inside a team. The server owns the rule and answers `audienceLabel` back
+ * on every concessão; these are the same words on the way in, because the picker has to name the
+ * choices before there is anything to read them off of.
+ */
+export const BADGE_AUDIENCE_CHOICES = [
+  { value: 'EVERYONE', label: 'Toda a equipe', hint: 'Todo mundo da equipe, menos os convidados de fora.' },
+  { value: 'STAFF', label: 'Quem conduz a equipe', hint: 'Proprietários, administradores, técnicos e mentores.' },
+  { value: 'STUDENTS', label: 'Só os membros', hint: 'Quem é conduzido: o cargo de membro, e mais ninguém.' },
+  { value: 'DIVISION', label: 'Uma divisão', hint: 'Quem está na divisão escolhida.' },
+  { value: 'SELECTED', label: 'Pessoas escolhidas', hint: 'Uma lista feita à mão, de até 500 pessoas.' },
+];
+
 /** The decorative treatments a hand-granted badge may wear, for the ones meant to stand out more. */
 export const BADGE_FRAME_CHOICES = [
   { value: 'NONE', label: 'Sem moldura' },
@@ -199,6 +212,12 @@ export function membershipLabel(membership) {
  * chips, wrapping onto as many lines as it takes, because that is exactly the six things the person
  * wants seen. Returns [{ text, color?, icon?, accent? }].
  *
+ * The one thing that IS collapsed is a repeat: two Alumni badges issued by the same team read the
+ * same, and since nothing here ever becomes a "(+N)" they would sit under the name as two identical
+ * chips. A mass grant makes that easy to produce — one concessão in massa plus one badge by hand —
+ * so the Alumni chips are deduplicated by issuer and text. That is not the "(+N)" rule bending: six
+ * different chips still show six times, and only the literal twin is dropped.
+ *
  * `memberships` is only what THIS viewer may be told — a person who hid every team leaves it empty
  * for a stranger even though `kind` still correctly says MENTOR or STUDENT — so with nothing to show
  * at all the line falls back to the bare `kindLabel`.
@@ -208,10 +227,15 @@ export function headlineChips(profile) {
   for (const membership of profile.memberships || []) {
     chips.push({ text: `${membershipLabel(membership)} • ${membership.tenantName}`, color: membership.color, accent: true });
   }
+  const seenAlumni = new Set();
   for (const badge of profile.badges || []) {
     if (badge.kind !== 'ALUMNI') continue;
+    const text = badge.issuerName ? `Alumni • ${badge.issuerName}` : 'Alumni';
+    const key = `${badge.issuerName || ''}|${text}`;
+    if (seenAlumni.has(key)) continue;
+    seenAlumni.add(key);
     chips.push({
-      text: badge.issuerName ? `Alumni • ${badge.issuerName}` : 'Alumni',
+      text,
       color: badge.color,
       icon: 'history',
     });

@@ -331,6 +331,14 @@ const teamCards = computed(() => {
       to: { name: 'adminEvents' },
     });
   }
+  if (auth.featureOn('BADGES') && auth.can('BADGE_GRANT')) {
+    cards.push({
+      label: 'Badges e condecorações',
+      icon: 'badge',
+      hint: 'Condecorar um grupo de uma vez — a equipe inteira, uma divisão ou uma lista — e desfazer o que foi concedido.',
+      to: { name: 'adminBadges' },
+    });
+  }
   if (auth.featureOn('LANDING_PAGE') && auth.can('PAGE_MANAGE')) {
     cards.push({
       label: 'Página pública',
