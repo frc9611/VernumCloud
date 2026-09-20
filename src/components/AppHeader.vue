@@ -222,6 +222,7 @@ function iconFor(type) {
   if (type === 'CLOUD_SHARED') return 'share';
   if (type === 'CLOUD_COMMENT') return 'comment';
   if (type.startsWith('TENANT_MEMBER')) return 'users';
+  if (type.startsWith('TEAM_SIGNUP')) return 'userPlus';
   if (type.startsWith('DIVISION_MEMBER')) return 'divisions';
   if (type === 'ANNOUNCEMENT_PUBLISHED') return 'megaphone';
   if (type === 'ANNOUNCEMENT_COMMENT') return 'comment';

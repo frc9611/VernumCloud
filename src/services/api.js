@@ -511,6 +511,22 @@ export const publicRecruitment = {
   prefill: () => http.get('/public/recruitment/prefill'),
 };
 
+/*
+ * A team asking to exist. The two reads below are the two sides of the same row: `mine` is what
+ * whoever asked sees on the waiting screen, and the rest is the queue of the system tenant.
+ */
+export const teamSignup = {
+  options: () => http.get('/public/teamSignup/options'),
+  submit: (body) => http.post('/public/teamSignup', body),
+  mine: () => http.get('/me/teamSignupRequests'),
+};
+
+export const teamSignupRequests = {
+  list: (status) => http.get('/platform/teamSignupRequests', { params: status ? { status } : {} }),
+  approve: (requestId, body) => http.post(`/platform/teamSignupRequests/${requestId}/approve`, body),
+  reject: (requestId, body) => http.post(`/platform/teamSignupRequests/${requestId}/reject`, body),
+};
+
 /* ---------------------------------------------------------------- team page */
 
 /** PNG, JPEG, WebP or GIF up to 5 MB, in the multipart field the server expects. */
@@ -689,6 +705,19 @@ export const calendar = {
  * `links` é a história inteira, que só a tela de competição abre. `suggestions` é a única chamada
  * daqui que faz o servidor sair para a internet, e por isso ela é de quem gerencia, não de quem lê.
  */
+export const competition = {
+  showing: (tenantId) => http.get(`/tenants/${tenantId}/competition`),
+  links: (tenantId, season) => http.get(`/tenants/${tenantId}/competition/links`, { params: { season } }),
+  suggestions: (tenantId, season) =>
+    http.get(`/tenants/${tenantId}/competition/suggestions`, { params: { season } }),
+  link: (tenantId, body) => http.post(`/tenants/${tenantId}/competition/links`, body),
+  update: (tenantId, linkId, body) => http.put(`/tenants/${tenantId}/competition/links/${linkId}`, body),
+  unlink: (tenantId, linkId) => http.delete(`/tenants/${tenantId}/competition/links/${linkId}`),
+  /* Traz os prêmios para Eventos e Premiações. Idempotente: apertar de novo não duplica nada. */
+  importAwards: (tenantId, linkId) =>
+    http.post(`/tenants/${tenantId}/competition/links/${linkId}/import`),
+};
+
 /*
  * As chaves com que a plataforma fala com as ligas externas.
  *
@@ -701,19 +730,6 @@ export const platformCredentials = {
   remove: (kind) => http.delete(`/platform/credentials/${kind}`),
   /* Responde 200 mesmo quando a liga recusa: quem decide a cor do toast é o `ok` do corpo. */
   test: (kind, body) => http.post(`/platform/credentials/${kind}/test`, body || {}),
-};
-
-export const competition = {
-  showing: (tenantId) => http.get(`/tenants/${tenantId}/competition`),
-  links: (tenantId, season) => http.get(`/tenants/${tenantId}/competition/links`, { params: { season } }),
-  suggestions: (tenantId, season) =>
-    http.get(`/tenants/${tenantId}/competition/suggestions`, { params: { season } }),
-  link: (tenantId, body) => http.post(`/tenants/${tenantId}/competition/links`, body),
-  update: (tenantId, linkId, body) => http.put(`/tenants/${tenantId}/competition/links/${linkId}`, body),
-  unlink: (tenantId, linkId) => http.delete(`/tenants/${tenantId}/competition/links/${linkId}`),
-  /* Traz os prêmios para Eventos e Premiações. Idempotente: apertar de novo não duplica nada. */
-  importAwards: (tenantId, linkId) =>
-    http.post(`/tenants/${tenantId}/competition/links/${linkId}/import`),
 };
 
 export const wiki = {
@@ -851,6 +867,8 @@ export default {
   notifications,
   recruitment,
   publicRecruitment,
+  teamSignup,
+  teamSignupRequests,
   page,
   publicPage,
   wall,
