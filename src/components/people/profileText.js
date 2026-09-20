@@ -69,7 +69,7 @@ export const BADGE_AUDIENCE_CHOICES = [
   { value: 'EVERYONE', label: 'Toda a equipe', hint: 'Todo mundo da equipe, menos os convidados de fora.' },
   { value: 'STAFF', label: 'Quem conduz a equipe', hint: 'Proprietários, administradores, técnicos e mentores.' },
   { value: 'STUDENTS', label: 'Só os membros', hint: 'Quem é conduzido: o cargo de membro, e mais ninguém.' },
-  { value: 'DIVISION', label: 'Uma divisão', hint: 'Quem está na divisão escolhida.' },
+  { value: 'DIVISION', label: 'Uma divisão', hint: 'Quem está na divisão escolhida e nas subdivisões dela.' },
   { value: 'SELECTED', label: 'Pessoas escolhidas', hint: 'Uma lista feita à mão, de até 500 pessoas.' },
 ];
 
