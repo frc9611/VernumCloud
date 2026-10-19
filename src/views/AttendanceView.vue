@@ -121,6 +121,15 @@
               Incluir técnicos e administradores
             </label>
             <span class="vc-chip">{{ periodLabel }}</span>
+            <button
+              v-if="ranking.length"
+              class="vc-btn vc-btn--ghost vc-btn--small"
+              type="button"
+              @click="exportRankingCsv"
+            >
+              <AppIcon name="download" :size="15" />
+              Exportar CSV
+            </button>
           </template>
         </SectionTitle>
         <div class="vc-table-wrap">
@@ -159,7 +168,20 @@
 
       <!-- -------------------------------------------------------------- history -->
       <template v-if="tab === 'historico'">
-        <SectionTitle lead="Histórico de" title="Estadas" />
+        <SectionTitle lead="Histórico de" title="Estadas">
+          <template #actions>
+            <button
+              v-if="entriesTotal > 0"
+              class="vc-btn vc-btn--ghost vc-btn--small"
+              type="button"
+              :disabled="exportingCsv"
+              @click="exportHistoryCsv"
+            >
+              <AppIcon name="download" :size="15" />
+              {{ exportingCsv ? 'Exportando...' : 'Exportar CSV' }}
+            </button>
+          </template>
+        </SectionTitle>
 
         <div class="vc-row">
           <div class="vc-field" style="margin: 0">
@@ -261,6 +283,7 @@ import PanelCard from '@/components/PanelCard.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import TabBar from '@/components/TabBar.vue';
 import { authStore } from '@/store/auth.js';
+import { preferencesStore } from '@/store/preferences.js';
 import { attendance as attendanceApi } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 import {
@@ -276,12 +299,14 @@ import {
  * showing instead of leaving a short table looking broken.
  */
 const auth = authStore();
+const prefs = preferencesStore();
 const toast = useToast();
 
 const REFRESH_MS = 60000;
 
 const tab = ref('sala');
 const loading = ref(false);
+const exportingCsv = ref(false);
 const lastUpdated = ref(null);
 const scope = ref({ board: 'SELF', logs: 'SELF', divisions: [], canRegister: false, canManage: false });
 const me = ref({ inRoom: false, since: null, secondsInRoom: 0, totalSeconds: 0, tenants: [] });
@@ -298,11 +323,11 @@ const loadingMore = ref(false);
 /* Who the caller may read the register of, from the team's memberships — not from the rows that came. */
 const people = ref([]);
 /*
- * Whether the ranking shows whoever conducts the team. Off by default and remembered per browser: the
- * server hides the staff unless asked, and the 60 s refresh has to keep asking the same thing.
+ * Whether the ranking shows whoever conducts the team. Off by default and remembered in preferencesStore:
+ * the server hides the staff unless asked, and the 60 s refresh has to keep asking the same thing.
  */
 const INCLUDE_STAFF_KEY = 'attendance.includeStaff';
-const includeStaff = ref(localStorage.getItem(INCLUDE_STAFF_KEY) === 'true');
+const includeStaff = ref(Boolean(prefs.getSetting(INCLUDE_STAFF_KEY, false)));
 const personFilter = ref('');
 const closing = ref(null);
 const closeEndTime = ref('');
@@ -384,8 +409,15 @@ watch(tabs, (list) => {
   }
 });
 
+watch(() => prefs.getSetting(INCLUDE_STAFF_KEY, false), (val) => {
+  const next = Boolean(val);
+  if (includeStaff.value !== next) {
+    includeStaff.value = next;
+  }
+});
+
 watch(includeStaff, (value) => {
-  localStorage.setItem(INCLUDE_STAFF_KEY, value ? 'true' : 'false');
+  prefs.setSetting(INCLUDE_STAFF_KEY, Boolean(value));
   load();
 });
 
@@ -456,6 +488,80 @@ async function loadMoreEntries() {
     toast.error(apiMessage(error, 'Erro ao carregar o histórico'));
   } finally {
     loadingMore.value = false;
+  }
+}
+
+function csvCell(value) {
+  const str = String(value ?? '');
+  return /[";\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function downloadCsv(filename, rows) {
+  const content = '\uFEFF' + rows.map((row) => row.map(csvCell).join(';')).join('\r\n');
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportRankingCsv() {
+  const slug = auth.activeTenant?.slug || 'equipe';
+  const rows = [
+    ['Posição', 'Pessoa', 'Conduz a equipe', 'Tempo total', 'Segundos', 'Na sala agora'],
+    ...ranking.value.map((line) => [
+      line.position,
+      line.userName,
+      line.staff ? 'Sim' : 'Não',
+      formatDuration(line.totalSeconds),
+      line.totalSeconds ?? 0,
+      line.inRoom ? 'Sim' : 'Não',
+    ]),
+  ];
+  downloadCsv(`ranking-presenca-${slug}-${period.from}-a-${period.to}.csv`, rows);
+}
+
+async function exportHistoryCsv() {
+  if (exportingCsv.value || !auth.activeTenantId) return;
+  exportingCsv.value = true;
+  try {
+    const all = [];
+    let current = 0;
+    let totalPages = 1;
+    while (current < totalPages && current < 25) {
+      const { data } = await attendanceApi.entries(auth.activeTenantId, {
+        from: period.from,
+        to: period.to,
+        userId: personFilter.value || undefined,
+        page: current,
+        size: 200,
+      });
+      all.push(...(data.items || []));
+      totalPages = data.totalPages || 1;
+      current += 1;
+    }
+    const slug = auth.activeTenant?.slug || 'equipe';
+    const rows = [
+      ['Pessoa', 'Entrada', 'Saída', 'Duração', 'Segundos', 'Situação'],
+      ...all.map((stay) => [
+        stay.userName,
+        formatDateTime(stay.startTime),
+        stay.endTime ? formatDateTime(stay.endTime) : 'Em aberto',
+        formatDuration(stay.seconds),
+        stay.seconds ?? 0,
+        stay.open ? 'Aberta' : 'Fechada',
+      ]),
+    ];
+    downloadCsv(`historico-presenca-${slug}-${period.from}-a-${period.to}.csv`, rows);
+    toast.success('CSV exportado!');
+  } catch (error) {
+    toast.error(apiMessage(error, 'Erro ao exportar o histórico'));
+  } finally {
+    exportingCsv.value = false;
   }
 }
 

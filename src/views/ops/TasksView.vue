@@ -305,6 +305,7 @@ import PersonLink from '@/components/PersonLink.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 import { authStore } from '@/store/auth.js';
+import { preferencesStore } from '@/store/preferences.js';
 import { divisions as divisionsApi, tasks as tasksApi, tenants } from '@/services/api.js';
 import { apiMessage } from '@/services/http.js';
 
@@ -327,6 +328,7 @@ import { apiMessage } from '@/services/http.js';
  * the open team, because a new demanda has to belong to exactly one.
  */
 const auth = authStore();
+const prefs = preferencesStore();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
@@ -346,8 +348,8 @@ const PAGE_SIZE = 50;
 /* A round trip per keystroke is a round trip per keystroke; the server answers the pause, not the key. */
 const SEARCH_DELAY = 300;
 
-/* Remembered in the browser only: it is a way of looking, not a fact about the person. */
-const SCOPE_KEY = 'vernum.tasks.allTeams';
+/* Persisted in preferencesStore so the person's preferred board scope follows them across browsers. */
+const SCOPE_KEY = 'tasks.allTeams';
 
 /* The flat page of /tasks/mine (all teams) and the columns of /tenants/{id}/tasks (one team). */
 const tasks = ref([]);
@@ -369,7 +371,7 @@ const search = ref('');
 const filters = reactive({ divisionId: '', mine: false, assignedToMe: false, inMyDivisions: false });
 const form = reactive(blank());
 
-const allTeamsPref = ref(readScope());
+const allTeamsPref = ref(Boolean(prefs.getSetting(SCOPE_KEY, false)));
 const multiTeam = computed(() => auth.memberships.length > 1);
 const allTeams = computed(() => multiTeam.value && allTeamsPref.value);
 
@@ -422,6 +424,9 @@ onUnmounted(() => clearTimeout(searchTimer));
 /* A busca do header manda outra demanda estando a tela já aberta: abrir de novo é o que ela espera. */
 watch(() => route.query.demanda, openFromQuery);
 watch(() => auth.activeTenantId, load);
+watch(() => prefs.getSetting(SCOPE_KEY, false), (val) => {
+  allTeamsPref.value = Boolean(val);
+});
 watch(allTeams, load);
 watch(search, () => {
   clearTimeout(searchTimer);
@@ -437,21 +442,9 @@ function blank() {
   };
 }
 
-function readScope() {
-  try {
-    return localStorage.getItem(SCOPE_KEY) === '1';
-  } catch (error) {
-    return false;
-  }
-}
-
 function toggleAllTeams() {
   allTeamsPref.value = !allTeamsPref.value;
-  try {
-    localStorage.setItem(SCOPE_KEY, allTeamsPref.value ? '1' : '0');
-  } catch (error) {
-    //A private window forgets the choice on close, which is fine
-  }
+  prefs.setSetting(SCOPE_KEY, allTeamsPref.value);
 }
 
 /*
@@ -704,7 +697,8 @@ async function moveTo(task, status) {
     const { data } = await tasksApi.move(task.taskId, status);
     //The card the hand is still on gets the server's own words, before the board is read again
     Object.assign(task, { status: data.status, statusLabel: data.statusLabel, updatedAt: data.updatedAt });
-    if (!allTeams.value) await reload();
+    const anyExpanded = boardColumns.value.some((column) => column.page > 0);
+    if (!allTeams.value && !anyExpanded) await reload();
     //O cartão aberto passou a ter mais uma linha de histórico
     if (selected.value && selected.value.taskId === task.taskId) await loadMoves(task.taskId);
     return true;
