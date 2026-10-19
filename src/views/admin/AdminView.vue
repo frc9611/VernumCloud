@@ -48,6 +48,13 @@
             <div class="vc-metric__value">{{ overview.inRoomNow }}</div>
             <div class="vc-metric__foot">pessoas com estada aberta, em todas as equipes</div>
           </div>
+          <router-link class="vc-metric" :to="{ name: 'adminTeamSignups' }">
+            <div class="vc-metric__head"><span>Solicitações de equipe</span><AppIcon name="userPlus" :size="16" /></div>
+            <div :class="['vc-metric__value', pendingSignups ? 'vc-metric__value--warning' : '']">
+              {{ pendingSignups }}
+            </div>
+            <div class="vc-metric__foot">aguardando aprovação da plataforma</div>
+          </router-link>
         </div>
         <p v-else-if="overviewFailed" class="vc-faint platform__note">
           Não deu para carregar os números da plataforma agora.
@@ -102,7 +109,7 @@ import SectionTitle from '@/components/SectionTitle.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { authStore } from '@/store/auth.js';
-import { platform } from '@/services/api.js';
+import { platform, teamSignupRequests } from '@/services/api.js';
 
 /*
  * Hub of the admin panel. Each card only shows up when the user has the permission.
@@ -115,6 +122,7 @@ const auth = authStore();
 
 const overview = ref(null);
 const overviewFailed = ref(false);
+const pendingSignups = ref(0);
 
 const canSeePlatform = computed(() => auth.platformAdmin || auth.canPlatform('TENANT_VIEW_ALL'));
 const showPlatform = computed(() => canSeePlatform.value || platformCards.value.length > 0);
@@ -188,15 +196,21 @@ watch(() => auth.platformPermissions, loadOverview);
 async function loadOverview() {
   if (!auth.canPlatform('TENANT_VIEW_ALL')) {
     overview.value = null;
+    pendingSignups.value = 0;
     return;
   }
   try {
-    const { data } = await platform.overview();
-    overview.value = data;
+    const [overviewRes, signupsRes] = await Promise.all([
+      platform.overview(),
+      teamSignupRequests.list('PENDING').catch(() => ({ data: [] })),
+    ]);
+    overview.value = overviewRes.data;
+    pendingSignups.value = Array.isArray(signupsRes.data) ? signupsRes.data.length : 0;
     overviewFailed.value = false;
   } catch (error) {
     //The hub still works without the numbers: the cards are the point of the screen
     overview.value = null;
+    pendingSignups.value = 0;
     overviewFailed.value = true;
   }
 }

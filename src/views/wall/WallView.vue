@@ -253,6 +253,8 @@ const DEFAULT_PANELS = ['countdown', 'kanban', 'announcements', 'updates', 'room
 
 /* Text reflows on its own — "há 9 min" becomes "há 10 min" and a line wraps — so the fit is retaken */
 const REMEASURE = 60000;
+/* When a list has more items than fit on screen, cycle through pages of `cap` items every 10 s */
+const ROTATE_MS = 10000;
 
 /*
  * De quanto em quanto tempo a televisão pergunta.
@@ -288,6 +290,7 @@ const rootEl = ref(null);
  */
 const measuring = ref(true);
 const caps = reactive({ cards: [], announcements: null, updates: null, room: null, race: null });
+const pageTick = ref(0);
 
 /* The device clock, ticking, plus how far the server is from it */
 const nowMs = ref(Date.now());
@@ -300,6 +303,7 @@ let lastTarget = null;
 
 let tick = null;
 let remeasure = null;
+let rotateTimer = null;
 let pollTimer = null;
 let polling = false;
 const originalTitle = document.title;
@@ -313,6 +317,7 @@ onMounted(() => {
   applyTheme('dark');
   tick = setInterval(() => (nowMs.value = Date.now()), 1000);
   remeasure = setInterval(measure, REMEASURE);
+  rotateTimer = setInterval(() => { pageTick.value += 1; }, ROTATE_MS);
   window.addEventListener('resize', measure);
   //The first snapshot can land before Poppins does, and the fallback font is not the same height
   if (document.fonts?.ready) {
@@ -325,8 +330,10 @@ onUnmounted(() => {
   stopFeed();
   clearInterval(tick);
   clearInterval(remeasure);
+  clearInterval(rotateTimer);
   tick = null;
   remeasure = null;
+  rotateTimer = null;
   window.removeEventListener('resize', measure);
   document.title = originalTitle;
 });
@@ -467,12 +474,18 @@ function visibleCards(column, index) {
 function hiddenCards(column, index) {
   const cards = column.cards || [];
   const total = typeof column.count === 'number' ? column.count : cards.length;
-  return Math.max(0, total - cut(cards, caps.cards[index]).length);
+  const cap = caps.cards[index];
+  const shown = measuring.value || cap == null ? cards.length : Math.min(cards.length, cap);
+  return Math.max(0, total - shown);
 }
 
-/** The head of a list that fits, or all of it while the wall is measuring. */
+/** The slice of a list that fits on screen, rotating through pages when more items arrived than fit. */
 function cut(items, cap) {
-  return measuring.value || cap == null ? items : items.slice(0, cap);
+  if (measuring.value || cap == null || items.length <= cap) return items;
+  const pages = Math.ceil(items.length / cap);
+  const page = pageTick.value % pages;
+  const start = page * cap;
+  return items.slice(start, start + cap);
 }
 
 function left(items, cap) {

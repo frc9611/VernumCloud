@@ -37,7 +37,9 @@
             </template>
             <p class="vc-faint" style="margin-top: 0">
               {{ formatDate(entry.entryDate) }}
-              <template v-if="entry.author"> · {{ entry.author.name }}</template>
+              <template v-if="entry.author">
+                · <PersonLink :user-id="entry.author.userId" :name="entry.author.name" muted />
+              </template>
               <template v-if="entry.mine"> · seu</template>
             </p>
             <p style="white-space: pre-wrap">{{ entry.body || 'Sem corpo.' }}</p>
@@ -112,6 +114,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import AlertBanner from '@/components/AlertBanner.vue';
+import PersonLink from '@/components/PersonLink.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import PanelCard from '@/components/PanelCard.vue';
 import EmptyState from '@/components/EmptyState.vue';

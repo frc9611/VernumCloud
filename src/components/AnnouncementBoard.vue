@@ -248,15 +248,21 @@ watch(() => route.query.aviso, highlightFromQuery);
 /*
  * O aviso que a busca global apontou: o mural rola até ele e o cerca com um anel por um instante.
  *
- * Só a primeira página é procurada — não existe rota de um aviso só, e paginar até achar pediria uma
- * requisição por página. Fora dela o mural simplesmente abre, com um aviso de que ele não está à
- * vista. A query sai do endereço assim que é lida, para o F5 não repetir o destaque.
+ * Se não estiver na primeira página, o mural busca até mais três páginas antes de desistir — o bastante
+ * para alcançar avisos das últimas semanas sem varrer o histórico inteiro da equipe. A query sai do
+ * endereço assim que é lida, para o F5 não repetir o destaque.
  */
 async function highlightFromQuery() {
   const id = route.query.aviso;
   if (!id) return;
   router.replace({ query: { ...route.query, aviso: undefined } });
-  const target = board.value.find((one) => String(one.announcementId) === String(id));
+  let target = board.value.find((one) => String(one.announcementId) === String(id));
+  let tries = 0;
+  while (!target && board.value.length < total.value && tries < 3) {
+    tries += 1;
+    await loadMore();
+    target = board.value.find((one) => String(one.announcementId) === String(id));
+  }
   if (!target) {
     toast.warning('Esse aviso não está entre os mais recentes do mural.');
     return;

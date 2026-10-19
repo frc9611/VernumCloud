@@ -222,7 +222,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import SectionTitle from '@/components/SectionTitle.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
@@ -262,6 +262,12 @@ onMounted(async () => {
   await loadTags();
 });
 
+onUnmounted(() => {
+  if (pictureUrl.value) {
+    URL.revokeObjectURL(pictureUrl.value);
+  }
+});
+
 async function loadProfile() {
   try {
     const { data } = await users.get(auth.getId);
@@ -276,6 +282,10 @@ async function loadProfile() {
 }
 
 async function loadPicture() {
+  if (pictureUrl.value) {
+    URL.revokeObjectURL(pictureUrl.value);
+    pictureUrl.value = null;
+  }
   try {
     const { data } = await users.picture(auth.getId);
     pictureUrl.value = URL.createObjectURL(data);
