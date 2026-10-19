@@ -34,7 +34,8 @@ axiosInstance.interceptors.response.use(
                 localStorage.removeItem('token');
                 localStorage.removeItem('activeTenantId');
             }
-            router.push('/');
+            const current = router.currentRoute?.value?.fullPath;
+            router.push(current && current !== '/' ? { path: '/', query: { next: current } } : '/');
         }
         return Promise.reject(error);
     }

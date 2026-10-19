@@ -482,15 +482,19 @@ router.beforeEach(async (to, from, next) => {
     return next();
   }
 
+  const loginTarget = to.fullPath && to.fullPath !== '/'
+    ? { name: 'login', query: { next: to.fullPath } }
+    : { name: 'login' };
+
   if (!auth.isAuth) {
-    return next({ name: 'login' });
+    return next(loginTarget);
   }
 
   //On a reload the guard can run before /me answered
   if (!auth.ready) {
     await auth.loadMe();
     if (!auth.isAuth) {
-      return next({ name: 'login' });
+      return next(loginTarget);
     }
   }
 
