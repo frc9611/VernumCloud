@@ -2,7 +2,7 @@
   <section class="vc-stack">
     <SectionTitle lead="Suas" title="Demandas">
       <template #actions>
-        <span v-if="tasks.length" class="vc-chip">{{ tasks.length }} aberta(s)</span>
+        <span v-if="totalCount" class="vc-chip">{{ totalCount }} aberta(s)</span>
         <router-link v-if="canOpenBoard" class="vc-btn vc-btn--ghost vc-btn--small" :to="{ name: 'tasks' }">
           Ver quadro
         </router-link>
@@ -17,7 +17,7 @@
             v-for="task in tasks.slice(0, LIMIT)"
             :key="task.taskId"
             :class="['vc-list__item', canOpenBoard ? '' : 'vc-list__item--plain']"
-            :to="canOpenBoard ? { name: 'tasks' } : null"
+            :to="canOpenBoard ? { name: 'tasks', query: { demanda: task.taskId } } : null"
           >
             <span class="vc-dot" :style="{ background: task.overdue ? 'var(--vc-danger-text)' : dotColor(task) }"></span>
             <span class="vc-list__text">
@@ -35,8 +35,8 @@
           </component>
         </div>
         <p v-else class="vc-faint" style="margin: 0">Nenhuma demanda aberta vinculada a você.</p>
-        <p v-if="tasks.length > LIMIT" class="vc-faint" style="margin: 0">
-          e mais {{ tasks.length - LIMIT }}<template v-if="canOpenBoard"> — abra o quadro para ver todas</template>.
+        <p v-if="totalCount > LIMIT" class="vc-faint" style="margin: 0">
+          e mais {{ totalCount - LIMIT }}<template v-if="canOpenBoard"> — abra o quadro para ver todas</template>.
         </p>
       </div>
     </div>
@@ -44,6 +44,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import SectionTitle from '@/components/SectionTitle.vue';
 
 /*
@@ -51,16 +52,18 @@ import SectionTitle from '@/components/SectionTitle.vue';
  *
  * The rows come from GET /tasks/mine already filtered by the parent; this panel only says which team
  * each one belongs to when that matters (more than one team) and where the deadline stands. The rows
- * open the board of the team that is open, which has the "Todas as equipes" switch for the rest.
+ * open the card directly on the board of the open team.
  */
-defineProps({
+const props = defineProps({
   tasks: { type: Array, required: true },
+  total: { type: Number, default: 0 },
   multiTeam: { type: Boolean, default: false },
   /** Whether the tasks route opens in the team that is open; otherwise the rows are plain. */
   canOpenBoard: { type: Boolean, default: false },
 });
 
 const LIMIT = 8;
+const totalCount = computed(() => Math.max(props.total, props.tasks.length));
 
 /* The priority colours the kanban uses on its left border, so the dot reads the same way. */
 function dotColor(task) {

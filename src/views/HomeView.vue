@@ -69,6 +69,7 @@
           <MyTasksPanel
             v-else-if="key === 'myTasks'"
             :tasks="myTasks"
+            :total="myTasksTotal"
             :multi-team="auth.memberships.length > 1"
             :can-open-board="auth.featureOn('TASKS') && auth.can('TASK_VIEW')"
           />
@@ -139,6 +140,7 @@ const pendingAccessRequests = ref([]);
 const apps = ref([]);
 const dashboard = ref(null);
 const myTasks = ref([]);
+const myTasksTotal = ref(0);
 const openProcesses = ref([]);
 const competition = ref({ events: [], nextMatch: null, nextMatchEventName: null });
 
@@ -289,32 +291,43 @@ async function load() {
   } catch (error) {
     dashboard.value = null;
   }
-  try {
-    const { data } = await cloud.accessRequests();
-    pendingAccessRequests.value = data;
-  } catch (error) {
+  if (auth.featureOn('CLOUD')) {
+    try {
+      const { data } = await cloud.accessRequests();
+      pendingAccessRequests.value = data;
+    } catch (error) {
+      pendingAccessRequests.value = [];
+    }
+  } else {
     pendingAccessRequests.value = [];
   }
-  try {
-    const { data } = await appsApi.list(auth.activeTenantId);
-    apps.value = data;
-  } catch (error) {
+  if (auth.featureOn('APPS') && auth.can('APP_VIEW')) {
+    try {
+      const { data } = await appsApi.list(auth.activeTenantId);
+      apps.value = data;
+    } catch (error) {
+      apps.value = [];
+    }
+  } else {
     apps.value = [];
   }
   /*
    * The person's open demandas across every team; only the ones assigned to them belong on the home.
-   * Both cuts are the query's now — the route answers a page, and picking the assigned ones out of a
-   * page would show the page minus whatever was somebody else's.
-   *
-   * The page is bigger than the eight rows the panel draws on purpose: the panel counts what it is
-   * given ("N aberta(s)", "e mais N"), so a page of eight would make it say eight to somebody who owes
-   * thirty and never offer the board. This is the route's own default size.
+   * The panel draws up to eight rows and reads `totalElements` from the page response so the counter
+   * ("N aberta(s)", "e mais N") stays exact without downloading fifty cards on login.
    */
-  try {
-    const { data } = await tasksApi.mine({ open: true, assignedToMe: true, size: 50 });
-    myTasks.value = data.items || [];
-  } catch (error) {
+  if (auth.memberships.some((membership) => (membership.permissions || []).includes('TASK_VIEW'))) {
+    try {
+      const { data } = await tasksApi.mine({ open: true, assignedToMe: true, size: 8 });
+      myTasks.value = data.items || [];
+      myTasksTotal.value = data.totalElements ?? myTasks.value.length;
+    } catch (error) {
+      myTasks.value = [];
+      myTasksTotal.value = 0;
+    }
+  } else {
     myTasks.value = [];
+    myTasksTotal.value = 0;
   }
   try {
     const { data } = await publicRecruitment.open();
@@ -323,10 +336,14 @@ async function load() {
     openProcesses.value = [];
   }
   /* Sem o recurso ou sem permissão a rota responde 403, e aí a aba simplesmente não nasce. */
-  try {
-    const { data } = await competitionApi.showing(auth.activeTenantId);
-    competition.value = data;
-  } catch (error) {
+  if (auth.featureOn('COMPETITION') && auth.can('COMPETITION_VIEW') && auth.activeCategory !== 'NONE') {
+    try {
+      const { data } = await competitionApi.showing(auth.activeTenantId);
+      competition.value = data;
+    } catch (error) {
+      competition.value = { events: [], nextMatch: null, nextMatchEventName: null };
+    }
+  } else {
     competition.value = { events: [], nextMatch: null, nextMatchEventName: null };
   }
 }

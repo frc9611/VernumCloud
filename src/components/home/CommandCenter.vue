@@ -87,7 +87,7 @@
           </p>
           <div v-if="dashboard.reminders.length" class="vc-list">
             <router-link v-for="task in dashboard.reminders.slice(0, 6)" :key="task.taskId"
-                         class="vc-list__item" :to="{ name: 'tasks' }">
+                         class="vc-list__item" :to="{ name: 'tasks', query: { demanda: task.taskId } }">
               <span class="vc-dot" :style="{ background: task.overdue
                 ? 'var(--vc-danger-text)' : 'var(--vc-warning-strong)' }"></span>
               <span class="vc-list__text">
