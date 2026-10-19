@@ -81,27 +81,45 @@
           <div v-if="notificationsOpen" class="vc-header__dropdown vc-header__dropdown--wide" @click.stop>
             <div class="vc-header__dropdown-head">
               <strong>Notificações</strong>
-              <button
-                v-if="notifications.unread"
-                class="vc-btn vc-btn--ghost vc-btn--small"
-                type="button"
-                @click="notifications.markAllRead()"
-              >
-                Marcar como lidas
-              </button>
+              <div class="vc-header__dropdown-actions">
+                <button
+                  v-if="auth.memberships.length > 1 || hiddenNotificationsCount > 0"
+                  :class="['vc-chip', 'vc-chip--button', showAllNotifications ? 'vc-chip--purple' : '']"
+                  type="button"
+                  @click="showAllNotifications = !showAllNotifications"
+                >
+                  {{ showAllNotifications ? 'Todas as equipes' : 'Equipe aberta' }}
+                  <template v-if="!showAllNotifications && hiddenNotificationsCount > 0">
+                    (+{{ hiddenNotificationsCount }})
+                  </template>
+                </button>
+                <button
+                  v-if="notifications.unread"
+                  class="vc-btn vc-btn--ghost vc-btn--small"
+                  type="button"
+                  @click="notifications.markAllRead()"
+                >
+                  Marcar como lidas
+                </button>
+              </div>
             </div>
 
             <p v-if="notifications.loading" class="vc-faint vc-header__dropdown-empty">Carregando...</p>
             <p v-else-if="!visibleNotifications.length" class="vc-faint vc-header__dropdown-empty">
               Nenhuma notificação por enquanto.
+              <template v-if="!showAllNotifications && hiddenNotificationsCount > 0">
+                Há {{ hiddenNotificationsCount }} em outra(s) equipe(s).
+              </template>
             </p>
 
-            <button
+            <div
               v-for="item in visibleNotifications"
               :key="item.notificationId"
-              type="button"
+              role="button"
+              tabindex="0"
               :class="['vc-notification', item.read ? '' : 'is-unread']"
               @click="openNotification(item)"
+              @keydown.enter.prevent="openNotification(item)"
             >
               <span class="vc-notification__icon"><AppIcon :name="iconFor(item.type)" :size="16" /></span>
               <span class="vc-notification__content">
@@ -112,7 +130,16 @@
                   <template v-if="item.tenantName"> · {{ item.tenantName }}</template>
                 </span>
               </span>
-            </button>
+              <button
+                class="vc-notification__delete"
+                type="button"
+                title="Excluir notificação"
+                aria-label="Excluir notificação"
+                @click.stop="notifications.remove(item.notificationId)"
+              >
+                <AppIcon name="trash" :size="14" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -143,6 +170,7 @@ const toast = useToast();
 const menuOpen = ref(false);
 const tenantOpen = ref(false);
 const notificationsOpen = ref(false);
+const showAllNotifications = ref(false);
 const searchBox = ref(null);
 
 /*
@@ -179,7 +207,13 @@ function toggleTheme() {
   prefs.setTheme(prefs.resolvedTheme === 'dark' ? 'light' : 'dark');
 }
 const badge = computed(() => (notifications.unread > 9 ? '9+' : notifications.unread));
-const visibleNotifications = computed(() => notifications.forTenant(auth.activeTenantId));
+const tenantNotifications = computed(() => notifications.forTenant(auth.activeTenantId));
+const hiddenNotificationsCount = computed(() =>
+  Math.max(0, notifications.items.length - tenantNotifications.value.length),
+);
+const visibleNotifications = computed(() =>
+  showAllNotifications.value ? notifications.items : tenantNotifications.value,
+);
 
 /* One dropdown at a time. The click stops here so the document listener does not close it again. */
 function toggleTenants() {
@@ -465,11 +499,18 @@ watch(() => route.fullPath, () => (menuOpen.value = false));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 4px 6px 10px;
   border-bottom: 1px solid var(--vc-border);
   margin-bottom: 6px;
   font-size: 0.9rem;
+}
+
+.vc-header__dropdown-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .vc-header__dropdown-empty {
@@ -555,6 +596,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false));
 }
 
 .vc-notification__content {
+  flex: 1;
   min-width: 0;
   display: block;
 }
@@ -579,6 +621,33 @@ watch(() => route.fullPath, () => (menuOpen.value = false));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.vc-notification__delete {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: var(--vc-radius);
+  background: transparent;
+  color: var(--vc-text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.vc-notification:hover .vc-notification__delete,
+.vc-notification__delete:focus-visible {
+  opacity: 1;
+}
+
+.vc-notification__delete:hover {
+  color: var(--vc-danger-text);
+  background: var(--vc-danger-bg);
+  border-color: var(--vc-danger-border);
 }
 
 @media (max-width: 900px) {
