@@ -8,7 +8,7 @@ import { authStore } from '@/store/auth.js';
  * sends the user back to the login when the server says the token is gone.
  */
 const axiosInstance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL || 'https://vernumserver-prod.onrender.com' // 'https://server.frc9611.com:8443'
+    baseURL: process.env.VUE_APP_API_URL || 'https://vernumserver2.onrender.com' // 'https://vernumserver-prod.onrender.com'
 });
 
 axiosInstance.interceptors.request.use(
