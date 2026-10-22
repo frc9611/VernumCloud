@@ -78,7 +78,7 @@
               </h2>
               <div class="comp">
                 <div>
-                  <p class="comp__when">{{ competitionCountdown }}</p>
+                  <p :class="['comp__when', competitionQueue ? 'is-queuing' : '']">{{ competitionCountdown }}</p>
                   <p class="comp__what">{{ competitionSubtitle }}</p>
                 </div>
                 <div v-if="snapshot.competition.ourAlliance" class="comp__sides">
@@ -590,9 +590,31 @@ const competitionWhere = computed(() => {
  * cronômetro grande já faz, e pela mesma razão: a máquina pendurada na parede pode estar dez minutos
  * errada e ninguém nunca vai conferir.
  */
+/*
+ * A palavra de quem conduz o evento ganha da nossa conta. Num sábado atrasado "CHAMANDO AGORA" é a
+ * informação, e "em 18 min" é aritmética sobre um horário que ninguém está mais cumprindo — mas só
+ * enquanto ela for recente: estado de fila de meia hora atrás afirma um presente que já passou.
+ */
+const QUEUE_FRESH_MS = 15 * 60 * 1000;
+
+const QUEUE_WORDS = {
+  'now queuing': 'CHAMANDO AGORA',
+  'on deck': 'NA FILA',
+  'on field': 'EM CAMPO',
+};
+
+const competitionQueue = computed(() => {
+  const row = snapshot.value?.competition;
+  if (!row || !row.queueStatus || !row.queueAsOf) return null;
+  const asOf = parseServer(row.queueAsOf);
+  if (!asOf || serverNow.value - asOf.getTime() > QUEUE_FRESH_MS) return null;
+  return QUEUE_WORDS[row.queueStatus.toLowerCase()] || null;
+});
+
 const competitionCountdown = computed(() => {
   const row = snapshot.value?.competition;
   if (!row) return '';
+  if (competitionQueue.value) return competitionQueue.value;
   if (row.played) return `${row.ourScore ?? '—'} × ${row.theirScore ?? '—'}`;
   const target = row.scheduledAt ? parseServer(row.scheduledAt) : null;
   if (!target) return 'sem horário';
@@ -1079,6 +1101,11 @@ function agoText(value) {
   color: var(--vc-text-faint);
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* Chamando agora não é um número: é um aviso, e ele muda de cor para ser lido de relance. */
+.comp__when.is-queuing {
+  color: var(--vc-purple);
 }
 
 .comp__when {

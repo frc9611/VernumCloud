@@ -10,6 +10,7 @@
           {{ countdown }}
           <small>{{ subtitle }}</small>
         </p>
+        <span v-if="queueWord" class="vc-chip vc-chip--purple queue">{{ queueWord }}</span>
 
         <!-- Liga sem aliança (uma rodada de FLL é uma mesa e um placar): não há lados a desenhar -->
         <div v-if="match.ourAlliance" class="alliance">
@@ -46,6 +47,7 @@ import { formatTime } from '@/services/time.js';
  */
 const props = defineProps({
   match: { type: Object, required: true },
+  live: { type: Object, default: null },
   teamNumber: { type: [String, Number], default: '' },
   eventName: { type: String, default: '' },
   showEvent: { type: Boolean, default: false },
@@ -53,9 +55,26 @@ const props = defineProps({
 
 const SIDES = { RED: 'Vermelha', BLUE: 'Azul' };
 
+/* Estado de fila envelhece: passada esta janela ele não descreve mais o presente. */
+const QUEUE_FRESH_MS = 15 * 60 * 1000;
+
+const QUEUE_WORDS = {
+  'now queuing': 'chamando agora',
+  'on deck': 'na fila',
+  'on field': 'em campo',
+};
+
 const now = ref(Date.now());
 const tick = setInterval(() => (now.value = Date.now()), 1000);
 onUnmounted(() => clearInterval(tick));
+
+/** O que o pessoal do evento está dizendo, quando é recente o bastante para ser o presente. */
+const queueWord = computed(() => {
+  const live = props.live;
+  if (!live || !live.ourStatus || !live.asOf) return '';
+  if (now.value - new Date(live.asOf).getTime() > QUEUE_FRESH_MS) return '';
+  return QUEUE_WORDS[live.ourStatus.toLowerCase()] || '';
+});
 
 const otherSide = computed(() => (props.match.ourAlliance === 'RED' ? 'BLUE' : 'RED'));
 
@@ -115,6 +134,10 @@ function resultWord(result) {
 </script>
 
 <style scoped>
+.queue {
+  align-self: start;
+}
+
 .next {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
